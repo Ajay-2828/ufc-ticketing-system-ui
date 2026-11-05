@@ -1,6 +1,8 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
+import { TicketProvider } from '@/context/ticket-context'
+import { AppShell } from '@/components/layout/app-shell'
 
 export const metadata: Metadata = {
   title: 'UFC Service Desk · IT Service Management',
@@ -27,10 +29,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   colorScheme: 'light',
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: 'white' },
-    
-  ],
+  themeColor: [{ media: '(prefers-color-scheme: light)', color: 'white' }],
 }
 
 export default function RootLayout({
@@ -41,7 +40,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased">
-        {children}
+        <TicketProvider>
+          <AppShell>{children}</AppShell>
+        </TicketProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>
