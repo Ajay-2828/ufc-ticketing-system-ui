@@ -21,6 +21,7 @@ import {
   Calendar,
   Check,
   Download,
+  PlayCircle,
 } from 'lucide-react'
 import { Ticket, Role, usersByRole } from '@/app/ticket-data'
 import { ClassifyChangeRequestModal } from '@/components/tickets/classify-change-request-modal'
@@ -1022,8 +1023,13 @@ export function TicketDetailDrawer({
                         <GitBranch size={14} /> Classify as Change Request
                       </button>
                     )}
-                    <button type="button" className="btn-secondary" onClick={handleTechnicianStart}>
-                      Start Work
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      style={{ gap: '6px', fontWeight: 700 }}
+                      onClick={handleTechnicianStart}
+                    >
+                      <PlayCircle size={14} /> Start Work
                     </button>
                   </>
                 )}

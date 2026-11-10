@@ -13,6 +13,7 @@ import {
   MoreHorizontal,
   GitBranch,
   FlaskConical,
+  PlayCircle,
 } from 'lucide-react'
 import { Ticket, TicketStatus } from '@/app/ticket-data'
 
@@ -22,6 +23,7 @@ interface TechnicianWorkbenchProps {
   onResolveTicket: (t: Ticket) => void
   onSendTesting: (t: Ticket) => void
   onClassifyCR?: (t: Ticket) => void
+  onStartWork?: (t: Ticket) => void
 }
 
 export function TechnicianWorkbench({
@@ -30,6 +32,7 @@ export function TechnicianWorkbench({
   onResolveTicket,
   onSendTesting,
   onClassifyCR,
+  onStartWork,
 }: TechnicianWorkbenchProps) {
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban')
 
@@ -230,9 +233,29 @@ export function TechnicianWorkbench({
                           )
                         )}
                         {t.status === 'Assigned' && (
-                          <span style={{ fontSize: '11px', color: 'var(--primary)', fontWeight: 600 }}>
-                            Ready to start
-                          </span>
+                          onStartWork ? (
+                            <button
+                              type="button"
+                              className="btn-primary"
+                              style={{
+                                height: '26px',
+                                padding: '0 8px',
+                                fontSize: '11px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                fontWeight: 700,
+                              }}
+                              onClick={() => onStartWork(t)}
+                              title="Start Work (moves ticket to In Progress)"
+                            >
+                              <PlayCircle size={12} /> Start Work
+                            </button>
+                          ) : (
+                            <span style={{ fontSize: '11px', color: 'var(--primary)', fontWeight: 600 }}>
+                              Ready to start
+                            </span>
+                          )
                         )}
                         {t.status === 'In Testing' && (
                           <span style={{ fontSize: '11px', color: '#BE185D', fontWeight: 600 }}>

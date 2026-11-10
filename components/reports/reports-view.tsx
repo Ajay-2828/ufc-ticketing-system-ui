@@ -394,7 +394,7 @@ export function ReportsView({ tickets }: ReportsViewProps) {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(3, 1fr)',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
               gap: '18px',
             }}
           >
@@ -626,33 +626,104 @@ export function ReportsView({ tickets }: ReportsViewProps) {
 
           {/* Chart with Labelled Axes (Section 14) */}
           <div className="modern-card" style={{ padding: '24px', marginBottom: '22px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700 }}>
-                {selectedReport?.title} &bull; Distribution & Volume Trend
-              </h3>
-              <span style={{ fontSize: '12.5px', color: 'var(--text-muted)' }}>
-                Y-Axis: Ticket Count &bull; X-Axis: Time / System Dimension
-              </span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--text-main)' }}>
+                  {selectedReport?.title} &bull; Volume Trend &amp; Distribution
+                </h3>
+                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                  Y-Axis: Ticket Volume &bull; X-Axis: Timeframe (Weekly intervals)
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span className="badge-tag badge-tag-sm" style={{ background: '#EFF6FF', color: '#1D4ED8', fontWeight: 600 }}>
+                  Active Filter: {dateRange}
+                </span>
+              </div>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', paddingTop: '10px' }}>
-              {[
-                { label: 'Flexcube Core Banking', count: 48, pct: '75%', color: '#2563EB' },
-                { label: 'Atomverse Mobile Channels', count: 34, pct: '53%', color: '#7C3AED' },
-                { label: 'Firewall & Security Rules', count: 22, pct: '34%', color: '#D97706' },
-                { label: 'SWIFT Alliance & Payments', count: 14, pct: '22%', color: '#059669' },
-                { label: 'Workstations & Peripherals', count: 10, pct: '16%', color: '#475569' },
-              ].map((row) => (
-                <div key={row.label}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
-                    <strong>{row.label}</strong>
-                    <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>{row.count} Tickets</span>
+            {/* Split Grid: Left SVG Trend Line/Bar with Labeled Axes, Right Distribution Bars */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px', alignItems: 'center' }}>
+              {/* Labeled Axes SVG Chart */}
+              <div style={{ width: '100%', height: '180px' }}>
+                <svg viewBox="0 0 460 170" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
+                  {/* Y Axis line and label */}
+                  <line x1="45" y1="15" x2="45" y2="135" stroke="#CBD5E1" strokeWidth="1.5" />
+                  <text x="12" y="75" fill="#64748B" fontSize="10" fontWeight="700" transform="rotate(-90 12 75)" textAnchor="middle">
+                    Ticket Count (Y)
+                  </text>
+
+                  {/* Y Axis tick marks & gridlines */}
+                  <line x1="40" y1="20" x2="45" y2="20" stroke="#CBD5E1" strokeWidth="1.5" />
+                  <text x="36" y="24" fill="#94A3B8" fontSize="10" textAnchor="end">50</text>
+                  <line x1="45" y1="20" x2="440" y2="20" stroke="#F1F5F9" strokeDasharray="3 3" />
+
+                  <line x1="40" y1="50" x2="45" y2="50" stroke="#CBD5E1" strokeWidth="1.5" />
+                  <text x="36" y="54" fill="#94A3B8" fontSize="10" textAnchor="end">35</text>
+                  <line x1="45" y1="50" x2="440" y2="50" stroke="#F1F5F9" strokeDasharray="3 3" />
+
+                  <line x1="40" y1="80" x2="45" y2="80" stroke="#CBD5E1" strokeWidth="1.5" />
+                  <text x="36" y="84" fill="#94A3B8" fontSize="10" textAnchor="end">20</text>
+                  <line x1="45" y1="80" x2="440" y2="80" stroke="#F1F5F9" strokeDasharray="3 3" />
+
+                  <line x1="40" y1="110" x2="45" y2="110" stroke="#CBD5E1" strokeWidth="1.5" />
+                  <text x="36" y="114" fill="#94A3B8" fontSize="10" textAnchor="end">10</text>
+                  <line x1="45" y1="110" x2="440" y2="110" stroke="#F1F5F9" strokeDasharray="3 3" />
+
+                  {/* X Axis line and label */}
+                  <line x1="45" y1="135" x2="440" y2="135" stroke="#CBD5E1" strokeWidth="1.5" />
+                  <text x="242" y="165" fill="#64748B" fontSize="10" fontWeight="700" textAnchor="middle">
+                    Reporting Interval (X)
+                  </text>
+
+                  {/* Bars per time interval */}
+                  {[
+                    { label: 'Wk 1', count: 32, h: 72 },
+                    { label: 'Wk 2', count: 44, h: 99 },
+                    { label: 'Wk 3', count: 28, h: 63 },
+                    { label: 'Wk 4', count: 48, h: 108 },
+                    { label: 'Current', count: 38, h: 85 },
+                  ].map((bar, i) => {
+                    const x = 85 + i * 72
+                    const y = 135 - bar.h
+                    return (
+                      <g key={bar.label}>
+                        <rect x={x - 14} y={y} width="28" height={bar.h} rx="4" fill="var(--primary)" opacity={0.88} />
+                        <text x={x} y={y - 5} fill="var(--primary)" fontSize="10" fontWeight="700" textAnchor="middle">
+                          {bar.count}
+                        </text>
+                        <text x={x} y="148" fill="#64748B" fontSize="10.5" fontWeight="600" textAnchor="middle">
+                          {bar.label}
+                        </text>
+                      </g>
+                    )
+                  })}
+                </svg>
+              </div>
+
+              {/* Right: Distribution Breakdown */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)', fontWeight: 700 }}>
+                  Distribution by Application
+                </span>
+                {[
+                  { label: 'Flexcube Core Banking', count: 48, pct: '75%', color: '#2563EB' },
+                  { label: 'Atomverse Mobile Channels', count: 34, pct: '53%', color: '#7C3AED' },
+                  { label: 'Firewall & Security Rules', count: 22, pct: '34%', color: '#D97706' },
+                  { label: 'SWIFT Alliance & Payments', count: 14, pct: '22%', color: '#059669' },
+                  { label: 'Workstations & Peripherals', count: 10, pct: '16%', color: '#475569' },
+                ].map((row) => (
+                  <div key={row.label}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '3px' }}>
+                      <strong style={{ color: 'var(--text-main)' }}>{row.label}</strong>
+                      <span style={{ fontWeight: 700, color: 'var(--text-secondary)' }}>{row.count} Tickets</span>
+                    </div>
+                    <div style={{ width: '100%', height: '7px', background: '#F1F5F9', borderRadius: '4px', overflow: 'hidden' }}>
+                      <div style={{ width: row.pct, height: '100%', background: row.color, borderRadius: '4px' }} />
+                    </div>
                   </div>
-                  <div style={{ width: '100%', height: '10px', background: '#F1F5F9', borderRadius: '5px', overflow: 'hidden' }}>
-                    <div style={{ width: row.pct, height: '100%', background: row.color, borderRadius: '5px' }} />
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
 

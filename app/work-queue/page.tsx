@@ -66,6 +66,26 @@ export default function WorkQueuePage() {
         onSelectTicket={(t: Ticket) => router.push(`/tickets/${t.id}`)}
         onResolveTicket={(t) => setTicketToResolve(t)}
         onClassifyCR={(t) => setTicketToClassifyCR(t)}
+        onStartWork={(t) => {
+          const updated: Ticket = {
+            ...t,
+            status: 'In Progress',
+            timeline: [
+              ...t.timeline,
+              {
+                id: `t-${Date.now()}`,
+                time: 'Just now',
+                user: currentUser.name,
+                role: currentRole,
+                action: 'Work Started by Technician',
+                note: 'Accepted ticket into active queue — Response SLA satisfied. Troubleshooting in progress.',
+                tone: 'blue',
+              },
+            ],
+          }
+          handleUpdateTicket(updated)
+          triggerToast(`Work started on ticket ${t.id}! Moved to In Progress.`)
+        }}
         onSendTesting={(t) => {
           const updated: Ticket = {
             ...t,
