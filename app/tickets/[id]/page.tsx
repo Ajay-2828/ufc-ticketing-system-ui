@@ -41,9 +41,11 @@ import {
   CheckCheck,
 } from 'lucide-react'
 import { useTicketContext } from '@/context/ticket-context'
-import { Ticket, Role, usersByRole, classificationTree } from '@/app/ticket-data'
+import { Ticket, Role, usersByRole, classificationTree, departmentsData, usersDirectory } from '@/app/ticket-data'
 import { ClassifyChangeRequestModal } from '@/components/tickets/classify-change-request-modal'
 import { ForwardToTestingModal } from '@/components/tickets/forward-to-testing-modal'
+import { RejectTicketModal } from '@/components/tickets/reject-ticket-modal'
+import { EscalateToVendorModal } from '@/components/tickets/escalate-to-vendor-modal'
 
 export default function TicketDetailPage() {
   const params = useParams()
@@ -70,6 +72,8 @@ export default function TicketDetailPage() {
   const [clarificationTargetRole, setClarificationTargetRole] = useState('End User')
   const [showClassifyCRModal, setShowClassifyCRModal] = useState(false)
   const [showTestingModal, setShowTestingModal] = useState(false)
+  const [showRejectModal, setShowRejectModal] = useState(false)
+  const [showVendorModal, setShowVendorModal] = useState(false)
 
   const ticket = useMemo(() => {
     return tickets.find((t) => t.id === ticketId)
@@ -114,6 +118,16 @@ export default function TicketDetailPage() {
       }
     }
     return 'Daniel Mensah'
+  }, [ticket])
+
+  // Look up designated HOD for requester's department from Active Directory / Department matrix
+  const departmentHOD = useMemo(() => {
+    if (!ticket) return 'Grace Nsubuga'
+    const foundDept = departmentsData.find((d) => d.name === ticket.department)
+    if (foundDept?.hodName) return foundDept.hodName
+    const foundUser = usersDirectory.find((u) => u.name === ticket.creator)
+    if (foundUser?.manager) return foundUser.manager
+    return 'Grace Nsubuga'
   }, [ticket])
 
   // Stepper stages matching Scope of Work 3.6 (User ➔ Admin Review ➔ HOD Approval ➔ Management ➔ Implementation ➔ Testing ➔ Closure)
@@ -365,22 +379,23 @@ export default function TicketDetailPage() {
   }
 
   const handleHODReject = () => {
-    const reason = prompt('Mandatory: Please provide rejection justification:')
-    if (!reason || !reason.trim()) return
+    setShowRejectModal(true)
+  }
 
+  const handleConfirmRejectModal = (targetTicketId: string, reason: string, category: string) => {
     const updated: Ticket = {
       ...ticket,
       status: 'Closed',
-      closureRemarks: `HOD Rejection: ${reason}`,
+      closureRemarks: `Rejection (${currentRole}): ${reason} [${category}]`,
       timeline: [
         ...ticket.timeline,
         {
           id: `t-${Date.now()}`,
           time: 'Just now',
           user: currentUser.name,
-          role: 'HOD',
-          action: 'Ticket Rejected by Department Head',
-          note: `Mandatory reason: ${reason}`,
+          role: currentRole,
+          action: `Ticket Rejected by ${currentRole}`,
+          note: `Category: ${category}. Justification: ${reason}`,
           tone: 'red',
         },
         {
@@ -388,14 +403,15 @@ export default function TicketDetailPage() {
           time: 'Just now',
           user: 'System Notification Service',
           role: 'System',
-          action: 'Admin Notification Dispatched',
-          note: `Admin Team notified that ticket was rejected and closed by HOD. Reason: ${reason}`,
+          action: 'Rejection Notification Dispatched',
+          note: `Automated alert sent to ${ticket.creator} and Administration Team with formal rejection justification.`,
           tone: 'amber',
         },
       ],
     }
     handleUpdateTicket(updated)
-    triggerToast('Ticket rejected and closed.')
+    setShowRejectModal(false)
+    triggerToast('Ticket rejected and closed. Rejection notification dispatched!')
   }
 
   const handleTechnicianStart = () => {
@@ -488,6 +504,55 @@ export default function TicketDetailPage() {
     }
     handleUpdateTicket(updated)
     triggerToast('Implementation complete! Forwarded to Testing Team for QA verification.')
+  }
+
+  const handleConfirmVendorEscalate = (
+    targetTicketId: string,
+    vendorName: string,
+    mode: 'co-assign' | 'handover',
+    diagnosticNotes: string
+  ) => {
+    if (!ticket) return
+
+    const isHandover = mode === 'handover'
+    const updated: Ticket = {
+      ...ticket,
+      vendor: vendorName,
+      coAssignee: isHandover ? ticket.coAssignee : vendorName,
+      assignee: isHandover ? vendorName : ticket.assignee,
+      assigneeRole: isHandover ? 'External Vendor' : ticket.assigneeRole,
+      timeline: [
+        ...ticket.timeline,
+        {
+          id: `t-${Date.now()}`,
+          time: 'Just now',
+          user: currentUser.name,
+          role: currentRole,
+          action: isHandover ? 'Ticket Transferred to External Vendor' : 'External Vendor Co-Assigned',
+          note: `Escalated to ${vendorName} by ${currentUser.name} (${currentRole}). Mode: ${
+            isHandover ? 'Full Handover / Ownership Transfer' : 'Collaborative Co-Assignment'
+          }. Diagnostic: ${diagnosticNotes}`,
+          tone: 'purple' as const,
+        },
+        {
+          id: `t-${Date.now() + 1}`,
+          time: 'Just now',
+          user: 'System Notification Service',
+          role: 'System',
+          action: 'Vendor Dispatch Notification Sent',
+          note: `Secure dispatch sent to ${vendorName} partner lead via Vendor Portal gateway. Response SLA timer monitored.`,
+          tone: 'blue' as const,
+        },
+      ],
+    }
+
+    handleUpdateTicket(updated)
+    setShowVendorModal(false)
+    triggerToast(
+      isHandover
+        ? `Ticket transferred to ${vendorName} as primary assignee!`
+        : `External vendor ${vendorName} co-assigned to ticket!`
+    )
   }
 
   const handleAdminApproveCR = () => {
@@ -694,7 +759,42 @@ export default function TicketDetailPage() {
               </span>
 
               <span className={`badge-tag badge-severity-${ticket.severity.toLowerCase()}`}>
-                {ticket.severity} Priority
+                Severity: {ticket.severity}
+              </span>
+
+              <span
+                className="badge-tag"
+                style={{
+                  background:
+                    ticket.priority === 'P1'
+                      ? '#FEE2E2'
+                      : ticket.priority === 'P2'
+                      ? '#FEF3C7'
+                      : ticket.priority === 'P3'
+                      ? '#EFF6FF'
+                      : '#F1F5F9',
+                  color:
+                    ticket.priority === 'P1'
+                      ? '#991B1B'
+                      : ticket.priority === 'P2'
+                      ? '#92400E'
+                      : ticket.priority === 'P3'
+                      ? '#1E40AF'
+                      : '#475569',
+                  border: `1px solid ${
+                    ticket.priority === 'P1'
+                      ? '#FECACA'
+                      : ticket.priority === 'P2'
+                      ? '#FDE68A'
+                      : ticket.priority === 'P3'
+                      ? '#BFDBFE'
+                      : '#E2E8F0'
+                  }`,
+                  fontFamily: 'var(--font-mono)',
+                  fontWeight: 700,
+                }}
+              >
+                Priority: {ticket.priority}
               </span>
 
               <span
@@ -859,6 +959,27 @@ export default function TicketDetailPage() {
                       <CheckCircle2 size={14} /> Mark Resolved
                     </button>
                   )}
+
+                  {ticket.status !== 'Resolved' && ticket.status !== 'Closed' && (
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      style={{
+                        height: '32px',
+                        fontSize: '12px',
+                        color: '#0D9488',
+                        borderColor: '#99F6E4',
+                        background: '#F0FDFA',
+                        fontWeight: 700,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                      }}
+                      onClick={() => setShowVendorModal(true)}
+                    >
+                      <Building2 size={14} /> Escalate to Vendor
+                    </button>
+                  )}
                 </>
               )}
 
@@ -908,6 +1029,68 @@ export default function TicketDetailPage() {
             </div>
           </div>
         </div>
+
+        {/* 1.5 Pending HOD Approval Banner */}
+        {ticket.status === 'Pending Approval' && (
+          <div
+            className="modern-card"
+            style={{
+              padding: '16px 20px',
+              borderRadius: '10px',
+              background: '#FFFBEB',
+              border: '1px solid #FDE68A',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '16px',
+              flexWrap: 'wrap',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <div
+                style={{
+                  width: '42px',
+                  height: '42px',
+                  borderRadius: '10px',
+                  background: '#FEF3C7',
+                  color: '#D97706',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <Clock size={22} />
+              </div>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <strong style={{ fontSize: '14.5px', color: '#92400E' }}>
+                    Awaiting Department Head (HOD) Approval
+                  </strong>
+                  <span className="badge-tag badge-tag-sm" style={{ background: '#FEF3C7', color: '#B45309', fontWeight: 700 }}>
+                    Stage 2: Pending
+                  </span>
+                </div>
+                <p style={{ margin: '3px 0 0', fontSize: '12.5px', color: '#B45309' }}>
+                  This ticket has been sent to <strong>{departmentHOD}</strong> (Head of {ticket.department}) for authorization before work begins.
+                  {ticket.hodTimeRemaining ? ` Approval SLA timer: ${ticket.hodTimeRemaining} remaining.` : ''}
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {currentRole === 'HOD' ? (
+                <span className="badge-tag" style={{ background: '#ECFDF5', color: '#047857', fontWeight: 700, padding: '6px 12px' }}>
+                  Action Required by You
+                </span>
+              ) : (
+                <span className="badge-tag" style={{ background: '#FFFFFF', color: '#B45309', border: '1px solid #FDE68A', fontWeight: 600, padding: '6px 12px' }}>
+                  Automated Alert Dispatched to {departmentHOD}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* 2. Sleek Connected Stepper Bar */}
         <div className="modern-card" style={{ padding: '16px 24px' }}>
@@ -1214,8 +1397,18 @@ export default function TicketDetailPage() {
                           <strong>{designatedTechnicianName}</strong>
                         </div>
                         <div>
-                          <span style={{ color: 'var(--text-muted)' }}>SLA Target:</span>{' '}
-                          <strong>{ticket.sla}</strong> resolution limit
+                          <span style={{ color: 'var(--text-muted)' }}>Response SLA:</span>{' '}
+                          <strong>{ticket.severity === 'Critical' ? '30m' : ticket.severity === 'High' ? '1h' : ticket.severity === 'Medium' ? '2h' : '4h'}</strong> initial response target
+                        </div>
+                        <div>
+                          <span style={{ color: 'var(--text-muted)' }}>Resolution SLA:</span>{' '}
+                          <strong>{ticket.sla}</strong> resolution guarantee
+                        </div>
+                        <div>
+                          <span style={{ color: 'var(--text-muted)' }}>Clock State:</span>{' '}
+                          <strong style={{ color: ticket.slaBreached ? '#DC2626' : isClarificationPaused ? '#D97706' : '#16A34A' }}>
+                            {ticket.slaBreached ? 'Breached' : isClarificationPaused ? 'Paused (Customer Action)' : 'Active (Running)'}
+                          </strong>
                         </div>
                       </div>
                     </div>
@@ -1232,7 +1425,7 @@ export default function TicketDetailPage() {
                         </div>
                         <div>
                           <span style={{ color: 'var(--text-muted)' }}>Reporting Manager (HOD):</span>{' '}
-                          <strong>Grace Nwosu</strong>
+                          <strong>{departmentHOD}</strong>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#047857', fontWeight: 600, fontSize: '11px', marginTop: '2px' }}>
                           <CheckCircle2 size={12} /> Active Directory Synced
@@ -1747,6 +1940,27 @@ export default function TicketDetailPage() {
           ticket={ticket}
           onClose={() => setShowTestingModal(false)}
           onConfirm={handleConfirmForwardToTesting}
+        />
+      )}
+
+      {/* Reject Ticket Modal */}
+      {showRejectModal && (
+        <RejectTicketModal
+          ticket={ticket}
+          approverRole={currentRole}
+          approverName={currentUser.name}
+          onClose={() => setShowRejectModal(false)}
+          onConfirmReject={handleConfirmRejectModal}
+        />
+      )}
+
+      {/* Escalate to External Vendor Modal */}
+      {showVendorModal && (
+        <EscalateToVendorModal
+          ticket={ticket}
+          technicianName={currentUser.name}
+          onClose={() => setShowVendorModal(false)}
+          onConfirmEscalate={handleConfirmVendorEscalate}
         />
       )}
     </div>

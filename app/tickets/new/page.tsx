@@ -25,6 +25,7 @@ import {
   applicationQuestionnaires,
   departmentsData,
   policySettings,
+  standardSeveritySLAs,
 } from '@/app/ticket-data'
 
 export default function CreateTicketPage() {
@@ -87,6 +88,28 @@ export default function CreateTicketPage() {
   const [attachedFiles, setAttachedFiles] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  const autoSeverity = activeIssueTypeObj?.autoSeverity || 'Medium'
+  const calculatedPriority =
+    autoSeverity === 'Critical'
+      ? 'P1'
+      : autoSeverity === 'High'
+      ? 'P2'
+      : autoSeverity === 'Medium'
+      ? 'P3'
+      : 'P4'
+  const finalPriority =
+    currentRole !== 'End User' ? priorityOverride : calculatedPriority
+
+  // Fallback to System-Wide Severity SLA Matrix if issue doesn't define custom SLA
+  const targetResolutionHours =
+    activeIssueTypeObj?.slaResolutionHours ??
+    standardSeveritySLAs[autoSeverity]?.resolutionHours ??
+    4
+  const targetResponseHours =
+    activeIssueTypeObj?.slaResponseHours ??
+    standardSeveritySLAs[autoSeverity]?.responseHours ??
+    1
+
   // Get dynamic questionnaire questions
   const questions =
     applicationQuestionnaires[selectedSubClass] ||
@@ -130,18 +153,6 @@ export default function CreateTicketPage() {
 
     const isCR = activeIssueTypeObj?.isChangeRequest || false
     const crRequiresHod = activeIssueTypeObj?.crRequiresHodApproval !== false
-    const autoSeverity = activeIssueTypeObj?.autoSeverity || 'Medium'
-    const calculatedPriority =
-      autoSeverity === 'Critical'
-        ? 'P1'
-        : autoSeverity === 'High'
-        ? 'P2'
-        : autoSeverity === 'Medium'
-        ? 'P3'
-        : 'P4'
-
-    const finalPriority =
-      currentRole !== 'End User' ? priorityOverride : calculatedPriority
 
     const primaryTechnician = designatedTechnicians[0] || 'Daniel Mensah'
     const coTechnician = designatedTechnicians[1] || undefined
@@ -150,10 +161,14 @@ export default function CreateTicketPage() {
       ? `CR-2026-${Math.floor(100 + Math.random() * 900)}`
       : `INC-2026-${Math.floor(1000 + Math.random() * 9000)}`
 
+    const isStaffCreator = currentRole === 'HOD' || currentRole === 'Admin Team' || currentRole === 'Technician'
+
     const initialStatus = isDraft
       ? 'Awaiting Clarification'
       : isCR
       ? 'Admin Review'
+      : isStaffCreator
+      ? 'Assigned'
       : 'Pending Approval'
 
     const newTicket: Partial<Ticket> = {
@@ -174,8 +189,8 @@ export default function CreateTicketPage() {
       creatorAvatar: currentUser.initials,
       assignee: primaryTechnician,
       coAssignee: coTechnician,
-      sla: `${activeIssueTypeObj?.slaResolutionHours || 4}h remaining`,
-      slaTimeRemaining: `0${activeIssueTypeObj?.slaResolutionHours || 4}:00:00`,
+      sla: `${targetResolutionHours}h remaining`,
+      slaTimeRemaining: `0${Math.floor(targetResolutionHours)}:00:00`,
       slaBreached: false,
       hodTimeRemaining: `0${activeIssueTypeObj?.hodApprovalLimitHours || 2}:00:00`,
       created: 'Just now',
@@ -189,14 +204,10 @@ export default function CreateTicketPage() {
           action: isDraft
             ? 'Ticket Saved as Draft'
             : isCR
-            ? crRequiresHod
-              ? 'Change Request Submitted (Sent to HOD for First Approval)'
-              : 'Change Request Submitted (Forwarded Directly to Admin Team)'
+            ? 'Change Request Submitted (Forwarded to Admin Team for 1st Review)'
             : 'Ticket Submitted',
           note: isCR
-            ? crRequiresHod
-              ? `Change Request raised under ${selectedClassification} / ${selectedSubClass}. Sent to Department Head (${userDeptConfig?.hodName || 'Grace Nwosu'}) for initial change authorization.`
-              : `Change Request raised under ${selectedClassification} / ${selectedSubClass}. HOD approval is not required per catalog configuration. Forwarded directly to Admin Team.`
+            ? `Change Request raised under ${selectedClassification} / ${selectedSubClass}. Forwarded to Administration Team for initial review (Department Head Approval: ${crRequiresHod ? 'Required' : 'Waived'}).`
             : `Classification: ${selectedClassification} / ${selectedSubClass}. Auto-assigned to designated technician: ${primaryTechnician}${
                 coTechnician ? ` & ${coTechnician}` : ''
               }. Auto-calculated Severity: ${autoSeverity}.`,
@@ -777,8 +788,7 @@ export default function CreateTicketPage() {
                     SLA TARGETS
                   </span>
                   <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-main)', marginTop: '2px' }}>
-                    Response: {activeIssueTypeObj?.slaResponseHours || 1}h &bull; Resolution:{' '}
-                    {activeIssueTypeObj?.slaResolutionHours || 4}h
+                    Response: {targetResponseHours < 1 ? `${Math.round(targetResponseHours * 60)}m` : `${targetResponseHours}h`} &bull; Resolution: {targetResolutionHours}h
                   </div>
                 </div>
 
@@ -791,11 +801,12 @@ export default function CreateTicketPage() {
                   }}
                 >
                   <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>
-                    HOD APPROVAL ROUTE
+                    APPROVAL GOVERNANCE
                   </span>
                   <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-main)', marginTop: '2px' }}>
-                    {userDeptConfig?.hodName || 'Grace Nsubuga'} &bull; Max{' '}
-                    {activeIssueTypeObj?.hodApprovalLimitHours || 2}h limit
+                    {currentRole === 'End User'
+                      ? `${userDeptConfig?.hodName || 'Grace Nsubuga'} (HOD) • ${activeIssueTypeObj?.hodApprovalLimitHours || 2}h limit`
+                      : `Bypassed • Authorized by ${currentRole}`}
                   </div>
                 </div>
 
@@ -827,8 +838,8 @@ export default function CreateTicketPage() {
                     }}
                   >
                     {activeIssueTypeObj?.isChangeRequest
-                      ? 'Change Request Workflow (Draft)'
-                      : 'Standard Ticket Workflow (Published)'}
+                      ? 'Change Request Pipeline (Admin Review 1st)'
+                      : 'Standard Ticket Workflow'}
                   </div>
                 </div>
               </div>

@@ -22,9 +22,8 @@ export default function TicketsPage() {
       ? 'Track the real-time status, technician ETA, and resolutions of requests you have raised'
       : 'Comprehensive directory of IT incidents, service requests, and issues across UFC'
 
-  // Show gold Create Ticket action in All Tickets page for Admin Team, End User, and Technicians
-  const canCreateInList =
-    currentRole === 'Admin Team' || currentRole === 'End User' || currentRole === 'Technician'
+  // Show gold Create Ticket action in All Tickets page for any user
+  const canCreateInList = currentRole !== 'External Vendor'
 
   return (
     <TicketList

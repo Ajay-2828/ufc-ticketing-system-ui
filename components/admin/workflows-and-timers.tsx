@@ -24,14 +24,21 @@ import {
   FileCheck,
   Shield,
   HelpCircle,
+  Info,
+  Bell,
+  Workflow,
+  Settings2,
+  AlertTriangle,
+  ArrowUpRight,
+  CheckCheck,
 } from 'lucide-react'
 import { policySettings, standardSeveritySLAs } from '@/app/ticket-data'
 
 export function WorkflowsAndTimers() {
-  // Navigation Tabs: Workflows vs Timers & SLAs (Section 15.2 Rule)
+  // Navigation Tabs: Workflows vs Timers & SLAs
   const [activeTab, setActiveTab] = useState<'workflows' | 'timers'>('workflows')
 
-  // Workflow Pipeline Selection: Standard Ticket vs Change Request (Section 8 Rule)
+  // Workflow Pipeline Selection: Standard Ticket vs Change Request
   const [selectedWorkflow, setSelectedWorkflow] = useState<'standard' | 'changeRequest'>('standard')
 
   // Standard Ticket Flow Stage Controls
@@ -40,14 +47,14 @@ export function WorkflowsAndTimers() {
   const [stdTimeoutAction, setStdTimeoutAction] = useState('Notify and escalate to Admin')
   const [stdHodTimeoutHours, setStdHodTimeoutHours] = useState(24)
 
-  // Change Request Flow Stage Controls (Section 7 & User Explicit Rules)
+  // Change Request Flow Stage Controls
   const [crHodApproval, setCrHodApproval] = useState(true)
   const [crManagementApproval, setCrManagementApproval] = useState(true)
   const [crTestingRequired, setCrTestingRequired] = useState(true)
   const [crTimeoutAction, setCrTimeoutAction] = useState('Notify and escalate to Admin')
   const [crHodTimeoutHours, setCrHodTimeoutHours] = useState(24)
 
-  // Global Timers & Operational Thresholds (Section 10 Rule)
+  // Global Timers & Operational Thresholds
   const [closureThreshold, setClosureThreshold] = useState(policySettings.unresolvedClosureThreshold || 5)
   const [hodReminderDays, setHodReminderDays] = useState(policySettings.hodReminderDays || 3)
   const [hodDefaultTimeoutHours, setHodDefaultTimeoutHours] = useState(policySettings.hodDefaultTimeoutHours || 24)
@@ -131,7 +138,7 @@ export function WorkflowsAndTimers() {
   }
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', paddingBottom: '80px' }}>
+    <div style={{ maxWidth: '1240px', margin: '0 auto', paddingBottom: '90px' }}>
       {/* Toast Notification */}
       {toastMessage && (
         <div
@@ -159,13 +166,19 @@ export function WorkflowsAndTimers() {
       )}
 
       {/* Page Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '14px' }}>
         <div>
-          <h1 className="page-title-main" style={{ fontSize: '22px', fontWeight: 800, margin: 0 }}>
-            Workflows &amp; Timers
+          <div className="page-eyebrow">
+            <Settings2 size={13} />
+            <span>ITSM Governance Engine</span>
+            <span style={{ color: 'var(--text-muted)' }}>&bull;</span>
+            <span style={{ color: '#16A34A', fontWeight: 700 }}>2 Pipelines Active</span>
+          </div>
+          <h1 className="page-title-main" style={{ fontSize: '24px', fontWeight: 800, margin: '4px 0 0' }}>
+            Workflows &amp; Operational Timers
           </h1>
-          <p className="page-desc-sub" style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '3px 0 0' }}>
-            Configure lifecycle stage pipelines, approval pathways, operational thresholds, and system SLAs.
+          <p className="page-desc-sub" style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '4px 0 0' }}>
+            Configure lifecycle stage approval gates, Change Request governance rules, automated reminder timers, and system turnaround SLAs.
           </p>
         </div>
 
@@ -173,75 +186,148 @@ export function WorkflowsAndTimers() {
         <div
           style={{
             display: 'flex',
-            background: 'var(--surface)',
+            background: 'var(--surface-subtle)',
             border: '1px solid var(--border)',
-            borderRadius: '8px',
-            padding: '3px',
+            borderRadius: '10px',
+            padding: '4px',
+            gap: '4px',
           }}
         >
           <button
             type="button"
             className="btn-secondary"
             style={{
-              height: '32px',
-              fontSize: '12.5px',
+              height: '36px',
+              padding: '0 16px',
+              fontSize: '13px',
               border: 'none',
-              background: activeTab === 'workflows' ? 'var(--primary-soft)' : 'transparent',
+              borderRadius: '7px',
+              background: activeTab === 'workflows' ? '#FFFFFF' : 'transparent',
               color: activeTab === 'workflows' ? 'var(--primary)' : 'var(--text-secondary)',
               fontWeight: activeTab === 'workflows' ? 700 : 500,
-              gap: '6px',
+              boxShadow: activeTab === 'workflows' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+              gap: '8px',
             }}
             onClick={() => setActiveTab('workflows')}
           >
-            <GitBranch size={14} /> Workflow Pipelines
+            <GitBranch size={15} /> Workflow Pipelines
           </button>
           <button
             type="button"
             className="btn-secondary"
             style={{
-              height: '32px',
-              fontSize: '12.5px',
+              height: '36px',
+              padding: '0 16px',
+              fontSize: '13px',
               border: 'none',
-              background: activeTab === 'timers' ? 'var(--primary-soft)' : 'transparent',
+              borderRadius: '7px',
+              background: activeTab === 'timers' ? '#FFFFFF' : 'transparent',
               color: activeTab === 'timers' ? 'var(--primary)' : 'var(--text-secondary)',
               fontWeight: activeTab === 'timers' ? 700 : 500,
-              gap: '6px',
+              boxShadow: activeTab === 'timers' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+              gap: '8px',
             }}
             onClick={() => setActiveTab('timers')}
           >
-            <Clock size={14} /> Timers &amp; SLAs
+            <Clock size={15} /> Timers &amp; SLAs
           </button>
         </div>
       </div>
 
+      {/* Top Operational KPI Metrics */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px', marginBottom: '22px' }}>
+        <div className="modern-card" style={{ padding: '16px 18px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#EFF6FF', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Workflow size={20} />
+          </div>
+          <div>
+            <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)', fontWeight: 700 }}>
+              Lifecycle Pipelines
+            </span>
+            <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-main)', marginTop: '2px' }}>
+              2 Active Flows
+            </div>
+            <span style={{ fontSize: '11px', color: '#16A34A', fontWeight: 600 }}>Standard &amp; Change Request</span>
+          </div>
+        </div>
+
+        <div className="modern-card" style={{ padding: '16px 18px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#F5F3FF', color: '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <ShieldCheck size={20} />
+          </div>
+          <div>
+            <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)', fontWeight: 700 }}>
+              Governance Gates
+            </span>
+            <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-main)', marginTop: '2px' }}>
+              {selectedWorkflow === 'standard' ? (stdHodApproval ? '2 Approval Gates' : '1 Direct Route') : '6 Stage Sequence'}
+            </div>
+            <span style={{ fontSize: '11px', color: '#7C3AED', fontWeight: 600 }}>
+              {selectedWorkflow === 'standard' ? 'HOD Sign-Off Enforced' : 'Admin ➔ HOD ➔ Management'}
+            </span>
+          </div>
+        </div>
+
+        <div className="modern-card" style={{ padding: '16px 18px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#FEF3C7', color: '#B45309', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Clock size={20} />
+          </div>
+          <div>
+            <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)', fontWeight: 700 }}>
+              Approval SLA Limit
+            </span>
+            <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-main)', marginTop: '2px' }}>
+              {stdHodTimeoutHours}h Timeout
+            </div>
+            <span style={{ fontSize: '11px', color: '#B45309', fontWeight: 600 }}>Auto-Escalates to Admin</span>
+          </div>
+        </div>
+
+        <div className="modern-card" style={{ padding: '16px 18px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#ECFDF5', color: '#047857', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <CheckCheck size={20} />
+          </div>
+          <div>
+            <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)', fontWeight: 700 }}>
+              Turnaround SLA Matrix
+            </span>
+            <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-main)', marginTop: '2px' }}>
+              4 Severity Tiers
+            </div>
+            <span style={{ fontSize: '11px', color: '#047857', fontWeight: 600 }}>P1 (2h) to P4 (24h)</span>
+          </div>
+        </div>
+      </div>
+
       {/* ========================================================================= */}
-      {/* TAB 1: WORKFLOW PIPELINES (Section 8 Rule) */}
+      {/* TAB 1: WORKFLOW PIPELINES */}
       {/* ========================================================================= */}
       {activeTab === 'workflows' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
           {/* Template Selector Cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '14px' }}>
             {/* Standard Ticket Workflow Card */}
             <div
               onClick={() => setSelectedWorkflow('standard')}
               style={{
-                padding: '16px 18px',
-                borderRadius: '10px',
+                padding: '18px 20px',
+                borderRadius: '12px',
                 border: `2px solid ${selectedWorkflow === 'standard' ? 'var(--primary)' : 'var(--border)'}`,
-                background: selectedWorkflow === 'standard' ? 'var(--primary-soft)' : '#FFFFFF',
+                background: selectedWorkflow === 'standard' ? '#F8FAFC' : '#FFFFFF',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 transition: 'all 0.15s ease',
+                boxShadow: selectedWorkflow === 'standard' ? '0 4px 12px rgba(37,99,235,0.08)' : 'var(--shadow-sm)',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                 <div
                   style={{
-                    width: '38px',
-                    height: '38px',
-                    borderRadius: '8px',
+                    width: '42px',
+                    height: '42px',
+                    borderRadius: '10px',
                     background: selectedWorkflow === 'standard' ? 'var(--primary)' : '#EFF6FF',
                     color: selectedWorkflow === 'standard' ? '#FFFFFF' : 'var(--primary)',
                     display: 'flex',
@@ -249,31 +335,31 @@ export function WorkflowsAndTimers() {
                     justifyContent: 'center',
                   }}
                 >
-                  <FileCheck size={18} />
+                  <FileCheck size={20} />
                 </div>
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <strong style={{ fontSize: '14.5px', color: 'var(--text-main)' }}>
+                    <strong style={{ fontSize: '15px', color: 'var(--text-main)' }}>
                       Standard Ticket Flow
                     </strong>
                     <span style={{ fontSize: '10px', background: '#DCFCE7', color: '#15803D', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
-                      Published
+                      Active
                     </span>
                   </div>
-                  <span style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>
-                    Standard Incidents &amp; Service Requests
+                  <span style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', marginTop: '2px' }}>
+                    Standard Incidents &amp; Service Requests (HOD ➔ Specialist)
                   </span>
                 </div>
               </div>
-              <ChevronRight size={16} color={selectedWorkflow === 'standard' ? 'var(--primary)' : 'var(--text-muted)'} />
+              <ChevronRight size={18} color={selectedWorkflow === 'standard' ? 'var(--primary)' : 'var(--text-muted)'} />
             </div>
 
             {/* Change Request Workflow Card */}
             <div
               onClick={() => setSelectedWorkflow('changeRequest')}
               style={{
-                padding: '16px 18px',
-                borderRadius: '10px',
+                padding: '18px 20px',
+                borderRadius: '12px',
                 border: `2px solid ${selectedWorkflow === 'changeRequest' ? '#7C3AED' : 'var(--border)'}`,
                 background: selectedWorkflow === 'changeRequest' ? '#FAF5FF' : '#FFFFFF',
                 cursor: 'pointer',
@@ -281,14 +367,15 @@ export function WorkflowsAndTimers() {
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 transition: 'all 0.15s ease',
+                boxShadow: selectedWorkflow === 'changeRequest' ? '0 4px 12px rgba(124,58,237,0.08)' : 'var(--shadow-sm)',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                 <div
                   style={{
-                    width: '38px',
-                    height: '38px',
-                    borderRadius: '8px',
+                    width: '42px',
+                    height: '42px',
+                    borderRadius: '10px',
                     background: selectedWorkflow === 'changeRequest' ? '#7C3AED' : '#F5F3FF',
                     color: selectedWorkflow === 'changeRequest' ? '#FFFFFF' : '#7C3AED',
                     display: 'flex',
@@ -296,23 +383,23 @@ export function WorkflowsAndTimers() {
                     justifyContent: 'center',
                   }}
                 >
-                  <GitBranch size={18} />
+                  <GitBranch size={20} />
                 </div>
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <strong style={{ fontSize: '14.5px', color: 'var(--text-main)' }}>
-                      Change Request Flow
+                    <strong style={{ fontSize: '15px', color: 'var(--text-main)' }}>
+                      Change Request Governance Flow
                     </strong>
                     <span style={{ fontSize: '10px', background: '#EDE9FE', color: '#6D28D9', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
-                      Active
+                      Enforced
                     </span>
                   </div>
-                  <span style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>
-                    HOD/Admin Review ➔ Testing ➔ Closure
+                  <span style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', marginTop: '2px' }}>
+                    Admin Review ➔ HOD ➔ Management ➔ Testing ➔ Closure
                   </span>
                 </div>
               </div>
-              <ChevronRight size={16} color={selectedWorkflow === 'changeRequest' ? '#7C3AED' : 'var(--text-muted)'} />
+              <ChevronRight size={18} color={selectedWorkflow === 'changeRequest' ? '#7C3AED' : 'var(--text-muted)'} />
             </div>
           </div>
 
@@ -320,88 +407,90 @@ export function WorkflowsAndTimers() {
           {/* PIPELINE 1: STANDARD TICKET FLOW */}
           {/* ========================================================================= */}
           {selectedWorkflow === 'standard' && (
-            <div className="modern-card" style={{ padding: '24px' }}>
+            <div className="modern-card" style={{ padding: '24px 28px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px', flexWrap: 'wrap', gap: '10px' }}>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: 'var(--text-main)' }}>
-                    Standard Ticket Lifecycle Pipeline
-                  </h3>
-                  <p style={{ margin: '3px 0 0', fontSize: '12.5px', color: 'var(--text-muted)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: 'var(--text-main)' }}>
+                      Standard Ticket Lifecycle Pipeline
+                    </h3>
+                    <span style={{ fontSize: '11px', background: '#EFF6FF', color: 'var(--primary)', padding: '2px 8px', borderRadius: '4px', fontWeight: 700 }}>
+                      Default Incident Route
+                    </span>
+                  </div>
+                  <p style={{ margin: '4px 0 0', fontSize: '12.5px', color: 'var(--text-secondary)' }}>
                     Applied automatically to all general incidents and service requests across UFC Desk.
                   </p>
                 </div>
-                <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)', background: '#F1F5F9', padding: '4px 10px', borderRadius: '6px', fontWeight: 600 }}>
-                  Active Template: Standard Workflow
-                </span>
               </div>
 
               {/* Visual Interactive Pipeline Stepper */}
               <div
                 style={{
-                  padding: '20px',
-                  background: '#F8FAFC',
-                  borderRadius: '10px',
+                  padding: '24px 20px',
+                  background: 'linear-gradient(180deg, #F8FAFC 0%, #FFFFFF 100%)',
+                  borderRadius: '12px',
                   border: '1px solid var(--border)',
-                  marginBottom: '24px',
+                  marginBottom: '26px',
                   overflowX: 'auto',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', minWidth: '700px', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', minWidth: '720px', justifyContent: 'space-between' }}>
                   {/* Stage 1 */}
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '6px', width: '130px' }}>
-                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#EFF6FF', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '13px', border: '2px solid #BFDBFE' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#EFF6FF', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '14px', border: '2px solid #BFDBFE' }}>
                       1
                     </div>
-                    <strong style={{ fontSize: '12.5px', color: 'var(--text-main)' }}>Ticket Created</strong>
-                    <span style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>End User Intake</span>
+                    <strong style={{ fontSize: '13px', color: 'var(--text-main)' }}>Ticket Created</strong>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>End User Intake</span>
                   </div>
 
-                  <ArrowRight size={16} color="#94A3B8" />
+                  <ArrowRight size={18} color="#94A3B8" />
 
                   {/* Stage 2 */}
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '6px', width: '150px' }}>
-                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: stdHodApproval ? '#FEF3C7' : '#F1F5F9', color: stdHodApproval ? '#B45309' : '#94A3B8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '13px', border: `2px solid ${stdHodApproval ? '#FDE68A' : '#CBD5E1'}` }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: stdHodApproval ? '#FEF3C7' : '#F1F5F9', color: stdHodApproval ? '#B45309' : '#94A3B8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '14px', border: `2px solid ${stdHodApproval ? '#FDE68A' : '#CBD5E1'}` }}>
                       2
                     </div>
-                    <strong style={{ fontSize: '12.5px', color: stdHodApproval ? 'var(--text-main)' : '#94A3B8' }}>
+                    <strong style={{ fontSize: '13px', color: stdHodApproval ? 'var(--text-main)' : '#94A3B8' }}>
                       {stdHodApproval ? 'HOD Approval' : 'HOD Skipped'}
                     </strong>
-                    <span style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>
-                      {stdHodApproval ? 'Dept Manager (24h)' : 'Bypassed straight to IT'}
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                      {stdHodApproval ? `Dept Manager (${stdHodTimeoutHours}h)` : 'Bypassed straight to IT'}
                     </span>
                   </div>
 
-                  <ArrowRight size={16} color="#94A3B8" />
+                  <ArrowRight size={18} color="#94A3B8" />
 
                   {/* Stage 3 */}
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '6px', width: '140px' }}>
-                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#EFF6FF', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '13px', border: '2px solid #BFDBFE' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#EFF6FF', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '14px', border: '2px solid #BFDBFE' }}>
                       3
                     </div>
-                    <strong style={{ fontSize: '12.5px', color: 'var(--text-main)' }}>Auto-Assignment</strong>
-                    <span style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>Catalog Technicians</span>
+                    <strong style={{ fontSize: '13px', color: 'var(--text-main)' }}>Auto-Assignment</strong>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Designated Specialist</span>
                   </div>
 
-                  <ArrowRight size={16} color="#94A3B8" />
+                  <ArrowRight size={18} color="#94A3B8" />
 
                   {/* Stage 4 */}
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '6px', width: '130px' }}>
-                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#EFF6FF', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '13px', border: '2px solid #BFDBFE' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#EFF6FF', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '14px', border: '2px solid #BFDBFE' }}>
                       4
                     </div>
-                    <strong style={{ fontSize: '12.5px', color: 'var(--text-main)' }}>Technician Work</strong>
-                    <span style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>In Progress &bull; SLA</span>
+                    <strong style={{ fontSize: '13px', color: 'var(--text-main)' }}>Technician Work</strong>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>In Progress &bull; SLA Running</span>
                   </div>
 
-                  <ArrowRight size={16} color="#94A3B8" />
+                  <ArrowRight size={18} color="#94A3B8" />
 
                   {/* Stage 5 */}
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '6px', width: '140px' }}>
-                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '13px', border: '2px solid #BBF7D0' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '14px', border: '2px solid #BBF7D0' }}>
                       5
                     </div>
-                    <strong style={{ fontSize: '12.5px', color: '#15803D' }}>Resolved &amp; Closed</strong>
-                    <span style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>User Verifies Closure</span>
+                    <strong style={{ fontSize: '13px', color: '#15803D' }}>Resolved &amp; Closed</strong>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>User Verifies Closure</span>
                   </div>
                 </div>
               </div>
@@ -413,11 +502,11 @@ export function WorkflowsAndTimers() {
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
                 {/* Control 1: HOD Approval Switch */}
-                <div style={{ padding: '16px', borderRadius: '10px', border: '1px solid var(--border)', background: '#FFFFFF' }}>
+                <div style={{ padding: '18px', borderRadius: '10px', border: '1px solid var(--border)', background: '#FFFFFF' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <UserCheck size={18} color="var(--primary)" />
-                      <strong style={{ fontSize: '13.5px', color: 'var(--text-main)' }}>
+                      <strong style={{ fontSize: '14px', color: 'var(--text-main)' }}>
                         Department Head (HOD) Approval
                       </strong>
                     </div>
@@ -445,7 +534,7 @@ export function WorkflowsAndTimers() {
                         min={1}
                         max={72}
                         className="form-input-control"
-                        style={{ height: '32px', fontSize: '12.5px' }}
+                        style={{ height: '34px', fontSize: '12.5px' }}
                         value={stdHodTimeoutHours}
                         disabled={!stdHodApproval}
                         onChange={(e) => {
@@ -456,11 +545,11 @@ export function WorkflowsAndTimers() {
                     </div>
                     <div>
                       <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '3px' }}>
-                        Timeout Action
+                        Timeout Behavior
                       </label>
                       <select
                         className="form-input-control"
-                        style={{ height: '32px', fontSize: '12px' }}
+                        style={{ height: '34px', fontSize: '12.5px' }}
                         value={stdTimeoutAction}
                         disabled={!stdHodApproval}
                         onChange={(e) => {
@@ -468,27 +557,26 @@ export function WorkflowsAndTimers() {
                           markDirty()
                         }}
                       >
-                        <option value="Notify and escalate to Admin">Escalate to Admin</option>
-                        <option value="Notify user">Notify requester</option>
-                        <option value="Auto-approve">Auto-approve</option>
+                        <option value="Notify and escalate to Admin">Escalate to Admin Queue</option>
+                        <option value="Auto-approve">Auto-approve (Bypass to IT)</option>
                       </select>
                     </div>
                   </div>
                 </div>
 
-                {/* Control 2: End-User Verification & Reopen Rule */}
-                <div style={{ padding: '16px', borderRadius: '10px', border: '1px solid var(--border)', background: '#FFFFFF' }}>
+                {/* Control 2: End User Verification Switch */}
+                <div style={{ padding: '18px', borderRadius: '10px', border: '1px solid var(--border)', background: '#FFFFFF' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                     <ShieldCheck size={18} color="#16A34A" />
-                    <strong style={{ fontSize: '13.5px', color: 'var(--text-main)' }}>
-                      End-User Closure &amp; Reopen Guard
+                    <strong style={{ fontSize: '14px', color: 'var(--text-main)' }}>
+                      End User Verification &amp; Satisfaction Rating
                     </strong>
                   </div>
                   <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.45, margin: '0 0 12px' }}>
-                    Tickets are never auto-closed. When a technician marks resolved, the user verifies the resolution.
+                    When a technician resolves an issue, the ticket transitions to <strong>Resolved</strong>. The user must verify the fix, leave a satisfaction rating (1–5 stars), and confirm closure.
                   </p>
-                  <div style={{ background: '#F8FAFC', padding: '10px', borderRadius: '6px', fontSize: '11.5px', color: 'var(--text-main)', border: '1px solid #E2E8F0' }}>
-                    &bull; <strong>Reopen Exception:</strong> If the user reopens a ticket, it bypasses the original technician and routes directly to the Admin Queue for audit.
+                  <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', padding: '10px 12px', borderRadius: '8px', fontSize: '12px', color: '#166534' }}>
+                    <strong>Mandatory Safeguard:</strong> Reopened tickets bypass technician triage and escalate directly to the Admin Exception Queue.
                   </div>
                 </div>
               </div>
@@ -496,116 +584,139 @@ export function WorkflowsAndTimers() {
           )}
 
           {/* ========================================================================= */}
-          {/* PIPELINE 2: CHANGE REQUEST FLOW (Section 7 Rule) */}
+          {/* PIPELINE 2: CHANGE REQUEST GOVERNANCE FLOW */}
           {/* ========================================================================= */}
           {selectedWorkflow === 'changeRequest' && (
-            <div className="modern-card" style={{ padding: '24px' }}>
+            <div className="modern-card" style={{ padding: '24px 28px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px', flexWrap: 'wrap', gap: '10px' }}>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: 'var(--text-main)' }}>
-                    Change Request Governance Pipeline
-                  </h3>
-                  <p style={{ margin: '3px 0 0', fontSize: '12.5px', color: 'var(--text-muted)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: 'var(--text-main)' }}>
+                      Change Request Governance Pipeline
+                    </h3>
+                    <span style={{ fontSize: '11px', background: '#EDE9FE', color: '#6D28D9', padding: '2px 8px', borderRadius: '4px', fontWeight: 700 }}>
+                      Multi-Stage Authorization
+                    </span>
+                  </div>
+                  <p style={{ margin: '4px 0 0', fontSize: '12.5px', color: 'var(--text-secondary)' }}>
                     Standard Flow: Admin Review ➔ Department Head Approval ➔ Management Sign-off ➔ Implementation ➔ Testing ➔ Closure.
                   </p>
                 </div>
-                <span style={{ fontSize: '11.5px', color: '#6D28D9', background: '#EDE9FE', padding: '4px 10px', borderRadius: '6px', fontWeight: 700 }}>
-                  Active Template: Change Governance Workflow
-                </span>
               </div>
 
               {/* Visual Interactive Pipeline Stepper */}
               <div
                 style={{
-                  padding: '20px',
-                  background: '#FAF5FF',
-                  borderRadius: '10px',
+                  padding: '24px 20px',
+                  background: 'linear-gradient(180deg, #FAF5FF 0%, #FFFFFF 100%)',
+                  borderRadius: '12px',
                   border: '1px solid #E9D5FF',
-                  marginBottom: '24px',
+                  marginBottom: '20px',
                   overflowX: 'auto',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', minWidth: '860px', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', minWidth: '920px', justifyContent: 'space-between' }}>
                   {/* Stage 1: User / Initiation */}
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '6px', width: '120px' }}>
-                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#F5F3FF', color: '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '13px', border: '2px solid #DDD6FE' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#F5F3FF', color: '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '14px', border: '2px solid #DDD6FE' }}>
                       1
                     </div>
-                    <strong style={{ fontSize: '12px', color: 'var(--text-main)' }}>User / Intake</strong>
-                    <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Classified as CR</span>
+                    <strong style={{ fontSize: '12.5px', color: 'var(--text-main)' }}>User / Intake</strong>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Classified as CR</span>
                   </div>
 
-                  <ArrowRight size={16} color="#C4B5FD" />
+                  <ArrowRight size={18} color="#C4B5FD" />
 
                   {/* Stage 2: Administration Team Review (FIRST!) */}
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '6px', width: '130px' }}>
-                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#EDE9FE', color: '#6D28D9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '13px', border: '2px solid #C4B5FD' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '6px', width: '140px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#EDE9FE', color: '#6D28D9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '14px', border: '2px solid #C4B5FD' }}>
                       2
                     </div>
-                    <strong style={{ fontSize: '12px', color: '#6D28D9' }}>Admin Team Review</strong>
-                    <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>1st Review &bull; CAB Scope</span>
+                    <strong style={{ fontSize: '12.5px', color: '#6D28D9' }}>Admin Team Review</strong>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>1st Review &bull; CAB Scope</span>
                   </div>
 
-                  <ArrowRight size={16} color="#C4B5FD" />
+                  <ArrowRight size={18} color="#C4B5FD" />
 
                   {/* Stage 3: Department Head Approval (SECOND!) */}
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '6px', width: '130px' }}>
-                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: crHodApproval ? '#EDE9FE' : '#F1F5F9', color: crHodApproval ? '#6D28D9' : '#94A3B8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '13px', border: `2px solid ${crHodApproval ? '#C4B5FD' : '#CBD5E1'}` }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '6px', width: '140px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: crHodApproval ? '#EDE9FE' : '#F1F5F9', color: crHodApproval ? '#6D28D9' : '#94A3B8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '14px', border: `2px solid ${crHodApproval ? '#C4B5FD' : '#CBD5E1'}` }}>
                       3
                     </div>
-                    <strong style={{ fontSize: '12px', color: crHodApproval ? 'var(--text-main)' : '#94A3B8' }}>
+                    <strong style={{ fontSize: '12.5px', color: crHodApproval ? 'var(--text-main)' : '#94A3B8' }}>
                       {crHodApproval ? 'HOD Approval' : 'HOD Skipped'}
                     </strong>
-                    <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
                       {crHodApproval ? '2nd Approval &bull; Dept Head' : 'Bypassed per policy'}
                     </span>
                   </div>
 
-                  <ArrowRight size={16} color="#C4B5FD" />
+                  <ArrowRight size={18} color="#C4B5FD" />
 
                   {/* Stage 4: Management Approval (THIRD!) */}
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '6px', width: '120px' }}>
-                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: crManagementApproval ? '#EDE9FE' : '#F1F5F9', color: crManagementApproval ? '#6D28D9' : '#94A3B8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '13px', border: `2px solid ${crManagementApproval ? '#C4B5FD' : '#CBD5E1'}` }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '6px', width: '130px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: crManagementApproval ? '#EDE9FE' : '#F1F5F9', color: crManagementApproval ? '#6D28D9' : '#94A3B8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '14px', border: `2px solid ${crManagementApproval ? '#C4B5FD' : '#CBD5E1'}` }}>
                       4
                     </div>
-                    <strong style={{ fontSize: '12px', color: crManagementApproval ? 'var(--text-main)' : '#94A3B8' }}>
+                    <strong style={{ fontSize: '12.5px', color: crManagementApproval ? 'var(--text-main)' : '#94A3B8' }}>
                       {crManagementApproval ? 'Management' : 'Skipped'}
                     </strong>
-                    <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>3rd Approval &bull; Exec</span>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>3rd Approval &bull; Exec</span>
                   </div>
 
-                  <ArrowRight size={16} color="#C4B5FD" />
+                  <ArrowRight size={18} color="#C4B5FD" />
 
                   {/* Stage 5: Implementation Assignment */}
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '6px', width: '130px' }}>
-                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#EFF6FF', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '13px', border: '2px solid #BFDBFE' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '6px', width: '140px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#EFF6FF', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '14px', border: '2px solid #BFDBFE' }}>
                       5
                     </div>
-                    <strong style={{ fontSize: '12px', color: 'var(--text-main)' }}>Implementation</strong>
-                    <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Assigned Technician</span>
+                    <strong style={{ fontSize: '12.5px', color: 'var(--text-main)' }}>Implementation</strong>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Assigned Specialist</span>
                   </div>
 
-                  <ArrowRight size={16} color="#C4B5FD" />
+                  <ArrowRight size={18} color="#C4B5FD" />
 
                   {/* Stage 6: Testing */}
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '6px', width: '120px' }}>
-                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#FCE7F3', color: '#BE185D', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '13px', border: '2px solid #FBCFE8' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '6px', width: '130px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#FCE7F3', color: '#BE185D', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '14px', border: '2px solid #FBCFE8' }}>
                       6
                     </div>
-                    <strong style={{ fontSize: '12px', color: '#9D174D' }}>Testing</strong>
-                    <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Testing Team QA</span>
+                    <strong style={{ fontSize: '12.5px', color: '#9D174D' }}>Testing</strong>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Testing Team QA</span>
                   </div>
 
-                  <ArrowRight size={16} color="#C4B5FD" />
+                  <ArrowRight size={18} color="#C4B5FD" />
 
                   {/* Stage 7: Closure */}
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '6px', width: '110px' }}>
-                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '13px', border: '2px solid #BBF7D0' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '6px', width: '120px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '14px', border: '2px solid #BBF7D0' }}>
                       7
                     </div>
-                    <strong style={{ fontSize: '12px', color: '#15803D' }}>Closure</strong>
-                    <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Requester Signs Off</span>
+                    <strong style={{ fontSize: '12.5px', color: '#15803D' }}>Closure</strong>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Requester Signs Off</span>
                   </div>
+                </div>
+              </div>
+
+              {/* Rejection Notification Banner */}
+              <div
+                style={{
+                  padding: '12px 16px',
+                  borderRadius: '8px',
+                  background: '#FEF2F2',
+                  border: '1px solid #FECACA',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  marginBottom: '22px',
+                  fontSize: '12.5px',
+                  color: '#991B1B',
+                }}
+              >
+                <AlertTriangle size={18} color="#DC2626" style={{ flexShrink: 0 }} />
+                <div>
+                  <strong>Automated Rejection Governance Rule:</strong> If rejected at any stage (Admin, HOD, Management, or Testing), mandatory justification must be provided and appropriate notifications will be immediately dispatched to all parties.
                 </div>
               </div>
 
@@ -616,27 +727,27 @@ export function WorkflowsAndTimers() {
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
                 {/* Control 1: Admin Team Review (1st Review) */}
-                <div style={{ padding: '16px', borderRadius: '10px', border: '1px solid #E9D5FF', background: '#FFFFFF' }}>
+                <div style={{ padding: '18px', borderRadius: '10px', border: '1px solid #E9D5FF', background: '#FFFFFF' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                     <ShieldCheck size={18} color="#7C3AED" />
-                    <strong style={{ fontSize: '13.5px', color: 'var(--text-main)' }}>
+                    <strong style={{ fontSize: '14px', color: 'var(--text-main)' }}>
                       1. Administration Team Review (First Review)
                     </strong>
                   </div>
                   <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.45, margin: '0 0 10px' }}>
                     When classified as a Change Request, tickets are routed directly to the <strong>Administration Team first</strong> for technical risk assessment, rollback plan validation, and change window scheduling.
                   </p>
-                  <span style={{ fontSize: '11px', color: '#6D28D9', fontWeight: 700 }}>
+                  <span style={{ fontSize: '11.5px', color: '#6D28D9', fontWeight: 700 }}>
                     Mandatory Initial Review &bull; Routes to Admin Queue
                   </span>
                 </div>
 
                 {/* Control 2: Department Head Approval (2nd Approval) */}
-                <div style={{ padding: '16px', borderRadius: '10px', border: '1px solid #E9D5FF', background: '#FFFFFF' }}>
+                <div style={{ padding: '18px', borderRadius: '10px', border: '1px solid #E9D5FF', background: '#FFFFFF' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <UserCheck size={18} color="#7C3AED" />
-                      <strong style={{ fontSize: '13.5px', color: 'var(--text-main)' }}>
+                      <strong style={{ fontSize: '14px', color: 'var(--text-main)' }}>
                         2. Department Head Approval (Second)
                       </strong>
                     </div>
@@ -654,17 +765,17 @@ export function WorkflowsAndTimers() {
                   <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.45, margin: '0 0 10px' }}>
                     Once Admin Team validates the scope, ticket routes to requester&apos;s Department Head for formal business sign-off.
                   </p>
-                  <span style={{ fontSize: '11px', color: '#6D28D9', fontWeight: 600 }}>
+                  <span style={{ fontSize: '11.5px', color: '#6D28D9', fontWeight: 600 }}>
                     Status: {crHodApproval ? 'Enabled (Routes to HOD after Admin review)' : 'Bypassed per configuration'}
                   </span>
                 </div>
 
                 {/* Control 3: Management Approval Switch (3rd Approval) */}
-                <div style={{ padding: '16px', borderRadius: '10px', border: '1px solid #E9D5FF', background: '#FFFFFF' }}>
+                <div style={{ padding: '18px', borderRadius: '10px', border: '1px solid #E9D5FF', background: '#FFFFFF' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <Building2 size={18} color="#7C3AED" />
-                      <strong style={{ fontSize: '13.5px', color: 'var(--text-main)' }}>
+                      <strong style={{ fontSize: '14px', color: 'var(--text-main)' }}>
                         3. Management Approval (Third)
                       </strong>
                     </div>
@@ -682,18 +793,18 @@ export function WorkflowsAndTimers() {
                   <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.45, margin: '0 0 10px' }}>
                     Require formal authorization from Executive Management (VP Ops / C-level) prior to implementation.
                   </p>
-                  <span style={{ fontSize: '11px', color: '#6D28D9', fontWeight: 600 }}>
+                  <span style={{ fontSize: '11.5px', color: '#6D28D9', fontWeight: 600 }}>
                     Status: {crManagementApproval ? 'Executive Sign-Off Enabled' : 'Skipped for low-risk changes'}
                   </span>
                 </div>
 
                 {/* Control 4: QA Testing & Notification Rule */}
-                <div style={{ padding: '16px', borderRadius: '10px', border: '1px solid #FBCFE8', background: '#FFFFFF' }}>
+                <div style={{ padding: '18px', borderRadius: '10px', border: '1px solid #FBCFE8', background: '#FFFFFF' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <FlaskConical size={18} color="#BE185D" />
-                      <strong style={{ fontSize: '13.5px', color: 'var(--text-main)' }}>
-                        4. Testing Team Verification &amp; Rejection Rule
+                      <strong style={{ fontSize: '14px', color: 'var(--text-main)' }}>
+                        4. Testing Team Verification
                       </strong>
                     </div>
                     <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
@@ -710,7 +821,7 @@ export function WorkflowsAndTimers() {
                   <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.45, margin: '0 0 10px' }}>
                     Once technician deploys the change, the ticket is forwarded to the Testing Team. If rejected at any stage, appropriate notifications are dispatched.
                   </p>
-                  <span style={{ fontSize: '11px', color: '#BE185D', fontWeight: 700 }}>
+                  <span style={{ fontSize: '11.5px', color: '#BE185D', fontWeight: 700 }}>
                     Rule: Mandatory Testing &bull; If rejected at any stage, notify all stakeholders
                   </span>
                 </div>
@@ -721,36 +832,41 @@ export function WorkflowsAndTimers() {
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 2: TIMERS & SLAS (Section 10 Rule) */}
+      {/* TAB 2: TIMERS & SLAS */}
       {/* ========================================================================= */}
       {activeTab === 'timers' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
           {/* Section A: Operational Governance Thresholds */}
-          <div className="modern-card" style={{ padding: '24px' }}>
+          <div className="modern-card" style={{ padding: '24px 28px' }}>
             <div style={{ marginBottom: '18px' }}>
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: 'var(--text-main)' }}>
-                Operational Thresholds &amp; Escalation Timers
-              </h3>
-              <p style={{ margin: '3px 0 0', fontSize: '12.5px', color: 'var(--text-muted)' }}>
-                Automated safeguards enforcing ticket closure and timely managerial follow-ups.
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: 'var(--text-main)' }}>
+                  Operational Thresholds &amp; Escalation Timers
+                </h3>
+                <span style={{ fontSize: '11px', background: '#EFF6FF', color: 'var(--primary)', padding: '2px 8px', borderRadius: '4px', fontWeight: 700 }}>
+                  Service Safeguards
+                </span>
+              </div>
+              <p style={{ margin: '4px 0 0', fontSize: '12.5px', color: 'var(--text-secondary)' }}>
+                Automated safeguards enforcing ticket closure, timely managerial reviews, and SLA breach escalations.
               </p>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
               {/* Threshold 1: Unclosed Tickets Blocker */}
-              <div style={{ padding: '16px', borderRadius: '10px', border: '1px solid var(--border)', background: '#FFFFFF' }}>
+              <div style={{ padding: '18px', borderRadius: '10px', border: '1px solid var(--border)', background: '#FFFFFF' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                   <ShieldCheck size={18} color="var(--primary)" />
-                  <strong style={{ fontSize: '13.5px', color: 'var(--text-main)' }}>
+                  <strong style={{ fontSize: '14px', color: 'var(--text-main)' }}>
                     Unclosed Tickets Submission Blocker
                   </strong>
                 </div>
                 <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.45, margin: '0 0 12px' }}>
-                  Prevents users from abandoning resolved tickets. Blocks new requests if unclosed count reaches limit.
+                  Prevents users from abandoning resolved tickets. Blocks new requests if unclosed resolved count reaches threshold.
                 </p>
                 <div>
-                  <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '3px' }}>
-                    Maximum Unclosed Tickets Threshold *
+                  <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
+                    Block Threshold (Resolved Tickets) *
                   </label>
                   <input
                     type="number"
@@ -764,31 +880,31 @@ export function WorkflowsAndTimers() {
                       markDirty()
                     }}
                   />
-                  <span style={{ fontSize: '10.5px', color: 'var(--text-muted)', marginTop: '2px', display: 'block' }}>
-                    Standard ITSM baseline: 5 tickets
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '3px', display: 'block' }}>
+                    Standard threshold: 5 unclosed tickets
                   </span>
                 </div>
               </div>
 
-              {/* Threshold 2: HOD Unclosed Escalation Reminder */}
-              <div style={{ padding: '16px', borderRadius: '10px', border: '1px solid var(--border)', background: '#FFFFFF' }}>
+              {/* Threshold 2: Manager Approval Reminder Frequency */}
+              <div style={{ padding: '18px', borderRadius: '10px', border: '1px solid var(--border)', background: '#FFFFFF' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                  <Clock size={18} color="#EA580C" />
-                  <strong style={{ fontSize: '13.5px', color: 'var(--text-main)' }}>
-                    Manager Follow-Up Escalation Reminder
+                  <Bell size={18} color="#D97706" />
+                  <strong style={{ fontSize: '14px', color: 'var(--text-main)' }}>
+                    Manager Approval Reminder Frequency
                   </strong>
                 </div>
                 <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.45, margin: '0 0 12px' }}>
-                  When a ticket is marked resolved, the user has $N$ days to verify. If unverified, alerts their HOD.
+                  Automated email alerts dispatched to Department Heads reminding them to review pending approvals.
                 </p>
                 <div>
-                  <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '3px' }}>
-                    Reminder Threshold (Days) *
+                  <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
+                    Reminder Interval (Days) *
                   </label>
                   <input
                     type="number"
                     min={1}
-                    max={30}
+                    max={14}
                     className="form-input-control"
                     style={{ height: '34px', fontSize: '13px', fontWeight: 700 }}
                     value={hodReminderDays}
@@ -797,17 +913,17 @@ export function WorkflowsAndTimers() {
                       markDirty()
                     }}
                   />
-                  <span style={{ fontSize: '10.5px', color: 'var(--text-muted)', marginTop: '2px', display: 'block' }}>
-                    Standard ITSM baseline: 3 days
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '3px', display: 'block' }}>
+                    Standard ITSM baseline: every 3 days
                   </span>
                 </div>
               </div>
 
               {/* Threshold 3: Approval Timeout Action */}
-              <div style={{ padding: '16px', borderRadius: '10px', border: '1px solid var(--border)', background: '#FFFFFF' }}>
+              <div style={{ padding: '18px', borderRadius: '10px', border: '1px solid var(--border)', background: '#FFFFFF' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                   <AlertCircle size={18} color="#7C3AED" />
-                  <strong style={{ fontSize: '13.5px', color: 'var(--text-main)' }}>
+                  <strong style={{ fontSize: '14px', color: 'var(--text-main)' }}>
                     Approval SLA Timeout Fallback
                   </strong>
                 </div>
@@ -815,7 +931,7 @@ export function WorkflowsAndTimers() {
                   Action executed automatically if an approver fails to review a request within the SLA limit ({hodDefaultTimeoutHours}h).
                 </p>
                 <div>
-                  <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '3px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
                     Timeout Escalation Behavior *
                   </label>
                   <select
@@ -831,8 +947,8 @@ export function WorkflowsAndTimers() {
                     <option value="Notify user">Notify requester only</option>
                     <option value="Auto-approve">Auto-approve (Bypass to IT)</option>
                   </select>
-                  <span style={{ fontSize: '10.5px', color: 'var(--text-muted)', marginTop: '2px', display: 'block' }}>
-                    Default: Escalates to Admin Queue for audit
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '3px', display: 'block' }}>
+                    Default: Escalates to Admin Exception Queue
                   </span>
                 </div>
               </div>
@@ -840,27 +956,29 @@ export function WorkflowsAndTimers() {
           </div>
 
           {/* Section B: Universal Turnaround SLA Targets Table */}
-          <div className="modern-card" style={{ padding: '24px' }}>
+          <div className="modern-card" style={{ padding: '24px 28px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: 'var(--text-main)' }}>
-                  System-Wide SLA Target Matrix by Severity
-                </h3>
-                <p style={{ margin: '3px 0 0', fontSize: '12.5px', color: 'var(--text-muted)' }}>
-                  Default turnaround targets applied across tickets. Specific issue types in Classification can override these.
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: 'var(--text-main)' }}>
+                    System-Wide SLA Target Matrix by Severity
+                  </h3>
+                  <span style={{ fontSize: '11px', color: '#16A34A', background: '#ECFDF5', padding: '2px 8px', borderRadius: '4px', fontWeight: 700 }}>
+                    Policy Baseline
+                  </span>
+                </div>
+                <p style={{ margin: '4px 0 0', fontSize: '12.5px', color: 'var(--text-secondary)' }}>
+                  Default turnaround targets applied across all tickets. Individual issue types in Classification can override these.
                 </p>
               </div>
-              <span style={{ fontSize: '11.5px', color: 'var(--text-muted)', background: '#F1F5F9', padding: '3px 8px', borderRadius: '4px' }}>
-                Editable Policy Matrix
-              </span>
             </div>
 
             <div className="table-responsive-container">
               <table className="custom-data-table">
                 <thead>
                   <tr>
-                    <th style={{ width: '22%' }}>Severity Tier</th>
-                    <th style={{ width: '34%' }}>Operational Criteria &amp; Target</th>
+                    <th style={{ width: '18%' }}>Severity Tier</th>
+                    <th style={{ width: '38%' }}>Operational Criteria &amp; Target</th>
                     <th style={{ width: '22%' }}>Response SLA (Hours)</th>
                     <th style={{ width: '22%' }}>Resolution SLA (Hours)</th>
                   </tr>
@@ -869,9 +987,23 @@ export function WorkflowsAndTimers() {
                   {/* P1 Critical */}
                   <tr>
                     <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '11px', fontWeight: 800, color: '#DC2626', background: '#FEE2E2', padding: '2px 8px', borderRadius: '4px' }}>
-                          P1 CRITICAL
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span
+                          style={{
+                            fontSize: '11px',
+                            fontWeight: 800,
+                            fontFamily: 'var(--font-mono)',
+                            color: '#991B1B',
+                            background: '#FEE2E2',
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            border: '1px solid #FECACA',
+                          }}
+                        >
+                          P1
+                        </span>
+                        <span className="badge-tag badge-tag-sm badge-critical">
+                          Critical
                         </span>
                       </div>
                     </td>
@@ -879,44 +1011,46 @@ export function WorkflowsAndTimers() {
                       <strong style={{ fontSize: '13px', color: 'var(--text-main)', display: 'block' }}>
                         Total Outage / Mission-Critical Blocker
                       </strong>
-                      <span style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>
-                        Immediate engineer response; continuous work until restored.
+                      <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)' }}>
+                        Immediate engineer response; continuous emergency work until restored.
                       </span>
                     </td>
                     <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <input
                           type="number"
                           step={0.25}
                           min={0.1}
                           className="form-input-control"
-                          style={{ width: '90px', height: '32px', fontSize: '12.5px', fontWeight: 700 }}
+                          style={{ width: '90px', height: '34px', fontSize: '13px', fontWeight: 700 }}
                           value={p1Response}
                           onChange={(e) => {
                             setP1Response(parseFloat(e.target.value) || 0.5)
                             markDirty()
                           }}
                         />
-                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                          {p1Response < 1 ? `(${Math.round(p1Response * 60)}m)` : `(${p1Response}h)`}
+                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                          {p1Response < 1 ? `(${Math.round(p1Response * 60)} mins)` : `(${p1Response} hrs)`}
                         </span>
                       </div>
                     </td>
                     <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <input
                           type="number"
                           step={0.5}
                           min={0.5}
                           className="form-input-control"
-                          style={{ width: '90px', height: '32px', fontSize: '12.5px', fontWeight: 700 }}
+                          style={{ width: '90px', height: '34px', fontSize: '13px', fontWeight: 700 }}
                           value={p1Resolution}
                           onChange={(e) => {
                             setP1Resolution(parseFloat(e.target.value) || 2)
                             markDirty()
                           }}
                         />
-                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>hours target</span>
+                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                          ({p1Resolution} hrs target)
+                        </span>
                       </div>
                     </td>
                   </tr>
@@ -924,52 +1058,70 @@ export function WorkflowsAndTimers() {
                   {/* P2 High */}
                   <tr>
                     <td>
-                      <span style={{ fontSize: '11px', fontWeight: 800, color: '#EA580C', background: '#FFEDD5', padding: '2px 8px', borderRadius: '4px' }}>
-                        P2 HIGH
-                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span
+                          style={{
+                            fontSize: '11px',
+                            fontWeight: 800,
+                            fontFamily: 'var(--font-mono)',
+                            color: '#92400E',
+                            background: '#FEF3C7',
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            border: '1px solid #FDE68A',
+                          }}
+                        >
+                          P2
+                        </span>
+                        <span className="badge-tag badge-tag-sm badge-high">
+                          High
+                        </span>
+                      </div>
                     </td>
                     <td>
                       <strong style={{ fontSize: '13px', color: 'var(--text-main)', display: 'block' }}>
                         Severe Degradation / High Business Impact
                       </strong>
-                      <span style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>
-                        Significant disruption without acceptable immediate workaround.
+                      <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)' }}>
+                        Significant operational disruption without acceptable immediate workaround.
                       </span>
                     </td>
                     <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <input
                           type="number"
                           step={0.25}
                           min={0.25}
                           className="form-input-control"
-                          style={{ width: '90px', height: '32px', fontSize: '12.5px', fontWeight: 700 }}
+                          style={{ width: '90px', height: '34px', fontSize: '13px', fontWeight: 700 }}
                           value={p2Response}
                           onChange={(e) => {
                             setP2Response(parseFloat(e.target.value) || 1)
                             markDirty()
                           }}
                         />
-                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                          {p2Response < 1 ? `(${Math.round(p2Response * 60)}m)` : `(${p2Response}h)`}
+                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                          {p2Response < 1 ? `(${Math.round(p2Response * 60)} mins)` : `(${p2Response} hrs)`}
                         </span>
                       </div>
                     </td>
                     <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <input
                           type="number"
                           step={0.5}
                           min={1}
                           className="form-input-control"
-                          style={{ width: '90px', height: '32px', fontSize: '12.5px', fontWeight: 700 }}
+                          style={{ width: '90px', height: '34px', fontSize: '13px', fontWeight: 700 }}
                           value={p2Resolution}
                           onChange={(e) => {
                             setP2Resolution(parseFloat(e.target.value) || 4)
                             markDirty()
                           }}
                         />
-                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>hours target</span>
+                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                          ({p2Resolution} hrs target)
+                        </span>
                       </div>
                     </td>
                   </tr>
@@ -977,52 +1129,70 @@ export function WorkflowsAndTimers() {
                   {/* P3 Medium */}
                   <tr>
                     <td>
-                      <span style={{ fontSize: '11px', fontWeight: 800, color: '#854D0E', background: '#FEF9C3', padding: '2px 8px', borderRadius: '4px' }}>
-                        P3 MEDIUM
-                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span
+                          style={{
+                            fontSize: '11px',
+                            fontWeight: 800,
+                            fontFamily: 'var(--font-mono)',
+                            color: '#1E40AF',
+                            background: '#EFF6FF',
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            border: '1px solid #BFDBFE',
+                          }}
+                        >
+                          P3
+                        </span>
+                        <span className="badge-tag badge-tag-sm badge-medium">
+                          Medium
+                        </span>
+                      </div>
                     </td>
                     <td>
                       <strong style={{ fontSize: '13px', color: 'var(--text-main)', display: 'block' }}>
                         Standard Work Request / Moderate Impact
                       </strong>
-                      <span style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>
+                      <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)' }}>
                         Routine operational inquiry or non-critical issue with workaround.
                       </span>
                     </td>
                     <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <input
                           type="number"
                           step={0.5}
                           min={0.5}
                           className="form-input-control"
-                          style={{ width: '90px', height: '32px', fontSize: '12.5px', fontWeight: 700 }}
+                          style={{ width: '90px', height: '34px', fontSize: '13px', fontWeight: 700 }}
                           value={p3Response}
                           onChange={(e) => {
                             setP3Response(parseFloat(e.target.value) || 2)
                             markDirty()
                           }}
                         />
-                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                          {p3Response < 1 ? `(${Math.round(p3Response * 60)}m)` : `(${p3Response}h)`}
+                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                          {p3Response < 1 ? `(${Math.round(p3Response * 60)} mins)` : `(${p3Response} hrs)`}
                         </span>
                       </div>
                     </td>
                     <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <input
                           type="number"
                           step={1}
                           min={1}
                           className="form-input-control"
-                          style={{ width: '90px', height: '32px', fontSize: '12.5px', fontWeight: 700 }}
+                          style={{ width: '90px', height: '34px', fontSize: '13px', fontWeight: 700 }}
                           value={p3Resolution}
                           onChange={(e) => {
                             setP3Resolution(parseFloat(e.target.value) || 8)
                             markDirty()
                           }}
                         />
-                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>hours target</span>
+                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                          ({p3Resolution} hrs target)
+                        </span>
                       </div>
                     </td>
                   </tr>
@@ -1030,52 +1200,70 @@ export function WorkflowsAndTimers() {
                   {/* P4 Low */}
                   <tr>
                     <td>
-                      <span style={{ fontSize: '11px', fontWeight: 800, color: '#475569', background: '#E2E8F0', padding: '2px 8px', borderRadius: '4px' }}>
-                        P4 LOW
-                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span
+                          style={{
+                            fontSize: '11px',
+                            fontWeight: 800,
+                            fontFamily: 'var(--font-mono)',
+                            color: '#475569',
+                            background: '#F1F5F9',
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            border: '1px solid #CBD5E1',
+                          }}
+                        >
+                          P4
+                        </span>
+                        <span className="badge-tag badge-tag-sm badge-low">
+                          Low
+                        </span>
+                      </div>
                     </td>
                     <td>
                       <strong style={{ fontSize: '13px', color: 'var(--text-main)', display: 'block' }}>
                         Low Priority / Minor Request
                       </strong>
-                      <span style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>
+                      <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)' }}>
                         Informational question, setup guidance, or aesthetic request.
                       </span>
                     </td>
                     <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <input
                           type="number"
                           step={0.5}
                           min={0.5}
                           className="form-input-control"
-                          style={{ width: '90px', height: '32px', fontSize: '12.5px', fontWeight: 700 }}
+                          style={{ width: '90px', height: '34px', fontSize: '13px', fontWeight: 700 }}
                           value={p4Response}
                           onChange={(e) => {
                             setP4Response(parseFloat(e.target.value) || 4)
                             markDirty()
                           }}
                         />
-                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                          {p4Response < 1 ? `(${Math.round(p4Response * 60)}m)` : `(${p4Response}h)`}
+                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                          {p4Response < 1 ? `(${Math.round(p4Response * 60)} mins)` : `(${p4Response} hrs)`}
                         </span>
                       </div>
                     </td>
                     <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <input
                           type="number"
                           step={1}
                           min={1}
                           className="form-input-control"
-                          style={{ width: '90px', height: '32px', fontSize: '12.5px', fontWeight: 700 }}
+                          style={{ width: '90px', height: '34px', fontSize: '13px', fontWeight: 700 }}
                           value={p4Resolution}
                           onChange={(e) => {
                             setP4Resolution(parseFloat(e.target.value) || 24)
                             markDirty()
                           }}
                         />
-                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>hours target</span>
+                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                          ({p4Resolution} hrs target)
+                        </span>
                       </div>
                     </td>
                   </tr>
@@ -1087,7 +1275,7 @@ export function WorkflowsAndTimers() {
       )}
 
       {/* ========================================================================= */}
-      {/* FLOATING UNSAVED-CHANGES BAR (Section 15 Rule) */}
+      {/* FLOATING UNSAVED-CHANGES BAR */}
       {/* ========================================================================= */}
       {hasUnsavedChanges && (
         <div className="unsaved-changes-bar">

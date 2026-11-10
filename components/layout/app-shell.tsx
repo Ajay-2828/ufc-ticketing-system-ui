@@ -28,6 +28,7 @@ import {
   UserCheck,
   Sliders,
   Users,
+  Plus,
   LucideIcon,
 } from 'lucide-react'
 import { useTicketContext } from '@/context/ticket-context'
@@ -83,7 +84,7 @@ export function AppShell({ children }: AppShellProps) {
   const [isAdminExpanded, setIsAdminExpanded] = useState(true)
   const [showRoleDropdown, setShowRoleDropdown] = useState(false)
 
-  // Section 16: Navigation by Role
+  // Navigation by Role - Any user can create tickets
   const navItems: NavItem[] = useMemo(() => {
     switch (currentRole) {
       case 'End User':
@@ -95,6 +96,7 @@ export function AppShell({ children }: AppShellProps) {
       case 'Technician':
         return [
           { label: 'Home', href: '/', icon: LayoutDashboard },
+          { label: 'Create Ticket', href: '/tickets/new', icon: FilePlus2 },
           { label: 'Work Queue', href: '/work-queue', icon: Briefcase },
           { label: 'My Tickets', href: '/tickets', icon: TicketIcon },
           { label: 'Change Requests', href: '/change-requests', icon: GitBranch },
@@ -102,6 +104,7 @@ export function AppShell({ children }: AppShellProps) {
       case 'HOD':
         return [
           { label: 'Home', href: '/', icon: LayoutDashboard },
+          { label: 'Create Ticket', href: '/tickets/new', icon: FilePlus2 },
           {
             label: 'Approvals',
             href: '/approvals',
@@ -114,6 +117,7 @@ export function AppShell({ children }: AppShellProps) {
       case 'Management':
         return [
           { label: 'Home', href: '/', icon: LayoutDashboard },
+          { label: 'Create Ticket', href: '/tickets/new', icon: FilePlus2 },
           {
             label: 'Approvals',
             href: '/approvals',
@@ -128,12 +132,14 @@ export function AppShell({ children }: AppShellProps) {
       case 'Testing Team':
         return [
           { label: 'Home', href: '/', icon: LayoutDashboard },
+          { label: 'Create Ticket', href: '/tickets/new', icon: FilePlus2 },
           {
             label: 'Testing Queue',
             href: '/testing',
             icon: FlaskConical,
             badge: tickets.filter((t) => t.status === 'In Testing').length,
           },
+          { label: 'All Tickets', href: '/tickets', icon: TicketIcon },
         ]
       case 'External Vendor':
         return [
@@ -144,6 +150,7 @@ export function AppShell({ children }: AppShellProps) {
       default:
         return [
           { label: 'Home', href: '/', icon: LayoutDashboard },
+          { label: 'Create Ticket', href: '/tickets/new', icon: FilePlus2 },
           {
             label: 'Admin Queue',
             href: '/exceptions',
@@ -367,6 +374,19 @@ export function AppShell({ children }: AppShellProps) {
           </div>
 
           <div className="topbar-right">
+            {/* Quick Create Ticket for Any User */}
+            {currentRole !== 'External Vendor' && (
+              <button
+                type="button"
+                className="btn-gold"
+                style={{ height: '34px', fontSize: '12.5px', padding: '0 12px', gap: '6px' }}
+                onClick={() => router.push('/tickets/new')}
+                title="Create a new support ticket"
+              >
+                <Plus size={14} /> New Ticket
+              </button>
+            )}
+
             {/* Persona View Switcher */}
             <div className="role-switcher-container">
               <button

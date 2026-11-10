@@ -24,11 +24,14 @@ export function VendorPortal({
   onSelectTicket,
   onResolveTicket,
 }: VendorPortalProps) {
-  // Vendor Isolation: Only tickets where vendor is TechServe or assigned
+  // Vendor Isolation: Only tickets where vendor is TechServe or SecureNet or assigned
   const vendorTickets = tickets.filter(
     (t) =>
-      t.vendor === 'TechServe Ltd' ||
+      Boolean(t.vendor) ||
+      Boolean(t.coAssignee && (t.coAssignee.includes('TechServe') || t.coAssignee.includes('SecureNet') || t.coAssignee.includes('Vendor'))) ||
       t.assignee.includes('TechServe') ||
+      t.assignee.includes('SecureNet') ||
+      t.assignee.includes('Vendor') ||
       t.id === 'INC-2024-0832' ||
       t.id === 'INC-2024-0841'
   )

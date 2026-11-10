@@ -139,8 +139,8 @@ export function DashboardView({
           </p>
         </div>
 
-        {/* Section 17 & User Rule: Gold Create Ticket Button on Dashboard for End User ONLY */}
-        {currentRole === 'End User' && (
+        {/* Create Ticket Button on Dashboard for Any User */}
+        {currentRole !== 'External Vendor' && (
           <button
             type="button"
             className="btn-gold"

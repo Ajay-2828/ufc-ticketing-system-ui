@@ -24,6 +24,7 @@ import {
   departmentsData,
   policySettings,
   Role,
+  standardSeveritySLAs,
 } from '@/app/ticket-data'
 
 interface CreateTicketModalProps {
@@ -88,6 +89,28 @@ export function CreateTicketModal({
   const [attachedFiles, setAttachedFiles] = useState<string[]>([])
   const [submitted, setSubmitted] = useState(false)
 
+  const autoSeverity = activeIssueTypeObj?.autoSeverity || 'Medium'
+  const calculatedPriority =
+    autoSeverity === 'Critical'
+      ? 'P1'
+      : autoSeverity === 'High'
+      ? 'P2'
+      : autoSeverity === 'Medium'
+      ? 'P3'
+      : 'P4'
+  const finalPriority =
+    currentRole !== 'End User' ? priorityOverride : calculatedPriority
+
+  // Fallback to System-Wide Severity SLA Matrix if issue doesn't define custom SLA
+  const targetResolutionHours =
+    activeIssueTypeObj?.slaResolutionHours ??
+    standardSeveritySLAs[autoSeverity]?.resolutionHours ??
+    4
+  const targetResponseHours =
+    activeIssueTypeObj?.slaResponseHours ??
+    standardSeveritySLAs[autoSeverity]?.responseHours ??
+    1
+
   // Get dynamic questionnaire questions
   const questions =
     applicationQuestionnaires[selectedSubClass] ||
@@ -129,18 +152,6 @@ export function CreateTicketModal({
 
     const isCR = activeIssueTypeObj?.isChangeRequest || false
     const crRequiresHod = activeIssueTypeObj?.crRequiresHodApproval !== false
-    const autoSeverity = activeIssueTypeObj?.autoSeverity || 'Medium'
-    const calculatedPriority =
-      autoSeverity === 'Critical'
-        ? 'P1'
-        : autoSeverity === 'High'
-        ? 'P2'
-        : autoSeverity === 'Medium'
-        ? 'P3'
-        : 'P4'
-
-    const finalPriority =
-      currentRole !== 'End User' ? priorityOverride : calculatedPriority
 
     const primaryTechnician = designatedTechnicians[0] || 'Daniel Mensah'
     const coTechnician = designatedTechnicians[1] || undefined
@@ -149,10 +160,14 @@ export function CreateTicketModal({
       ? `CR-2026-${Math.floor(100 + Math.random() * 900)}`
       : `INC-2026-${Math.floor(1000 + Math.random() * 9000)}`
 
+    const isStaffCreator = currentRole === 'HOD' || currentRole === 'Admin Team' || currentRole === 'Technician'
+
     const initialStatus = isDraft
       ? 'Awaiting Clarification'
       : isCR
       ? 'Admin Review'
+      : isStaffCreator
+      ? 'Assigned'
       : 'Pending Approval'
 
     const newTicket: Partial<Ticket> = {
@@ -173,8 +188,8 @@ export function CreateTicketModal({
       creatorAvatar: currentUser.initials,
       assignee: primaryTechnician,
       coAssignee: coTechnician,
-      sla: `${activeIssueTypeObj?.slaResolutionHours || 4}h remaining`,
-      slaTimeRemaining: `0${activeIssueTypeObj?.slaResolutionHours || 4}:00:00`,
+      sla: `${targetResolutionHours}h remaining`,
+      slaTimeRemaining: `0${Math.floor(targetResolutionHours)}:00:00`,
       slaBreached: false,
       hodTimeRemaining: `0${activeIssueTypeObj?.hodApprovalLimitHours || 2}:00:00`,
       created: 'Just now',
@@ -578,6 +593,52 @@ export function CreateTicketModal({
                   </div>
                 </div>
 
+                {/* Severity & Priority Assessment */}
+                <div>
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
+                    Impact &amp; Urgency Assessment
+                  </span>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', marginTop: '6px' }}>
+                    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', padding: '8px 10px' }}>
+                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Auto Severity</span>
+                      <div
+                        style={{
+                          fontSize: '13px',
+                          fontWeight: 700,
+                          color:
+                            autoSeverity === 'Critical'
+                              ? '#DC2626'
+                              : autoSeverity === 'High'
+                              ? '#D97706'
+                              : '#2563EB',
+                          marginTop: '2px',
+                        }}
+                      >
+                        {autoSeverity}
+                      </div>
+                    </div>
+                    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', padding: '8px 10px' }}>
+                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Calculated Priority</span>
+                      <div
+                        style={{
+                          fontSize: '13px',
+                          fontWeight: 800,
+                          fontFamily: 'var(--font-mono)',
+                          color:
+                            finalPriority === 'P1'
+                              ? '#DC2626'
+                              : finalPriority === 'P2'
+                              ? '#D97706'
+                              : '#2563EB',
+                          marginTop: '2px',
+                        }}
+                      >
+                        {finalPriority}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 {/* SLA Targets */}
                 <div>
                   <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
@@ -587,13 +648,13 @@ export function CreateTicketModal({
                     <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', padding: '8px 10px' }}>
                       <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>1st Response</span>
                       <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--primary)', marginTop: '2px' }}>
-                        ⚡ {activeIssueTypeObj?.slaResponseHours || 1}h
+                        ⚡ {targetResponseHours < 1 ? `${Math.round(targetResponseHours * 60)}m` : `${targetResponseHours}h`}
                       </div>
                     </div>
                     <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', padding: '8px 10px' }}>
                       <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Resolution</span>
                       <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--emerald)', marginTop: '2px' }}>
-                        ⏱ {activeIssueTypeObj?.slaResolutionHours || 4}h
+                        ⏱ {targetResolutionHours}h
                       </div>
                     </div>
                   </div>
@@ -607,16 +668,26 @@ export function CreateTicketModal({
                   <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 12px', marginTop: '6px', fontSize: '12.5px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                       <span style={{ color: 'var(--text-muted)' }}>HOD Required:</span>
-                      <strong style={{ color: 'var(--amber)' }}>Yes (Enforced)</strong>
+                      <strong style={{ color: currentRole === 'End User' ? 'var(--amber)' : '#16A34A' }}>
+                        {currentRole === 'End User' ? 'Yes (Enforced)' : `Bypassed (${currentRole})`}
+                      </strong>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                      <span style={{ color: 'var(--text-muted)' }}>Approver (from AD):</span>
-                      <strong>{userDeptConfig?.hodName || 'Grace Nsubuga'}</strong>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ color: 'var(--text-muted)' }}>Approval Limit:</span>
-                      <strong>{activeIssueTypeObj?.hodApprovalLimitHours || 2} hours</strong>
-                    </div>
+                    {currentRole === 'End User' ? (
+                      <>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                          <span style={{ color: 'var(--text-muted)' }}>Approver (from AD):</span>
+                          <strong>{userDeptConfig?.hodName || 'Grace Nsubuga'}</strong>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ color: 'var(--text-muted)' }}>Approval Limit:</span>
+                          <strong>{activeIssueTypeObj?.hodApprovalLimitHours || 2} hours</strong>
+                        </div>
+                      </>
+                    ) : (
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                        Authorized by {currentRole} &bull; Directly dispatched to assigned technician upon creation.
+                      </div>
+                    )}
                   </div>
                 </div>
 

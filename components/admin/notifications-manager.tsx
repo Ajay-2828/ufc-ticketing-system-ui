@@ -14,6 +14,12 @@ import {
   RotateCcw,
   Code,
   Eye,
+  Send,
+  MessageSquare,
+  Check,
+  ChevronRight,
+  SlidersHorizontal,
+  ExternalLink,
 } from 'lucide-react'
 import { notificationEvents } from '@/app/ticket-data'
 
@@ -53,19 +59,19 @@ export function NotificationsManager() {
 
   const handleSave = () => {
     setHasUnsavedChanges(false)
-    triggerToast('Notification channels & templates saved successfully!')
+    triggerToast('Notification delivery preferences & templates saved!')
   }
 
   const handleDiscard = () => {
     setEvents(notificationEvents)
     setHasUnsavedChanges(false)
-    triggerToast('Changes discarded.')
+    triggerToast('All changes discarded.')
   }
 
   const activeEvent = events.find((e) => e.id === selectedEventId) || events[0]
 
   return (
-    <div>
+    <div style={{ maxWidth: '1240px', margin: '0 auto', paddingBottom: '90px' }}>
       {/* Toast */}
       {toastMessage && (
         <div
@@ -92,15 +98,20 @@ export function NotificationsManager() {
         </div>
       )}
 
-      {/* Header */}
-      <div className="page-header-flex">
+      {/* Page Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '14px' }}>
         <div>
           <div className="page-eyebrow">
-            <Bell size={14} /> Notification Settings
+            <Bell size={13} />
+            <span>Communications Gateway</span>
+            <span style={{ color: 'var(--text-muted)' }}>&bull;</span>
+            <span style={{ color: '#16A34A', fontWeight: 700 }}>2-Way Email Sync Active</span>
           </div>
-          <h1 className="page-title-main">Notification Gateway &amp; Templates</h1>
-          <p className="page-desc-sub">
-            In-app and email notification templates. When a user replies to an email notification, their response is automatically synced into the ticket timeline.
+          <h1 className="page-title-main" style={{ fontSize: '24px', fontWeight: 800, margin: '4px 0 0' }}>
+            Notifications &amp; Alert Delivery
+          </h1>
+          <p className="page-desc-sub" style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '4px 0 0' }}>
+            Configure automatic email alerts and in-app notifications. When users reply to notification emails, their responses sync directly into the ticket timeline.
           </p>
         </div>
 
@@ -108,53 +119,136 @@ export function NotificationsManager() {
         <div
           style={{
             display: 'flex',
-            background: 'var(--surface)',
+            background: 'var(--surface-subtle)',
             border: '1px solid var(--border)',
-            borderRadius: '8px',
-            padding: '3px',
+            borderRadius: '10px',
+            padding: '4px',
+            gap: '4px',
           }}
         >
           <button
             type="button"
             className="btn-secondary"
             style={{
-              height: '32px',
-              fontSize: '12.5px',
+              height: '36px',
+              padding: '0 16px',
+              fontSize: '13px',
               border: 'none',
-              background: activeTab === 'matrix' ? 'var(--primary-soft)' : 'transparent',
+              borderRadius: '7px',
+              background: activeTab === 'matrix' ? '#FFFFFF' : 'transparent',
               color: activeTab === 'matrix' ? 'var(--primary)' : 'var(--text-secondary)',
               fontWeight: activeTab === 'matrix' ? 700 : 500,
+              boxShadow: activeTab === 'matrix' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+              gap: '6px',
             }}
             onClick={() => setActiveTab('matrix')}
           >
-            <Bell size={14} /> Event Delivery Matrix ({events.length})
+            <Bell size={14} /> Event Matrix ({events.length})
           </button>
           <button
             type="button"
             className="btn-secondary"
             style={{
-              height: '32px',
-              fontSize: '12.5px',
+              height: '36px',
+              padding: '0 16px',
+              fontSize: '13px',
               border: 'none',
-              background: activeTab === 'templates' ? 'var(--primary-soft)' : 'transparent',
+              borderRadius: '7px',
+              background: activeTab === 'templates' ? '#FFFFFF' : 'transparent',
               color: activeTab === 'templates' ? 'var(--primary)' : 'var(--text-secondary)',
               fontWeight: activeTab === 'templates' ? 700 : 500,
+              boxShadow: activeTab === 'templates' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+              gap: '6px',
             }}
             onClick={() => setActiveTab('templates')}
           >
-            <Mail size={14} /> Template Editor
+            <Mail size={14} /> Template Editor &amp; Preview
           </button>
+        </div>
+      </div>
+
+      {/* Top Operational KPI Metrics */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px', marginBottom: '22px' }}>
+        <div className="modern-card" style={{ padding: '16px 18px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#EFF6FF', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Bell size={20} />
+          </div>
+          <div>
+            <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)', fontWeight: 700 }}>
+              Lifecycle Triggers
+            </span>
+            <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-main)', marginTop: '2px' }}>
+              {events.length} Active Events
+            </div>
+            <span style={{ fontSize: '11px', color: '#16A34A', fontWeight: 600 }}>Real-time event capture</span>
+          </div>
+        </div>
+
+        <div className="modern-card" style={{ padding: '16px 18px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#ECFDF5', color: '#047857', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Mail size={20} />
+          </div>
+          <div>
+            <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)', fontWeight: 700 }}>
+              Dual Channels
+            </span>
+            <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-main)', marginTop: '2px' }}>
+              Email &amp; In-App Push
+            </div>
+            <span style={{ fontSize: '11px', color: '#047857', fontWeight: 600 }}>Omnichannel delivery</span>
+          </div>
+        </div>
+
+        <div className="modern-card" style={{ padding: '16px 18px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#F5F3FF', color: '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <MessageSquare size={20} />
+          </div>
+          <div>
+            <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)', fontWeight: 700 }}>
+              Two-Way Email Sync
+            </span>
+            <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-main)', marginTop: '2px' }}>
+              Active &amp; Parsed
+            </div>
+            <span style={{ fontSize: '11px', color: '#7C3AED', fontWeight: 600 }}>Replies post to timeline</span>
+          </div>
+        </div>
+
+        <div className="modern-card" style={{ padding: '16px 18px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#FEF3C7', color: '#B45309', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Sparkles size={20} />
+          </div>
+          <div>
+            <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)', fontWeight: 700 }}>
+              Average Dispatch
+            </span>
+            <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-main)', marginTop: '2px' }}>
+              &lt; 1.5 Seconds
+            </div>
+            <span style={{ fontSize: '11px', color: '#B45309', fontWeight: 600 }}>High-throughput gateway</span>
+          </div>
         </div>
       </div>
 
       {/* TAB 1: EVENT DELIVERY MATRIX */}
       {activeTab === 'matrix' && (
-        <div className="modern-card">
-          <div className="modern-card-header">
+        <div className="modern-card" style={{ padding: 0, overflow: 'hidden' }}>
+          <div
+            style={{
+              padding: '16px 22px',
+              borderBottom: '1px solid var(--border)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: '#FFFFFF',
+            }}
+          >
             <div>
-              <h3 className="card-title-lg">Event Matrix ({events.length} Standard Triggers)</h3>
-              <p className="card-subtitle-sm">
-                Toggle delivery channels per event and configure message templates with dynamic merge tokens.
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: 'var(--text-main)' }}>
+                Lifecycle Event Delivery Matrix
+              </h3>
+              <p style={{ margin: '3px 0 0', fontSize: '12.5px', color: 'var(--text-muted)' }}>
+                Toggle which delivery channels fire for each lifecycle trigger.
               </p>
             </div>
           </div>
@@ -163,11 +257,11 @@ export function NotificationsManager() {
             <table className="custom-data-table">
               <thead>
                 <tr>
-                  <th>Lifecycle Event Trigger</th>
-                  <th>Target Recipients</th>
-                  <th style={{ width: '130px' }}>Email Channel</th>
-                  <th style={{ width: '130px' }}>In-App Channel</th>
-                  <th style={{ width: '90px', textAlign: 'right' }}>Template</th>
+                  <th style={{ width: '38%' }}>Lifecycle Event Trigger</th>
+                  <th style={{ width: '28%' }}>Target Stakeholders</th>
+                  <th style={{ width: '15%' }}>Email Alert</th>
+                  <th style={{ width: '15%' }}>In-App Alert</th>
+                  <th style={{ width: '4%', textAlign: 'right' }}></th>
                 </tr>
               </thead>
               <tbody>
@@ -177,7 +271,9 @@ export function NotificationsManager() {
                       <div style={{ fontWeight: 700, fontSize: '13.5px', color: 'var(--text-main)' }}>
                         {ev.name}
                       </div>
-                      <div style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>{ev.description}</div>
+                      <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                        {ev.description}
+                      </div>
                     </td>
                     <td>
                       <span className="badge-tag badge-tag-sm" style={{ background: '#EFF6FF', color: '#1D4ED8', fontWeight: 600 }}>
@@ -185,28 +281,28 @@ export function NotificationsManager() {
                       </span>
                     </td>
                     <td>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                      <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                         <input
                           type="checkbox"
                           checked={ev.defaultEmail}
                           onChange={() => toggleEmail(ev.id)}
                           style={{ width: '16px', height: '16px' }}
                         />
-                        <span style={{ fontSize: '13px', color: ev.defaultEmail ? 'var(--emerald)' : 'var(--text-muted)', fontWeight: 600 }}>
-                          {ev.defaultEmail ? 'Active' : 'Disabled'}
+                        <span style={{ fontSize: '12.5px', color: ev.defaultEmail ? '#15803D' : 'var(--text-muted)', fontWeight: 600 }}>
+                          {ev.defaultEmail ? 'Enabled' : 'Disabled'}
                         </span>
                       </label>
                     </td>
                     <td>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                      <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                         <input
                           type="checkbox"
                           checked={ev.defaultInApp}
                           onChange={() => toggleInApp(ev.id)}
                           style={{ width: '16px', height: '16px' }}
                         />
-                        <span style={{ fontSize: '13px', color: ev.defaultInApp ? 'var(--emerald)' : 'var(--text-muted)', fontWeight: 600 }}>
-                          {ev.defaultInApp ? 'Active' : 'Disabled'}
+                        <span style={{ fontSize: '12.5px', color: ev.defaultInApp ? '#15803D' : 'var(--text-muted)', fontWeight: 600 }}>
+                          {ev.defaultInApp ? 'Enabled' : 'Disabled'}
                         </span>
                       </label>
                     </td>
@@ -214,7 +310,7 @@ export function NotificationsManager() {
                       <button
                         type="button"
                         className="btn-secondary"
-                        style={{ height: '30px', padding: '0 10px', fontSize: '12px' }}
+                        style={{ height: '30px', padding: '0 10px', fontSize: '11.5px', gap: '4px' }}
                         onClick={() => {
                           setSelectedEventId(ev.id)
                           setActiveTab('templates')
@@ -231,118 +327,189 @@ export function NotificationsManager() {
         </div>
       )}
 
-      {/* TAB 2: TEMPLATE EDITOR */}
+      {/* TAB 2: TEMPLATE EDITOR & LIVE PREVIEW */}
       {activeTab === 'templates' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: '24px', alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', alignItems: 'start' }}>
+          {/* Left: Editor Controls */}
           <div className="modern-card" style={{ padding: '24px' }}>
-            <div className="form-field-group">
-              <label className="form-field-label">Selected Notification Event</label>
-              <select
-                className="form-input-control"
-                value={selectedEventId}
-                onChange={(e) => setSelectedEventId(e.target.value)}
-              >
-                {events.map((ev) => (
-                  <option key={ev.id} value={ev.id}>
-                    {ev.name} ({ev.recipients})
-                  </option>
-                ))}
-              </select>
+            <div style={{ marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: 'var(--text-main)' }}>
+                Template Content Editor
+              </h3>
+              <p style={{ margin: '3px 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>
+                Customize email subject and body with dynamic merge variables.
+              </p>
             </div>
 
-            {/* Variable Pills */}
-            <div style={{ marginBottom: '18px' }}>
-              <label className="form-field-label">Available Dynamic Merge Variables (Click to Insert)</label>
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '6px' }}>
-                {['ticket_no', 'subject', 'assignee', 'requester', 'sla_time', 'app', 'priority', 'status'].map(
-                  (v) => (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Event Selector */}
+              <div className="form-field-group">
+                <label className="form-field-label">Target Trigger Event</label>
+                <select
+                  className="form-input-control"
+                  value={selectedEventId}
+                  onChange={(e) => setSelectedEventId(e.target.value)}
+                  style={{ fontSize: '13px' }}
+                >
+                  {events.map((ev) => (
+                    <option key={ev.id} value={ev.id}>
+                      {ev.name} ({ev.recipients})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Clickable Merge Variables */}
+              <div>
+                <label className="form-field-label">
+                  Dynamic Merge Variables (Click to Insert)
+                </label>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '6px' }}>
+                  {[
+                    'ticket_no',
+                    'subject',
+                    'assignee',
+                    'requester',
+                    'app',
+                    'priority',
+                    'status',
+                    'sla_time',
+                    'hod_name',
+                  ].map((v) => (
                     <button
                       key={v}
                       type="button"
-                      onClick={() => handleInsertVariable(v)}
+                      className="btn-secondary"
                       style={{
-                        padding: '4px 10px',
-                        background: 'var(--surface-muted)',
-                        border: '1px solid var(--border)',
-                        borderRadius: '6px',
-                        fontSize: '12px',
-                        fontFamily: 'monospace',
+                        height: '26px',
+                        padding: '0 8px',
+                        fontSize: '11px',
+                        fontFamily: 'var(--font-mono)',
+                        background: '#F1F5F9',
                         color: 'var(--primary)',
-                        cursor: 'pointer',
-                        fontWeight: 600,
+                        borderColor: '#E2E8F0',
                       }}
+                      onClick={() => handleInsertVariable(v)}
                     >
-                      +{`{${v}}`}
+                      +{'{' + v + '}'}
                     </button>
-                  )
-                )}
-              </div>
-            </div>
-
-            <div className="form-field-group">
-              <label className="form-field-label">Email Subject Template *</label>
-              <input
-                type="text"
-                className="form-input-control"
-                value={templateSubject}
-                onChange={(e) => {
-                  setTemplateSubject(e.target.value)
-                  markDirty()
-                }}
-              />
-            </div>
-
-            <div className="form-field-group">
-              <label className="form-field-label">Email Body Template (HTML & Markdown) *</label>
-              <textarea
-                rows={10}
-                className="form-input-control"
-                style={{ fontFamily: 'monospace', fontSize: '12.5px', lineHeight: 1.5 }}
-                value={templateBody}
-                onChange={(e) => {
-                  setTemplateBody(e.target.value)
-                  markDirty()
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Right Column: Live Email Preview */}
-          <div className="modern-card" style={{ padding: '20px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--primary)', fontWeight: 700, marginBottom: '12px' }}>
-              <Eye size={16} /> Live Ingestion Preview
-            </div>
-
-            <div style={{ background: '#F8FAFC', border: '1px solid var(--border)', borderRadius: '10px', padding: '14px', fontSize: '12.5px' }}>
-              <div style={{ borderBottom: '1px solid var(--border)', paddingBottom: '8px', marginBottom: '10px' }}>
-                <div style={{ color: 'var(--text-muted)' }}>From: <b>UFC Service Desk &lt;notifications@desk.ufc.om&gt;</b></div>
-                <div style={{ color: 'var(--text-muted)' }}>To: <b>{activeEvent.recipients}</b></div>
-                <div style={{ color: 'var(--text-main)', fontWeight: 700, marginTop: '4px' }}>
-                  {templateSubject.replace('{ticket_no}', 'INC-2026-8841').replace('{subject}', 'Flexcube Login Failure')}
+                  ))}
                 </div>
               </div>
 
-              <div style={{ whiteSpace: 'pre-line', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+              {/* Subject Line */}
+              <div className="form-field-group">
+                <label className="form-field-label">Email Subject Line</label>
+                <input
+                  type="text"
+                  className="form-input-control"
+                  value={templateSubject}
+                  onChange={(e) => {
+                    setTemplateSubject(e.target.value)
+                    markDirty()
+                  }}
+                  style={{ fontSize: '13px' }}
+                />
+              </div>
+
+              {/* Body Text */}
+              <div className="form-field-group">
+                <label className="form-field-label">Message Body (Plain Text &amp; Variables)</label>
+                <textarea
+                  className="form-input-control"
+                  rows={9}
+                  value={templateBody}
+                  onChange={(e) => {
+                    setTemplateBody(e.target.value)
+                    markDirty()
+                  }}
+                  style={{ fontSize: '12.5px', lineHeight: 1.55, fontFamily: 'var(--font-mono)' }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Live Email Preview Pane */}
+          <div className="modern-card" style={{ padding: '24px', background: '#F8FAFC', border: '1.5px solid var(--border)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+              <Eye size={18} color="var(--primary)" />
+              <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: 'var(--text-main)' }}>
+                Live Stakeholder Email Preview
+              </h3>
+            </div>
+
+            <div
+              style={{
+                background: '#FFFFFF',
+                borderRadius: '10px',
+                border: '1px solid var(--border)',
+                overflow: 'hidden',
+                boxShadow: 'var(--shadow-sm)',
+              }}
+            >
+              {/* Fake Email Client Header */}
+              <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)', background: '#FAFAFA' }}>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>
+                  <strong>From:</strong> UFC Desk Notifications &lt;no-reply@desk.ufc.om&gt;
+                </div>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>
+                  <strong>To:</strong> {activeEvent.recipients}
+                </div>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-main)', marginTop: '6px' }}>
+                  <strong>Subject:</strong>{' '}
+                  {templateSubject
+                    .replace('{ticket_no}', 'INC-2026-8842')
+                    .replace('{subject}', 'Flexcube Database Lockout')}
+                </div>
+              </div>
+
+              {/* Fake Email Body */}
+              <div style={{ padding: '20px 22px', fontSize: '13px', color: 'var(--text-main)', lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>
                 {templateBody
-                  .replace(/{ticket_no}/g, 'INC-2026-8841')
-                  .replace(/{subject}/g, 'Flexcube Login Failure')
-                  .replace(/{assignee}/g, 'Daniel Mensah')
-                  .replace(/{app}/g, 'Flexcube')
-                  .replace(/{priority}/g, 'P1')
-                  .replace(/{sla_time}/g, '1h 45m')}
+                  .replace(/\{ticket_no\}/g, 'INC-2026-8842')
+                  .replace(/\{subject\}/g, 'Flexcube Database Lockout')
+                  .replace(/\{assignee\}/g, 'Daniel Mensah')
+                  .replace(/\{requester\}/g, 'Tariq Bello')
+                  .replace(/\{app\}/g, 'Flexcube')
+                  .replace(/\{priority\}/g, 'P1 - Critical')
+                  .replace(/\{status\}/g, 'In Progress')
+                  .replace(/\{sla_time\}/g, '01:45:00 remaining')
+                  .replace(/\{hod_name\}/g, 'Grace Nwosu')}
+              </div>
+
+              {/* Action Button Preview */}
+              <div style={{ padding: '0 22px 20px' }}>
+                <div
+                  style={{
+                    display: 'inline-block',
+                    background: 'var(--primary)',
+                    color: '#FFFFFF',
+                    padding: '8px 16px',
+                    borderRadius: '6px',
+                    fontWeight: 700,
+                    fontSize: '12.5px',
+                  }}
+                >
+                  View Ticket INC-2026-8842 &rarr;
+                </div>
+              </div>
+
+              {/* Footer Note */}
+              <div style={{ padding: '12px 22px', background: '#F8FAFC', borderTop: '1px solid var(--border)', fontSize: '11px', color: 'var(--text-muted)' }}>
+                Direct email replies to this alert are automatically parsed and appended to the ticket timeline.
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* UNSAVED CHANGES FLOATING BAR (Section 15) */}
+      {/* FLOATING UNSAVED CHANGES BAR */}
       {hasUnsavedChanges && (
         <div className="unsaved-changes-bar">
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <AlertCircle size={18} color="#FBBF24" />
             <span style={{ fontSize: '13.5px', fontWeight: 600 }}>
-              You have unsaved changes in Notifications.
+              You have unsaved changes in notification channels or templates.
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -350,24 +517,24 @@ export function NotificationsManager() {
               type="button"
               className="btn-secondary"
               style={{
-                height: '32px',
-                fontSize: '12px',
-                padding: '0 12px',
-                background: 'rgba(255, 255, 255, 0.1)',
-                borderColor: 'rgba(255, 255, 255, 0.2)',
+                background: 'rgba(255,255,255,0.1)',
                 color: '#FFFFFF',
+                borderColor: 'rgba(255,255,255,0.2)',
               }}
               onClick={handleDiscard}
             >
-              Discard
+              <RotateCcw size={14} /> Discard Changes
             </button>
             <button
               type="button"
               className="btn-primary"
-              style={{ height: '32px', fontSize: '12px', padding: '0 14px' }}
+              style={{
+                background: 'var(--primary)',
+                borderColor: 'var(--primary)',
+              }}
               onClick={handleSave}
             >
-              <Save size={13} /> Save Changes
+              <Save size={14} /> Save Changes
             </button>
           </div>
         </div>

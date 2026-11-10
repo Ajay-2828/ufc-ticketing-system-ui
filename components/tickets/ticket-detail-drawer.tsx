@@ -455,10 +455,41 @@ export function TicketDetailDrawer({
                   fontWeight: 700,
                 }}
               >
-                {ticket.severity}
+                Severity: {ticket.severity}
               </span>
-              <span className="badge-tag badge-tag-sm" style={{ background: '#F1F5F9', color: '#475569' }}>
-                {ticket.priority}
+              <span
+                className="badge-tag badge-tag-sm"
+                style={{
+                  background:
+                    ticket.priority === 'P1'
+                      ? '#FEE2E2'
+                      : ticket.priority === 'P2'
+                      ? '#FEF3C7'
+                      : ticket.priority === 'P3'
+                      ? '#EFF6FF'
+                      : '#F1F5F9',
+                  color:
+                    ticket.priority === 'P1'
+                      ? '#991B1B'
+                      : ticket.priority === 'P2'
+                      ? '#92400E'
+                      : ticket.priority === 'P3'
+                      ? '#1E40AF'
+                      : '#475569',
+                  border: `1px solid ${
+                    ticket.priority === 'P1'
+                      ? '#FECACA'
+                      : ticket.priority === 'P2'
+                      ? '#FDE68A'
+                      : ticket.priority === 'P3'
+                      ? '#BFDBFE'
+                      : '#E2E8F0'
+                  }`,
+                  fontFamily: 'var(--font-mono)',
+                  fontWeight: 700,
+                }}
+              >
+                Priority: {ticket.priority}
               </span>
             </div>
 

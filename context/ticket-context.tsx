@@ -343,7 +343,12 @@ export function TicketProvider({ children }: { children: ReactNode }) {
       )
     } else if (currentRole === 'External Vendor') {
       result = tickets.filter(
-        (t) => t.assignee.includes('TechServe') || t.assignee.includes('Vendor')
+        (t) =>
+          Boolean(t.vendor) ||
+          Boolean(t.coAssignee && (t.coAssignee.includes('TechServe') || t.coAssignee.includes('Vendor') || t.coAssignee.includes('SecureNet'))) ||
+          t.assignee.includes('TechServe') ||
+          t.assignee.includes('Vendor') ||
+          t.assignee.includes('SecureNet')
       )
     }
 

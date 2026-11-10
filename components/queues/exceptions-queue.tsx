@@ -28,27 +28,31 @@ export function ExceptionsQueue({
   onAssignTicket,
   onReferTicket,
 }: ExceptionsQueueProps) {
-  const [activeFilter, setActiveFilter] = useState<'All' | 'Reopened' | 'Change Request'>('All')
+  const [activeFilter, setActiveFilter] = useState<'All' | 'Reopened' | 'Change Request' | 'SLA Breached'>('All')
   const [openMenuTicketId, setOpenMenuTicketId] = useState<string | null>(null)
 
   // Section 9: Only tickets that left the standard flow appear here:
   // 1. Reopened: an end user reopened a resolved ticket.
   // 2. Change Request: a technician flagged or referred a ticket to Admin, or HOD approval was not required.
+  // 3. SLA Breached: technician or approver exceeded configured SLA threshold.
   // Normal tickets NEVER appear here.
   const exceptionTickets = tickets.filter((t) => {
     const isReopened = t.status === 'Reopened'
     const isChangeRequest = t.type === 'Change Request' || t.status === 'Admin Review'
+    const isBreached = Boolean(t.slaBreached)
 
-    if (!isReopened && !isChangeRequest) return false
+    if (!isReopened && !isChangeRequest && !isBreached) return false
 
     if (activeFilter === 'Reopened') return isReopened
     if (activeFilter === 'Change Request') return isChangeRequest
+    if (activeFilter === 'SLA Breached') return isBreached
     return true
   })
 
   const reopenedCount = tickets.filter((t) => t.status === 'Reopened').length
   const crCount = tickets.filter((t) => t.type === 'Change Request' || t.status === 'Admin Review').length
-  const totalExceptions = reopenedCount + crCount
+  const breachedCount = tickets.filter((t) => Boolean(t.slaBreached)).length
+  const totalExceptions = reopenedCount + crCount + breachedCount
 
   return (
     <div>
@@ -124,6 +128,25 @@ export function ExceptionsQueue({
           }}
         >
           Change Requests ({crCount})
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveFilter('SLA Breached')}
+          style={{
+            height: '36px',
+            padding: '0 16px',
+            fontSize: '13px',
+            borderRadius: '20px',
+            border: activeFilter === 'SLA Breached' ? '1px solid #DC2626' : '1px solid var(--border)',
+            background: activeFilter === 'SLA Breached' ? '#FEF2F2' : 'var(--surface)',
+            color: activeFilter === 'SLA Breached' ? '#DC2626' : 'var(--text-secondary)',
+            fontWeight: activeFilter === 'SLA Breached' ? 700 : 500,
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
+          }}
+        >
+          SLA Breached ({breachedCount})
         </button>
       </div>
 
@@ -205,6 +228,13 @@ export function ExceptionsQueue({
                               style={{ background: '#FEF2F2', color: '#B91C1C', fontWeight: 700 }}
                             >
                               Reopened
+                            </span>
+                          ) : ticket.slaBreached ? (
+                            <span
+                              className="badge-tag badge-tag-sm"
+                              style={{ background: '#FEF2F2', color: '#DC2626', fontWeight: 700 }}
+                            >
+                              SLA Breached
                             </span>
                           ) : (
                             <span

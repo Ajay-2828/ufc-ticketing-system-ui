@@ -16,7 +16,7 @@ import {
   User,
   SlidersHorizontal,
 } from 'lucide-react'
-import { Ticket, TicketType, TicketStatus, TicketSeverity } from '@/app/ticket-data'
+import { Ticket, TicketType, TicketStatus, TicketSeverity, departmentsData } from '@/app/ticket-data'
 
 interface TicketListProps {
   tickets: Ticket[]
@@ -333,7 +333,7 @@ export function TicketList({
                 <th>Subject &amp; Requester</th>
                 <th>Type</th>
                 <th>Status</th>
-                <th>Priority</th>
+                <th>Priority &amp; Severity</th>
                 <th>Application</th>
                 <th>Assignee</th>
                 <th>SLA Remaining</th>
@@ -449,11 +449,50 @@ export function TicketList({
                         </span>
                       </td>
 
-                      {/* Priority / Severity */}
+                      {/* Priority & Severity */}
                       <td>
-                        <span className={`badge-tag badge-tag-sm ${getSeverityBadge(t.severity)}`}>
-                          {t.severity}
-                        </span>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                          <span
+                            title={`Priority: ${t.priority}`}
+                            style={{
+                              fontSize: '11px',
+                              fontWeight: 800,
+                              fontFamily: 'var(--font-mono)',
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              background:
+                                t.priority === 'P1'
+                                  ? '#FEE2E2'
+                                  : t.priority === 'P2'
+                                  ? '#FEF3C7'
+                                  : t.priority === 'P3'
+                                  ? '#EFF6FF'
+                                  : '#F1F5F9',
+                              color:
+                                t.priority === 'P1'
+                                  ? '#991B1B'
+                                  : t.priority === 'P2'
+                                  ? '#92400E'
+                                  : t.priority === 'P3'
+                                  ? '#1E40AF'
+                                  : '#475569',
+                              border: `1px solid ${
+                                t.priority === 'P1'
+                                  ? '#FECACA'
+                                  : t.priority === 'P2'
+                                  ? '#FDE68A'
+                                  : t.priority === 'P3'
+                                  ? '#BFDBFE'
+                                  : '#E2E8F0'
+                              }`,
+                            }}
+                          >
+                            {t.priority}
+                          </span>
+                          <span className={`badge-tag badge-tag-sm ${getSeverityBadge(t.severity)}`}>
+                            {t.severity}
+                          </span>
+                        </div>
                       </td>
 
                       {/* Application */}
@@ -465,29 +504,58 @@ export function TicketList({
 
                       {/* Assignee */}
                       <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span
-                            className="user-avatar-circle avatar-indigo"
-                            style={{
-                              width: '24px',
-                              height: '24px',
-                              fontSize: '10px',
-                              background: t.assignee === 'Unassigned' ? '#F1F5F9' : undefined,
-                              color: t.assignee === 'Unassigned' ? '#64748B' : undefined,
-                            }}
-                          >
-                            {initials}
-                          </span>
-                          <span
-                            style={{
-                              fontSize: '12.5px',
-                              color: t.assignee === 'Unassigned' ? 'var(--text-muted)' : 'var(--text-main)',
-                              fontStyle: t.assignee === 'Unassigned' ? 'italic' : 'normal',
-                            }}
-                          >
-                            {t.assignee}
-                          </span>
-                        </div>
+                        {t.status === 'Pending Approval' ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span
+                                className="user-avatar-circle"
+                                style={{
+                                  width: '22px',
+                                  height: '22px',
+                                  fontSize: '10px',
+                                  background: '#FEF3C7',
+                                  color: '#B45309',
+                                  fontWeight: 700,
+                                }}
+                              >
+                                {(departmentsData.find((d) => d.name === t.department)?.hodName || 'GN')
+                                  .split(' ')
+                                  .map((n) => n[0])
+                                  .join('')}
+                              </span>
+                              <span style={{ fontSize: '12px', fontWeight: 600, color: '#B45309' }}>
+                                {departmentsData.find((d) => d.name === t.department)?.hodName || 'Grace Nsubuga'}
+                              </span>
+                            </div>
+                            <span style={{ fontSize: '10.5px', color: 'var(--text-muted)', paddingLeft: '28px' }}>
+                              Awaiting HOD Sign-Off
+                            </span>
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span
+                              className="user-avatar-circle avatar-indigo"
+                              style={{
+                                width: '24px',
+                                height: '24px',
+                                fontSize: '10px',
+                                background: t.assignee === 'Unassigned' ? '#F1F5F9' : undefined,
+                                color: t.assignee === 'Unassigned' ? '#64748B' : undefined,
+                              }}
+                            >
+                              {initials}
+                            </span>
+                            <span
+                              style={{
+                                fontSize: '12.5px',
+                                color: t.assignee === 'Unassigned' ? 'var(--text-muted)' : 'var(--text-main)',
+                                fontStyle: t.assignee === 'Unassigned' ? 'italic' : 'normal',
+                              }}
+                            >
+                              {t.assignee}
+                            </span>
+                          </div>
+                        )}
                       </td>
 
                       {/* SLA Remaining Timer */}
