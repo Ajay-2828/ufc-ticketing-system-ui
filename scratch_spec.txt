@@ -1,0 +1,190 @@
+<USER_REQUEST>
+UFC IT Ticket Management System: Build Specification
+Prepared for Antigravity. Sources: iProAT Scope of Work, meeting notes of 24/10/2026 (iProAT, UFC), and the UI review decisions made while designing the base UI in v0. Version 0.1, 4 November 2026.
+1. How to read this spec
+• Source priority: the 24/10/2026 meeting notes override the Scope of Work wherever they conflict.
+• Config first: the business team is still changing the flow. Anything marked OPEN must be built as an admin-configurable setting with the stated default, never hard-coded.
+• Scope: single organisation (UFC). No multi-tenant workspace switcher.
+• UI status: only the Admin Team role has been designed (light theme only). Screens for other roles must reuse the same shell and components.
+2. Core principles
+1. Everything dynamic (classification, SLA, approvals, testing, questionnaires, custom fields, notifications, statuses) is configured by admins with no code changes.
+2. Light theme only. No dark mode, no theme toggle, no prefers-color-scheme styles.
+3. Authentication through Active Directory (AD). Users and their managers (HOD) are read from AD.
+4. The database is encrypted at rest.
+5. Every action is written to the ticket timeline and to a system audit log.
+6. Role-based visibility everywhere: users only see tickets and applications they are entitled to.
+3. Roles
+Role
+Can do
+End User
+Create tickets, track own tickets, answer clarifications, close or reopen resolved tickets
+Technician (IT user)
+Work assigned tickets, update ETA and progress, resolve, flag or refer a ticket as a Change Request to Admin, raise technical tickets
+Department Head (HOD)
+Approve or reject tickets from own department, refer to other departments for clarification, receives reminders and reports
+Admin Team
+Handles exceptions, reassigns, classifies manually, refers to department or vendor, monitors SLA, configures the system
+Management
+Approves change requests where the workflow includes a management stage
+Testing Team
+Validates completed work where testing is enabled, passes or fails it
+External Vendor
+Separate secure login, sees only assigned tickets, updates progress, uploads files, requests clarification, resolves
+Other departments (Operations, Risk, Business, Compliance, configurable)
+Respond to clarification requests only
+Referral rule: the Refer to department action is available only to HOD and Admin Team. End users never refer. Technicians can only refer to Admin Team.
+4. Data model (minimum)
+• User: from AD (name, email, department, manager, status) plus role, vendor flag.
+• Department: name, HOD (from AD), assigned applications.
+• Classification tree: Main classification, then Sub-classification, then Issue type.
+    ◦ Main examples: Networking, Applications, Security, Hardware, other configurable.
+    ◦ Sub examples under Applications: Flexcube, Atomverse, Firewall.
+    ◦ Issue type examples under Flexcube: Application not opening, Password reset, Login not working.
+• Sub-classification: 1 or 2 assigned technicians.
+• Issue type: SLA response time, SLA resolution time, auto severity, HOD approval required (toggle), HOD approval time limit (hours), Testing required (toggle), questionnaire link.
+• Ticket: number, type (Incident, Issue, Service Request, Change Request, configurable), main, sub, issue type, severity, priority, subject, description, creator, department, status, current stage, current owner, ETA, due date, SLA timers, custom field values, questionnaire answers.
+• Timeline event: ticket, actor, type, details, timestamp, visibility flag.
+• Workflow template: ordered stages, each with enabled, approver role, time limit, on-timeout action, condition.
+• Clarification, Attachment, Notification event and template, Vendor account, Custom field, Audit log entry.
+Ticket type and classification are separate dimensions. Example: Type = Incident, Main = Applications, Sub = Flexcube, Issue = Login not working. Type decides which workflow template runs. The classification tree decides assignee, SLA and severity.
+5. Ticket creation
+Fields in order:
+1. Main classification, Sub-classification, Issue type (cascading dropdowns, only for applications the user's department may access).
+2. Severity: read-only badge, auto-calculated from issue type configuration. Not editable.
+3. Subject, Description.
+4. Application-specific questionnaire: appears after the application or sub-classification is chosen. Typical fields: error code, module name, customer number, device information, environment, browser, version, transaction details. Fully admin-configurable.
+5. Attachments (PNG, JPG, PDF, up to 10 MB each).
+6. Priority, shown only if the user's role is permitted.
+7. Actions: Submit, Save as draft.
+Proposed UX (recommended): a right-hand Routing preview card showing assigned technicians, SLA response and resolution time, whether HOD approval is required, the approver name from AD, and the approval time limit.
+Blocked state: if the user has reached the admin-set threshold of resolved-but-unclosed tickets, show a banner (for example: You have 3 resolved tickets awaiting closure) and disable the form.
+6. Standard ticket flow
+End user creates ticket
+  -> HOD approval (only if enabled for the issue type)
+       approve -> continue | reject (reason required) -> notify end user
+       refer to another department for clarification (HOD only)
+       no response within time limit -> notify end user
+  -> Automatic assignment to the technician(s) configured for the issue type; Admin and technicians are notified
+  -> Technician works (ETA, due date, remarks, attachments, clarifications)
+  -> Technician marks Resolved
+  -> End user verifies and closes
+       reopen -> routes directly to Admin Team
+       not closed within N days -> notify HOD
+Rules:
+• If HOD approval is not required for the issue type, the ticket skips straight to assignment.
+• Assignment is automatic. If more than one technician is configured, all are assigned and notified.
+• Admin does not triage every ticket. Admin only sees exceptions (section 9).
+• Clarification can be requested at any stage from the ticket creator, HOD, other departments, vendors or management. Responses are added to the ticket history.
+• Testing is optional per issue type or workflow template. Default: off for standard tickets, on for Change Requests. (OPEN: you may be asked to put Testing on every ticket. This is only a toggle.)
+7. Change Request flow
+The meeting notes and the Scope of Work disagree, so the flow must be a configurable workflow template. Status: OPEN, keep the template in Draft until the business team confirms.
+Version A (24/10 notes, preferred default):
+Technician flags ticket as Change Request, or refers it to Admin
+  -> HOD approval (configurable per change request; if not required, goes directly to Admin Team)
+  -> Admin Team review
+  -> Implementation assignment
+  -> Testing Team
+  -> Resolved -> end user closes
+Version B (Scope of Work 3.6): User, Administration review, Department Head approval, Management approval, Implementation assignment, Testing, Closure. If rejected at any stage, send notifications.
+Build the stage list so Management approval and HOD approval are optional stages that can be switched on or off. Disabled stages show as Skipped (not required) on the stepper.
+8. Workflow engine
+• Templates: Standard ticket (Published), Change request (Draft). Others can be added.
+• Stage properties: enabled, approver role, time limit, on-timeout action, condition.
+• On-timeout options: Notify user (default), Notify and escalate to Admin, Auto-approve. (OPEN: the notes only require notifying the end user.)
+• Assignment stage is automatic: no approver, no time limit.
+• The ticket stepper in the UI is generated from the active template. The current stage must always match the status badge.
+• A live preview shows the end-user view of the template.
+Standard template stages: Submitted, HOD approval (conditional), Assignment, In progress, Resolved, Closed by end user. Change request stages: HOD approval (optional), Admin review, Management approval (optional), Implementation, Testing, Resolved, Closed.
+9. Admin Team queue (Exceptions)
+Only tickets that left the standard flow appear here:
+1. Reopened: an end user reopened a resolved ticket.
+2. Change Request: a technician flagged or referred a ticket to Admin, or HOD approval was not required.
+UI: filter chips All, Reopened, Change Request (with counts). Columns: Ticket, Status badge (Reopened red, Change Request purple), Raised by or Sent by, Waiting for (amber after 4 h, red after 8 h), SLA bar, Action. Actions: Reopened -> Reassign, Change Request -> Review, plus a menu with Refer to department, Forward to vendor, Request clarification. Rows near SLA breach get a red left border. Normal tickets never appear here.
+The menu label may be renamed to Admin queue (recommended, because Exceptions is not an industry term).
+Not in the notes and therefore not built: a No technician mapped queue. See open questions.
+10. SLA, severity and timers
+• SLA is defined per issue type: response time and resolution time. Severity is derived from the issue type configuration. Example: Login not working has a faster SLA than other issues.
+• HOD approval time limit is configurable per issue type inside the SLA settings.
+• Global timers (Admin, Workflows and timers, Timers tab): notify HOD if a resolved ticket is not closed after N days (default 3); block new tickets after N resolved-but-unclosed tickets (default 5); default HOD approval time limit (24 h).
+• Do not use the term auto-close. Nothing closes automatically.
+• SLA countdowns are colour coded: green, amber, red. Breached shows in red.
+11. Notifications
+Channels: in-app and email. If a user replies to a notification email, the reply is added to that ticket history automatically.
+Events: ticket created, submitted, HOD approval required, approved or rejected, assigned or reassigned, clarification requested and received, ETA assigned or updated, due date reminder, HOD did not respond within time limit (notify end user), change request awaiting review, management decision, testing assigned and completed, ticket resolved, closed, reopened, resolved but not closed (notify HOD), escalations. Admins can edit templates with variables such as ticket_no, subject, assignee.
+12. Vendor portal
+Separate, simplified shell with its own login. Vendors see only tickets assigned to them. They can update progress, upload attachments, request clarification and resolve. No access to unrelated tickets. Admin or HOD forwards tickets to vendors. (OPEN: whether technicians can also forward to vendors.)
+13. Ticket detail
+Opens as a right-side panel or full page. Contents:
+• Header: ticket number, subject, type badge, status badge, severity and priority badges.
+• Current status banner: current stage, Currently with (person or team), time in stage, time left against SLA or approval limit.
+• Workflow stepper (data-driven).
+• Tabs: Overview, Timeline, Clarifications, Attachments, Testing.
+• Timeline: full chronological history (creation, approvals, assignments, status changes, clarification requests and responses, notes, attachments, ETA changes, escalations, testing, closure). Visible to authorised users. Internal notes can be hidden from end users and vendors (OPEN).
+• Role-based action bar: HOD sees Approve, Reject, Refer to department. Admin sees Assign, Reassign, Refer. Technician sees Resolve, Mark as Change Request, Refer to Admin. End user sees Close or Reopen when resolved. Testing sees Pass or Fail.
+• Closure fields: resolution summary, root cause, resolution time, closure remarks, closure date.
+14. Reports
+Reports are a library, not a sidebar tree. The Reports page opens with a search box, category chips and a card grid; clicking a card opens that report with a back link.
+• Categories: Volume, Approvals and closures, Performance, Change and external, Lifecycle.
+• Reports: Weekly overview, Open and closed tickets, Tickets by application, department, severity and assignee, Pending approvals, Outstanding closures, SLA compliance, Resolution trends, Aging analysis, Escalated tickets, Change requests, Vendor performance, Tester performance, Tickets by lifecycle stage, Tickets handled by HOD, Admin Team and Technicians.
+• Every report: sticky filters (date range, department, application, severity, reset), KPI strip, one chart with labelled axes, sortable table with pagination, Export to Excel and PDF.
+• Status counts required: Open, Resolved, Closed, Pending. Figures must be consistent across screens (mock values: Open 128, Pending approvals 24, Resolved not closed 18, Closed 38).
+• Schedule report dialog: frequency (daily or weekly) and recipient roles. (OPEN: the notes say automated reports go to HOD, Admin and Technicians, and weekly reports to HOD, end users and Admin.)
+15. Administration module
+A single expandable item in the sidebar with six pages (no secondary sidebar, no group labels). Each page opens its own route and never redirects elsewhere. Use an unsaved-changes bar at the bottom (Discard, Save) instead of top Save buttons.
+1. Classification: tabs Classification tree, Applications and access, Ticket types, Severity and priority, Statuses. In the tree, selecting a main classification shows only its sub-classifications. Selecting a sub-classification shows assigned technicians (1 or 2) and issue types. Issue type rows have inline SLA response, SLA resolution, auto severity badge, HOD approval toggle with time limit, Testing toggle, and an Incomplete badge when a value is missing. Preview routing link per issue type.
+2. Workflows and timers: tabs Workflows and Timers and thresholds (section 8 and 10).
+3. Forms and fields: tabs Application questionnaires and Custom fields. Field types: text, number, date, dropdown, multi-select, checkbox, radio button, attachment, lookup. Each field is mandatory or optional, visible or hidden, and role-based. Used in: creation, assignment, update, resolution, testing.
+4. Users and access: tabs Users, Roles, Departments, Vendors. Users show a Synced from Active Directory badge and read-only manager (HOD) from AD.
+5. Notifications: event table with email and in-app toggles and a template editor.
+6. Security and system: tabs Active Directory (status, Sync now, attribute mapping including Manager to HOD), Audit log (searchable, exportable), Data security (database encryption status).
+16. Navigation by role
+Admin Team (designed): Home, Exceptions (Admin queue), All Tickets, Reports, Administration. Change Request is a ticket type, not a menu item. It appears as a type badge and a filter chip (All, Incident, Service Request, Change Request).
+Proposed for other roles (not yet designed):
+• End User: Home, Create ticket, My tickets
+• Technician: Home, Work queue, My tickets
+• HOD: Home, Approvals, Department tickets, Reports
+• Management: Home, Approvals, Reports
+• Testing Team: Home, Testing queue
+• Vendor: own portal
+Home per role starts with a Needs your action strip. Admin: Exceptions total, Reopened, Change requests awaiting review. HOD: approvals waiting and overdue. Technician: tickets nearing SLA breach. End user: resolved tickets awaiting closure.
+17. UI design system
+• Light theme only. Page background cool light grey (F6F8FB). White sidebar and top bar with 1px E5E9F0 borders. White cards with 12px radius and a subtle shadow.
+• Text: headings 0F172A, body 475569, muted 94A3B8. Primary blue 2563EB for links and active states. One gold accent used only for the main page action (Create ticket, Schedule report).
+• Active menu item: light blue tint EEF4FF, blue text, 3px blue bar on the left edge.
+• Chart palette: navy, teal, amber. Status badges: red, amber, green, blue, purple.
+• Top bar: role and date on the left, global search, role switcher labelled Viewing as, notifications bell, avatar. Logo reads UFC Desk.
+• Dense tables with sortable columns, avatars, SLA bars. Skeleton loading, empty states, command palette are welcome. No dark mode.
+18. Security and audit
+• AD authentication for staff, separate secure login for vendors.
+• Application-level access: a department sees and creates tickets only for applications assigned to it.
+• Encrypted database, encrypted attachments recommended.
+• Complete audit trail on tickets and on configuration changes.
+19. Open questions for the business team
+1. Change Request: who raises it (user, technician or both), and what is the exact approval order? Is Management approval always required?
+2. Does every ticket go through Testing, or only Change Requests?
+3. If the HOD rejects a ticket, can the user edit and resubmit?
+4. If the HOD never responds: notify only, or escalate? To whom?
+5. Fallback assignee when no technician is mapped to an issue type.
+6. Vendor routing: can technicians forward to vendors, or only Admin and HOD?
+7. Exact recipients of automated and weekly reports.
+8. What configurable dashboards means: user-built, or a fixed set of dashboards.
+9. Should internal notes be hidden from end users and vendors?
+10. Ticket number formats (mock shows INC-2024-0842 and CR-2024-018).
+11. Is Administration restricted to the Admin Team, or is a separate super-admin needed?
+20. Suggested build order
+1. Foundation: AD authentication, roles, encrypted database, audit log, app shell.
+2. Admin configuration: classification tree with SLA and technicians, then questionnaires and custom fields.
+3. Ticket creation with dynamic form, severity and SLA calculation, routing preview.
+4. Workflow engine with the Standard template, HOD approval, auto-assignment, notifications (including email reply to history).
+5. Technician work queue, resolution, end-user closure, reopen, block threshold, HOD reminders.
+6. Admin queue, Change Request template (Draft), testing queue.
+7. Vendor portal.
+8. Reports library, scheduled reports, Excel and PDF export.
+9. Remaining role dashboards and polish.
+The mock UI contains placeholder data only. Do not treat its sample numbers, names or statuses as requirements.
+
+the above was given by claude because i did created the ui in v0 using the help of claude so it knows the project better becuase of fine tuning via my chatting with it
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-11-04T17:23:28+05:30.
+</ADDITIONAL_METADATA>

@@ -12,8 +12,6 @@ export default function HomePage() {
     visibleTickets,
     currentRole,
     unclosedResolvedCount,
-    setSelectedTicket,
-    setShowCreateModal,
   } = useTicketContext()
 
   const handleNavigateTab = (tab: string) => {
@@ -38,7 +36,17 @@ export default function HomePage() {
       case 'Classification':
         router.push('/admin/classification')
         break
+      case 'Testing Queue':
+        router.push('/testing')
+        break
+      case 'Vendor Portal':
+        router.push('/vendor-portal')
+        break
+      case 'Change Requests':
+        router.push('/change-requests')
+        break
       default:
+        router.push('/tickets')
         break
     }
   }
@@ -48,8 +56,8 @@ export default function HomePage() {
       currentRole={currentRole}
       tickets={visibleTickets}
       unclosedResolvedCount={unclosedResolvedCount}
-      onSelectTicket={(t: Ticket) => setSelectedTicket(t)}
-      onOpenCreateModal={() => setShowCreateModal(true)}
+      onSelectTicket={(t: Ticket) => router.push(`/tickets/${t.id}`)}
+      onOpenCreateModal={() => router.push('/tickets/new')}
       onNavigateTab={handleNavigateTab}
     />
   )

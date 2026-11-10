@@ -55,7 +55,7 @@ export function VendorPortal({
       <div className="page-header-flex">
         <div>
           <div className="page-eyebrow" style={{ color: 'var(--teal)' }}>
-            <Building2 size={14} /> Section 3.10 External Partner Gateway
+            <Building2 size={14} /> Vendor &amp; External Partner Gateway
           </div>
           <h1 className="page-title-main">TechServe Vendor Workspace</h1>
           <p className="page-desc-sub">
@@ -155,7 +155,7 @@ export function VendorPortal({
             {/* Vendor Work Progress Update Form */}
             <form onSubmit={handlePostUpdate} style={{ display: 'flex', flexDirection: 'column', gap: '14px', background: '#F8FAFC', border: '1px solid var(--border)', padding: '18px', borderRadius: '12px' }}>
               <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: 'var(--text-main)' }}>
-                Post Work Progress & Evidence (Section 3.10)
+                Post Work Progress &amp; Evidence
               </h4>
 
               {updatePosted && (

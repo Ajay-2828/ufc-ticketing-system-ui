@@ -33,9 +33,9 @@ export function TestingQueue({
       <div className="page-header-flex">
         <div>
           <div className="page-eyebrow" style={{ color: '#BE185D' }}>
-            <FlaskConical size={14} /> Quality Assurance & Verification (Section 3.11)
+            <FlaskConical size={14} /> Quality Assurance &amp; Verification
           </div>
-          <h1 className="page-title-main">Testing & QA Queue</h1>
+          <h1 className="page-title-main">Testing &amp; QA Queue</h1>
           <p className="page-desc-sub">
             Validate technical implementations and hotfixes in staging/UAT environments before
             allowing requests to proceed to resolution and customer sign-off.

@@ -210,7 +210,7 @@ export function FormsAndFields() {
       <div className="page-header-flex">
         <div>
           <div className="page-eyebrow">
-            <FileCheck size={14} /> Section 15 · Forms & Questionnaires
+            <FileCheck size={14} /> Forms &amp; Custom Fields
           </div>
           <h1 className="page-title-main">Forms & Custom Fields</h1>
           <p className="page-desc-sub">

@@ -41,6 +41,7 @@ export interface IssueTypeConfig {
   slaResolutionHours: number
   hodApprovalLimitHours: number
   isChangeRequest?: boolean
+  crRequiresHodApproval?: boolean // Configures whether HOD approval is required for this Change Request (defaults to true)
 }
 
 export interface SubClassificationConfig {
@@ -192,6 +193,25 @@ export const departmentsList = [
 ]
 
 export const applicationQuestionnaires: Record<string, DynamicQuestion[]> = {
+  'Pro People': [
+    { id: 'ppEmployeeId', label: 'Employee ID / Staff Number', type: 'text', required: true, placeholder: 'e.g. UFC-0482' },
+    { id: 'ppModule', label: 'HR Module', type: 'dropdown', options: ['Payroll & Payslips', 'Leave & Attendance', 'Performance Appraisal', 'Employee Profile / Self-Service', 'Recruitment'], required: true },
+    { id: 'ppErrorCode', label: 'Screen Error / Message', type: 'text', required: false, placeholder: 'e.g. Session timeout or permission denied' },
+  ],
+  'Pro Biz': [
+    { id: 'pbModule', label: 'Business Module', type: 'dropdown', options: ['General Ledger', 'Accounts Payable', 'Fixed Assets', 'Budgeting & Approvals'], required: true },
+    { id: 'pbBatchId', label: 'Batch / Voucher Number', type: 'text', required: false, placeholder: 'e.g. VCH-2026-8812' },
+  ],
+  'Pro Pupil': [
+    { id: 'pupilId', label: 'Student / Record ID', type: 'text', required: true, placeholder: 'e.g. STU-99214' },
+    { id: 'academicYear', label: 'Academic Year / Term', type: 'text', required: false, placeholder: 'e.g. 2026/2027 Term 1' },
+  ],
+  'Laptops': [
+    { id: 'assetTag', label: 'Hardware Asset Tag #', type: 'text', required: true, placeholder: 'e.g. UFC-LPT-2024-091' },
+    { id: 'deviceSerial', label: 'Machine Serial Number', type: 'text', required: false, placeholder: 'e.g. 5CD2410M7P' },
+    { id: 'location', label: 'Office Floor & Desk Location', type: 'dropdown', options: ['Muscat HQ - 7th Floor', 'Muscat HQ - 8th Floor', 'Salalah Branch', 'Sohar Branch', 'Remote / Work From Home'], required: true },
+    { id: 'osVersion', label: 'Operating System & Version', type: 'text', required: true, placeholder: 'e.g. Windows 11 Enterprise 23H2 or macOS Sequoia' },
+  ],
   'Flexcube': [
     { id: 'moduleName', label: 'Flexcube Module Name', type: 'dropdown', options: ['Payments', 'Demand Deposits', 'Term Deposits', 'Retail Lending', 'Trade Finance', 'General Ledger'], required: true, placeholder: 'Select affected module' },
     { id: 'errorCode', label: 'Error Code / ORA Exception', type: 'text', required: true, placeholder: 'e.g. FC-ERR-9021 or ORA-01017' },
@@ -227,11 +247,193 @@ export const applicationQuestionnaires: Record<string, DynamicQuestion[]> = {
   ],
 }
 
+export const COMMON_MASTER_ISSUES = [
+  {
+    name: 'Login not working',
+    autoSeverity: 'Critical' as TicketSeverity,
+    slaResponseHours: 0.5,
+    slaResolutionHours: 2,
+    hodApprovalLimitHours: 1,
+    description: 'User cannot authenticate or credentials rejected',
+  },
+  {
+    name: 'Application not opening',
+    autoSeverity: 'High' as TicketSeverity,
+    slaResponseHours: 1,
+    slaResolutionHours: 4,
+    hodApprovalLimitHours: 2,
+    description: 'Application crashes on launch or displays blank screen',
+  },
+  {
+    name: 'Password reset',
+    autoSeverity: 'Medium' as TicketSeverity,
+    slaResponseHours: 2,
+    slaResolutionHours: 8,
+    hodApprovalLimitHours: 4,
+    description: 'User locked out or requests password reset',
+  },
+  {
+    name: 'Slow performance / Freezing',
+    autoSeverity: 'Medium' as TicketSeverity,
+    slaResponseHours: 2,
+    slaResolutionHours: 6,
+    hodApprovalLimitHours: 3,
+    description: 'High latency, spin wheels, or unresponsiveness',
+  },
+  {
+    name: 'Report generation failure',
+    autoSeverity: 'Medium' as TicketSeverity,
+    slaResponseHours: 2,
+    slaResolutionHours: 6,
+    hodApprovalLimitHours: 3,
+    description: 'PDF/Excel export fails or timeout during report queries',
+  },
+  {
+    name: 'Data sync error',
+    autoSeverity: 'High' as TicketSeverity,
+    slaResponseHours: 1,
+    slaResolutionHours: 4,
+    hodApprovalLimitHours: 2,
+    description: 'Records not synchronizing across modules or databases',
+  },
+  {
+    name: 'User access & permissions',
+    autoSeverity: 'Medium' as TicketSeverity,
+    slaResponseHours: 2,
+    slaResolutionHours: 8,
+    hodApprovalLimitHours: 4,
+    description: 'User needs role privileges or access to specific screen',
+  },
+  {
+    name: 'Transaction timeout',
+    autoSeverity: 'Critical' as TicketSeverity,
+    slaResponseHours: 0.5,
+    slaResolutionHours: 2,
+    hodApprovalLimitHours: 1,
+    description: 'Processing payments, batches, or records fails with timeout',
+  },
+]
+
+export const COMMON_HARDWARE_ISSUES = [
+  {
+    name: 'Device will not power on / Power fault',
+    autoSeverity: 'Critical' as TicketSeverity,
+    slaResponseHours: 0.5,
+    slaResolutionHours: 2,
+    hodApprovalLimitHours: 1,
+    description: 'Hardware does not turn on, no power indicator or dead battery',
+  },
+  {
+    name: 'Screen display / Blank screen / Flickering',
+    autoSeverity: 'High' as TicketSeverity,
+    slaResponseHours: 1,
+    slaResolutionHours: 4,
+    hodApprovalLimitHours: 2,
+    description: 'Display panel blank, lines on screen, or flickering backlight',
+  },
+  {
+    name: 'Battery not charging / Fast draining',
+    autoSeverity: 'Medium' as TicketSeverity,
+    slaResponseHours: 2,
+    slaResolutionHours: 6,
+    hodApprovalLimitHours: 3,
+    description: 'Laptop battery failing to hold charge or charger not recognized',
+  },
+  {
+    name: 'Keyboard or trackpad unresponsive',
+    autoSeverity: 'Medium' as TicketSeverity,
+    slaResponseHours: 2,
+    slaResolutionHours: 8,
+    hodApprovalLimitHours: 4,
+    description: 'Keys not typing, trackpad cursor jumping, or physical key stuck',
+  },
+  {
+    name: 'Operating System crash / Blue screen (BSOD)',
+    autoSeverity: 'Critical' as TicketSeverity,
+    slaResponseHours: 0.5,
+    slaResolutionHours: 2,
+    hodApprovalLimitHours: 1,
+    description: 'Windows BSOD crash on startup or hard drive failure',
+  },
+  {
+    name: 'Paper jam / Feeder error',
+    autoSeverity: 'High' as TicketSeverity,
+    slaResponseHours: 1,
+    slaResolutionHours: 3,
+    hodApprovalLimitHours: 1.5,
+    description: 'Paper jammed in printer roller or input tray not picking up paper',
+  },
+  {
+    name: 'Toner / Ink cartridge replacement',
+    autoSeverity: 'Medium' as TicketSeverity,
+    slaResponseHours: 2,
+    slaResolutionHours: 6,
+    hodApprovalLimitHours: 3,
+    description: 'Low toner warning or faded prints requiring toner swap',
+  },
+  {
+    name: 'Printer offline / Network disconnection',
+    autoSeverity: 'High' as TicketSeverity,
+    slaResponseHours: 1,
+    slaResolutionHours: 3,
+    hodApprovalLimitHours: 1.5,
+    description: 'Network printer unreachable by IP address or print queue stuck',
+  },
+  {
+    name: 'Overheating / Excessive fan noise',
+    autoSeverity: 'Medium' as TicketSeverity,
+    slaResponseHours: 2,
+    slaResolutionHours: 8,
+    hodApprovalLimitHours: 4,
+    description: 'Chassis running extremely hot, loud fan spinning continuously',
+  },
+  {
+    name: 'Network port / Wi-Fi disconnected',
+    autoSeverity: 'Critical' as TicketSeverity,
+    slaResponseHours: 0.5,
+    slaResolutionHours: 2,
+    hodApprovalLimitHours: 1,
+    description: 'Ethernet cable port dead or Wi-Fi radio not connecting',
+  },
+]
+
 export const classificationTree: ClassificationConfig[] = [
   {
-    name: 'Core Banking & Applications',
+    name: 'Software',
     iconName: 'LayoutDashboard',
     subClassifications: [
+      {
+        name: 'Pro People',
+        technicians: ['Daniel Mensah', 'Maya Patel'],
+        issueTypes: [
+          { name: 'Login not working', autoSeverity: 'Critical', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
+          { name: 'Application not opening', autoSeverity: 'High', slaResponseHours: 1, slaResolutionHours: 4, hodApprovalLimitHours: 2 },
+          { name: 'Password reset', autoSeverity: 'Medium', slaResponseHours: 2, slaResolutionHours: 8, hodApprovalLimitHours: 4 },
+          { name: 'Slow performance / Freezing', autoSeverity: 'Medium', slaResponseHours: 2, slaResolutionHours: 6, hodApprovalLimitHours: 3 },
+          { name: 'Data sync error', autoSeverity: 'High', slaResponseHours: 1, slaResolutionHours: 4, hodApprovalLimitHours: 2 },
+        ],
+      },
+      {
+        name: 'Pro Biz',
+        technicians: ['Maya Patel', 'Ibrahim Sani'],
+        issueTypes: [
+          { name: 'Login not working', autoSeverity: 'Critical', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
+          { name: 'Application not opening', autoSeverity: 'High', slaResponseHours: 1, slaResolutionHours: 4, hodApprovalLimitHours: 2 },
+          { name: 'Report generation failure', autoSeverity: 'Medium', slaResponseHours: 2, slaResolutionHours: 6, hodApprovalLimitHours: 3 },
+          { name: 'Data sync error', autoSeverity: 'High', slaResponseHours: 1, slaResolutionHours: 4, hodApprovalLimitHours: 2 },
+          { name: 'Transaction timeout', autoSeverity: 'Critical', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
+        ],
+      },
+      {
+        name: 'Pro Pupil',
+        technicians: ['Ibrahim Sani', 'Daniel Mensah'],
+        issueTypes: [
+          { name: 'Login not working', autoSeverity: 'Critical', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
+          { name: 'Password reset', autoSeverity: 'Medium', slaResponseHours: 2, slaResolutionHours: 8, hodApprovalLimitHours: 4 },
+          { name: 'User access & permissions', autoSeverity: 'Medium', slaResponseHours: 2, slaResolutionHours: 8, hodApprovalLimitHours: 4 },
+          { name: 'Slow performance / Freezing', autoSeverity: 'Medium', slaResponseHours: 2, slaResolutionHours: 6, hodApprovalLimitHours: 3 },
+        ],
+      },
       {
         name: 'Flexcube',
         technicians: ['Daniel Mensah', 'Maya Patel'],
@@ -241,107 +443,75 @@ export const classificationTree: ClassificationConfig[] = [
           { name: 'Transaction timeout', autoSeverity: 'Critical', slaResponseHours: 0.5, slaResolutionHours: 3, hodApprovalLimitHours: 1 },
           { name: 'Password reset', autoSeverity: 'Medium', slaResponseHours: 2, slaResolutionHours: 8, hodApprovalLimitHours: 4 },
           { name: 'End of Day (EOD) Batch Stalled', autoSeverity: 'Critical', slaResponseHours: 0.25, slaResolutionHours: 1.5, hodApprovalLimitHours: 1 },
-          { name: 'Interest Accrual Calculation Error', autoSeverity: 'High', slaResponseHours: 1, slaResolutionHours: 6, hodApprovalLimitHours: 3 },
-          { name: 'GL Posting Mismatch', autoSeverity: 'High', slaResponseHours: 2, slaResolutionHours: 8, hodApprovalLimitHours: 4 },
-          { name: 'Core Patch Upgrade (Change Request)', autoSeverity: 'High', slaResponseHours: 4, slaResolutionHours: 48, hodApprovalLimitHours: 24, isChangeRequest: true },
+          { name: 'Core Patch Upgrade (Change Request)', autoSeverity: 'High', slaResponseHours: 4, slaResolutionHours: 48, hodApprovalLimitHours: 24, isChangeRequest: true, crRequiresHodApproval: true },
+          { name: 'Emergency Hotfix Deployment (CR - Direct to Admin)', autoSeverity: 'Critical', slaResponseHours: 1, slaResolutionHours: 12, hodApprovalLimitHours: 4, isChangeRequest: true, crRequiresHodApproval: false },
         ],
       },
       {
         name: 'Atomverse',
         technicians: ['Ibrahim Sani', 'Maya Patel'],
         issueTypes: [
+          { name: 'Login not working', autoSeverity: 'Critical', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
           { name: 'Customer biometric login failure', autoSeverity: 'High', slaResponseHours: 1, slaResolutionHours: 4, hodApprovalLimitHours: 2 },
           { name: 'OTP delivery timeout', autoSeverity: 'Critical', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
           { name: 'Mobile onboarding flow crash', autoSeverity: 'High', slaResponseHours: 1, slaResolutionHours: 6, hodApprovalLimitHours: 3 },
           { name: 'Payment gateway timeout', autoSeverity: 'Critical', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
-          { name: 'Civil ID verification failure', autoSeverity: 'Medium', slaResponseHours: 2, slaResolutionHours: 8, hodApprovalLimitHours: 4 },
-          { name: 'App release hotfix (Change Request)', autoSeverity: 'High', slaResponseHours: 4, slaResolutionHours: 24, hodApprovalLimitHours: 12, isChangeRequest: true },
-        ],
-      },
-      {
-        name: 'SWIFT Alliance Gateway',
-        technicians: ['Maya Patel', 'TechServe Ltd'],
-        issueTypes: [
-          { name: 'SWIFT MT103 transmission error', autoSeverity: 'Critical', slaResponseHours: 0.25, slaResolutionHours: 1, hodApprovalLimitHours: 0.5 },
-          { name: 'Alliance Lite2 connectivity failure', autoSeverity: 'Critical', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
-          { name: 'RMA token certificate renewal', autoSeverity: 'Medium', slaResponseHours: 4, slaResolutionHours: 24, hodApprovalLimitHours: 12, isChangeRequest: true },
-        ],
-      },
-      {
-        name: 'ATM & POS Switch',
-        technicians: ['Daniel Mensah', 'TechServe Ltd'],
-        issueTypes: [
-          { name: 'ATM network switch timeout', autoSeverity: 'Critical', slaResponseHours: 0.25, slaResolutionHours: 1.5, hodApprovalLimitHours: 1 },
-          { name: 'POS transaction settlement failure', autoSeverity: 'High', slaResponseHours: 1, slaResolutionHours: 4, hodApprovalLimitHours: 2 },
-          { name: 'Host security module (HSM) key sync', autoSeverity: 'High', slaResponseHours: 2, slaResolutionHours: 8, hodApprovalLimitHours: 4, isChangeRequest: true },
         ],
       },
     ],
   },
   {
-    name: 'Networking & Security',
-    iconName: 'ShieldCheck',
-    subClassifications: [
-      {
-        name: 'Firewall',
-        technicians: ['Daniel Mensah', 'SecureNet Ops'],
-        issueTypes: [
-          { name: 'Partner API firewall rule', autoSeverity: 'High', slaResponseHours: 2, slaResolutionHours: 12, hodApprovalLimitHours: 4, isChangeRequest: true },
-          { name: 'Emergency port block (Security incident)', autoSeverity: 'Critical', slaResponseHours: 0.25, slaResolutionHours: 1, hodApprovalLimitHours: 0.5 },
-          { name: 'Site-to-site IPsec tunnel down', autoSeverity: 'Critical', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
-          { name: 'NAT table exhaustion', autoSeverity: 'High', slaResponseHours: 1, slaResolutionHours: 3, hodApprovalLimitHours: 2 },
-        ],
-      },
-      {
-        name: 'Network Access',
-        technicians: ['Ibrahim Sani', 'TechServe Ltd'],
-        issueTypes: [
-          { name: 'Corporate VPN dropping connections', autoSeverity: 'Medium', slaResponseHours: 1, slaResolutionHours: 4, hodApprovalLimitHours: 2 },
-          { name: 'Branch Wi-Fi AP outage', autoSeverity: 'High', slaResponseHours: 1, slaResolutionHours: 4, hodApprovalLimitHours: 2 },
-          { name: 'DNS resolution failure', autoSeverity: 'Critical', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
-          { name: 'Branch MPLS circuit degradation', autoSeverity: 'High', slaResponseHours: 1, slaResolutionHours: 4, hodApprovalLimitHours: 2 },
-        ],
-      },
-    ],
-  },
-  {
-    name: 'Identity & Cloud Infrastructure',
+    name: 'Hardware',
     iconName: 'Server',
     subClassifications: [
       {
-        name: 'Active Directory & Identity',
+        name: 'Laptops & Workstations',
         technicians: ['Daniel Mensah', 'Ibrahim Sani'],
         issueTypes: [
-          { name: 'Domain controller replication error', autoSeverity: 'Critical', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
-          { name: 'MFA Entra ID authentication lockout', autoSeverity: 'High', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
-          { name: 'Service account password synchronization', autoSeverity: 'Medium', slaResponseHours: 2, slaResolutionHours: 6, hodApprovalLimitHours: 3 },
-          { name: 'Group policy object (GPO) propagation failure', autoSeverity: 'Medium', slaResponseHours: 2, slaResolutionHours: 8, hodApprovalLimitHours: 4 },
+          { name: 'Device will not power on / Power fault', autoSeverity: 'Critical', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
+          { name: 'Screen display / Blank screen / Flickering', autoSeverity: 'High', slaResponseHours: 1, slaResolutionHours: 4, hodApprovalLimitHours: 2 },
+          { name: 'Battery not charging / Fast draining', autoSeverity: 'Medium', slaResponseHours: 2, slaResolutionHours: 6, hodApprovalLimitHours: 3 },
+          { name: 'Keyboard or trackpad unresponsive', autoSeverity: 'Medium', slaResponseHours: 2, slaResolutionHours: 8, hodApprovalLimitHours: 4 },
+          { name: 'Operating System crash / Blue screen (BSOD)', autoSeverity: 'Critical', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
+          { name: 'Overheating / Excessive fan noise', autoSeverity: 'Medium', slaResponseHours: 2, slaResolutionHours: 8, hodApprovalLimitHours: 4 },
         ],
       },
       {
-        name: 'Database & Storage',
-        technicians: ['Maya Patel', 'Daniel Mensah'],
+        name: 'Printers & Scanners',
+        technicians: ['Ibrahim Sani', 'TechServe Ltd'],
         issueTypes: [
-          { name: 'Oracle RAC node crash / failover', autoSeverity: 'Critical', slaResponseHours: 0.25, slaResolutionHours: 1, hodApprovalLimitHours: 0.5 },
-          { name: 'Tablespace capacity 95% threshold exceeded', autoSeverity: 'High', slaResponseHours: 1, slaResolutionHours: 3, hodApprovalLimitHours: 1.5 },
-          { name: 'SAN LUN latency spike', autoSeverity: 'High', slaResponseHours: 1, slaResolutionHours: 4, hodApprovalLimitHours: 2 },
+          { name: 'Paper jam / Feeder error', autoSeverity: 'High', slaResponseHours: 1, slaResolutionHours: 3, hodApprovalLimitHours: 1.5 },
+          { name: 'Toner / Ink cartridge replacement', autoSeverity: 'Medium', slaResponseHours: 2, slaResolutionHours: 6, hodApprovalLimitHours: 3 },
+          { name: 'Printer offline / Network disconnection', autoSeverity: 'High', slaResponseHours: 1, slaResolutionHours: 3, hodApprovalLimitHours: 1.5 },
+          { name: 'Printout streaks / poor quality', autoSeverity: 'Low', slaResponseHours: 4, slaResolutionHours: 12, hodApprovalLimitHours: 6 },
         ],
       },
-    ],
-  },
-  {
-    name: 'End User Computing',
-    iconName: 'BriefcaseBusiness',
-    subClassifications: [
       {
-        name: 'Workstations & Peripherals',
+        name: 'Monitors & Displays',
+        technicians: ['Daniel Mensah', 'TechServe Ltd'],
+        issueTypes: [
+          { name: 'Screen display / Blank screen / Flickering', autoSeverity: 'High', slaResponseHours: 1, slaResolutionHours: 4, hodApprovalLimitHours: 2 },
+          { name: 'HDMI / DisplayPort cable or adapter failure', autoSeverity: 'Medium', slaResponseHours: 2, slaResolutionHours: 6, hodApprovalLimitHours: 3 },
+          { name: 'Color distortion or vertical lines', autoSeverity: 'Medium', slaResponseHours: 2, slaResolutionHours: 8, hodApprovalLimitHours: 4 },
+        ],
+      },
+      {
+        name: 'Keyboards, Mice & Peripherals',
         technicians: ['Ibrahim Sani', 'Daniel Mensah'],
         issueTypes: [
-          { name: 'New starter laptop and account provisioning', autoSeverity: 'Low', slaResponseHours: 8, slaResolutionHours: 24, hodApprovalLimitHours: 12 },
-          { name: 'BSOD / Operating system boot failure', autoSeverity: 'High', slaResponseHours: 1, slaResolutionHours: 4, hodApprovalLimitHours: 2 },
-          { name: 'Hard drive failure / Data recovery', autoSeverity: 'Critical', slaResponseHours: 0.5, slaResolutionHours: 3, hodApprovalLimitHours: 1 },
-          { name: 'Teller receipt printer hardware failure', autoSeverity: 'High', slaResponseHours: 1, slaResolutionHours: 3, hodApprovalLimitHours: 1.5 },
-          { name: 'Cheque scanner USB interface error', autoSeverity: 'Medium', slaResponseHours: 2, slaResolutionHours: 6, hodApprovalLimitHours: 3 },
+          { name: 'Keyboard or trackpad unresponsive', autoSeverity: 'Medium', slaResponseHours: 2, slaResolutionHours: 8, hodApprovalLimitHours: 4 },
+          { name: 'Docking station ports not responding', autoSeverity: 'High', slaResponseHours: 1, slaResolutionHours: 4, hodApprovalLimitHours: 2 },
+          { name: 'Webcam / Microphone not detected', autoSeverity: 'Medium', slaResponseHours: 2, slaResolutionHours: 8, hodApprovalLimitHours: 4 },
+        ],
+      },
+      {
+        name: 'Network Equipment & Routers',
+        technicians: ['Daniel Mensah', 'SecureNet Ops'],
+        issueTypes: [
+          { name: 'Wi-Fi Access Point offline', autoSeverity: 'Critical', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
+          { name: 'Ethernet wall port dead / No link', autoSeverity: 'High', slaResponseHours: 1, slaResolutionHours: 4, hodApprovalLimitHours: 2 },
+          { name: 'VPN router gateway drop', autoSeverity: 'Critical', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
+          { name: 'Switch port speed / Duplex mismatch', autoSeverity: 'Medium', slaResponseHours: 2, slaResolutionHours: 8, hodApprovalLimitHours: 4 },
         ],
       },
     ],
@@ -355,7 +525,7 @@ export const initialTickets: Ticket[] = [
     description: 'Multiple users in the Core Banking team receive ORA-01017 invalid username/password despite recent active directory password sync. Account appears locked in Flexcube security table.',
     type: 'Incident',
     app: 'Flexcube',
-    classification: 'Applications',
+    classification: 'Software',
     subClassification: 'Flexcube',
     issueType: 'Login not working',
     severity: 'High',
@@ -404,8 +574,8 @@ export const initialTickets: Ticket[] = [
     description: 'GlobalProtect VPN tunnel drops connection every 15-20 minutes for remote staff connecting to Core Banking and Swift portals.',
     type: 'Incident',
     app: 'Network Access',
-    classification: 'Networking & Security',
-    subClassification: 'Network Access',
+    classification: 'Hardware',
+    subClassification: 'Network Equipment & Routers',
     issueType: 'Corporate VPN dropping connections',
     severity: 'Medium',
     priority: 'P2',
@@ -443,7 +613,7 @@ export const initialTickets: Ticket[] = [
     description: 'Atomverse customer KYC verification calls timing out after 60s when fetching Civil Registry data.',
     type: 'Incident',
     app: 'Atomverse',
-    classification: 'Applications',
+    classification: 'Software',
     subClassification: 'Atomverse',
     issueType: 'Transaction timeout',
     severity: 'Critical',
@@ -483,8 +653,8 @@ export const initialTickets: Ticket[] = [
     description: 'Setup bi-directional TLS 1.3 firewall rules for the new Central Bank of Oman payment switch integration.',
     type: 'Change Request',
     app: 'Firewall',
-    classification: 'Networking & Security',
-    subClassification: 'Firewall',
+    classification: 'Hardware',
+    subClassification: 'Network Equipment & Routers',
     issueType: 'Partner API firewall rule',
     severity: 'High',
     priority: 'P2',
@@ -523,7 +693,7 @@ export const initialTickets: Ticket[] = [
     description: 'Ticket was previously resolved but the customer reported that the OTP retry button still stays disabled after 60s in the latest test build.',
     type: 'Incident',
     app: 'Atomverse',
-    classification: 'Applications',
+    classification: 'Software',
     subClassification: 'Atomverse',
     issueType: 'Mobile onboarding flow crash',
     severity: 'High',
@@ -547,7 +717,7 @@ export const initialTickets: Ticket[] = [
     timeline: [
       { id: 't1', time: '2 Nov, 11:20', user: 'Tariq Bello', action: 'Created', tone: 'blue' },
       { id: 't2', time: '3 Nov, 15:00', user: 'Maya Patel', action: 'Resolved', tone: 'green' },
-      { id: 't3', time: 'Today, 08:15', user: 'Tariq Bello', action: 'Ticket Reopened by End User', note: 'Issue persists on Android 15 devices. Routed directly to Admin Exception Queue as per Section 3.12.', tone: 'red' },
+      { id: 't3', time: 'Today, 08:15', user: 'Tariq Bello', action: 'Ticket Reopened by End User', note: 'Issue persists on Android 15 devices. Routed directly to Admin Exception Queue for priority triage.', tone: 'red' },
     ],
     clarifications: [],
   },
@@ -557,7 +727,7 @@ export const initialTickets: Ticket[] = [
     description: 'Nightly batch job stalled on job step 14 (Interest Accrual for Demand Deposits). Error code FC-EOD-409.',
     type: 'Incident',
     app: 'Flexcube',
-    classification: 'Applications',
+    classification: 'Software',
     subClassification: 'Flexcube',
     issueType: 'End of Day (EOD) Batch Stalled',
     severity: 'Critical',
@@ -592,8 +762,8 @@ export const initialTickets: Ticket[] = [
     description: 'Hardware provisioning and Active Directory profile creation for Senior Credit Analyst joining Operations next Sunday.',
     type: 'Service Request',
     app: 'End User Computing',
-    classification: 'End User Computing',
-    subClassification: 'Workstations & Peripherals',
+    classification: 'Hardware',
+    subClassification: 'Laptops & Workstations',
     issueType: 'New starter laptop and account provisioning',
     severity: 'Low',
     priority: 'P3',
@@ -631,8 +801,8 @@ export const initialTickets: Ticket[] = [
     description: 'Thermal receipt printer failing to print deposit slips.',
     type: 'Incident',
     app: 'End User Computing',
-    classification: 'End User Computing',
-    subClassification: 'Workstations & Peripherals',
+    classification: 'Hardware',
+    subClassification: 'Laptops & Workstations',
     issueType: 'BSOD / Operating system boot failure',
     severity: 'Medium',
     priority: 'P2',
@@ -666,8 +836,8 @@ export const initialTickets: Ticket[] = [
     description: 'Calendar invites taking 45+ minutes to appear on mobile device.',
     type: 'Service Request',
     app: 'End User Computing',
-    classification: 'End User Computing',
-    subClassification: 'Workstations & Peripherals',
+    classification: 'Hardware',
+    subClassification: 'Laptops & Workstations',
     issueType: 'BSOD / Operating system boot failure',
     severity: 'Low',
     priority: 'P3',
@@ -696,6 +866,13 @@ export const initialTickets: Ticket[] = [
     clarifications: [],
   },
 ]
+
+export const standardSeveritySLAs: Record<TicketSeverity, { resolutionHours: number; responseHours: number }> = {
+  Critical: { resolutionHours: 2, responseHours: 0.5 },
+  High: { resolutionHours: 4, responseHours: 1 },
+  Medium: { resolutionHours: 8, responseHours: 2 },
+  Low: { resolutionHours: 24, responseHours: 4 },
+}
 
 export const policySettings = {
   unresolvedClosureThreshold: 3,
@@ -746,14 +923,58 @@ export interface DepartmentConfig {
 }
 
 export const departmentsData: DepartmentConfig[] = [
-  { name: 'Core Banking', hodName: 'Grace Nsubuga', hodEmail: 'gnsubuga@ufc.om', assignedApplications: ['Flexcube', 'Atomverse', 'SWIFT Alliance Gateway', 'ATM & POS Switch'] },
-  { name: 'Digital Banking', hodName: 'Grace Nsubuga', hodEmail: 'gnsubuga@ufc.om', assignedApplications: ['Atomverse', 'Flexcube', 'Network Access', 'Workstations & Peripherals'] },
-  { name: 'Infrastructure', hodName: 'Daniel Mensah', hodEmail: 'dmensah@ufc.om', assignedApplications: ['Firewall', 'Network Access', 'Active Directory & Identity', 'Database & Storage', 'Workstations & Peripherals'] },
-  { name: 'Security & Compliance', hodName: 'Khalfan Al-Busaidi', hodEmail: 'kbusaidi@ufc.om', assignedApplications: ['Firewall', 'Network Access', 'Active Directory & Identity'] },
-  { name: 'Finance & Risk', hodName: 'Grace Nsubuga', hodEmail: 'gnsubuga@ufc.om', assignedApplications: ['Flexcube', 'SWIFT Alliance Gateway', 'Workstations & Peripherals', 'Network Access'] },
-  { name: 'Operations', hodName: 'Grace Nsubuga', hodEmail: 'gnsubuga@ufc.om', assignedApplications: ['Flexcube', 'Atomverse', 'ATM & POS Switch', 'Workstations & Peripherals'] },
-  { name: 'People & Talent', hodName: 'Grace Nsubuga', hodEmail: 'gnsubuga@ufc.om', assignedApplications: ['Workstations & Peripherals', 'Network Access', 'Active Directory & Identity'] },
-  { name: 'Business Development', hodName: 'Grace Nsubuga', hodEmail: 'gnsubuga@ufc.om', assignedApplications: ['Atomverse', 'Workstations & Peripherals', 'Network Access'] },
+  {
+    name: 'Core Banking',
+    hodName: 'Grace Nsubuga',
+    hodEmail: 'gnsubuga@ufc.om',
+    assignedApplications: ['Flexcube', 'Pro Biz', 'Atomverse', 'Laptops & Workstations', 'Printers & Scanners', 'Monitors & Displays'],
+  },
+  {
+    name: 'Digital Banking',
+    hodName: 'Grace Nsubuga',
+    hodEmail: 'gnsubuga@ufc.om',
+    assignedApplications: ['Atomverse', 'Pro Biz', 'Laptops & Workstations', 'Network Equipment & Routers'],
+  },
+  {
+    name: 'Infrastructure',
+    hodName: 'Daniel Mensah',
+    hodEmail: 'dmensah@ufc.om',
+    assignedApplications: [
+      'Pro People', 'Pro Biz', 'Pro Pupil', 'Flexcube', 'Atomverse',
+      'Laptops & Workstations', 'Printers & Scanners', 'Monitors & Displays',
+      'Keyboards, Mice & Peripherals', 'Network Equipment & Routers',
+    ],
+  },
+  {
+    name: 'Security & Compliance',
+    hodName: 'Khalfan Al-Busaidi',
+    hodEmail: 'kbusaidi@ufc.om',
+    assignedApplications: ['Network Equipment & Routers', 'Laptops & Workstations', 'Pro Biz'],
+  },
+  {
+    name: 'Finance & Risk',
+    hodName: 'Grace Nsubuga',
+    hodEmail: 'gnsubuga@ufc.om',
+    assignedApplications: ['Pro Biz', 'Flexcube', 'Laptops & Workstations', 'Printers & Scanners'],
+  },
+  {
+    name: 'Operations',
+    hodName: 'Grace Nsubuga',
+    hodEmail: 'gnsubuga@ufc.om',
+    assignedApplications: ['Pro People', 'Pro Biz', 'Flexcube', 'Laptops & Workstations', 'Printers & Scanners'],
+  },
+  {
+    name: 'People & Talent',
+    hodName: 'Grace Nsubuga',
+    hodEmail: 'gnsubuga@ufc.om',
+    assignedApplications: ['Pro People', 'Pro Pupil', 'Laptops & Workstations', 'Printers & Scanners'],
+  },
+  {
+    name: 'Business Development',
+    hodName: 'Grace Nsubuga',
+    hodEmail: 'gnsubuga@ufc.om',
+    assignedApplications: ['Pro People', 'Pro Biz', 'Laptops & Workstations'],
+  },
 ]
 
 export interface ADUser {
@@ -790,7 +1011,7 @@ export const ticketTypesList = [
   { id: 'Incident', name: 'Incident', code: 'INC', description: 'Unplanned interruption or reduction in quality of an IT service', defaultWorkflow: 'Standard Ticket Workflow (Published)', defaultPriority: 'High', active: true },
   { id: 'Service Request', name: 'Service Request', code: 'SRQ', description: 'User request for service provisioning, access permissions, or standard information', defaultWorkflow: 'Standard Ticket Workflow (Published)', defaultPriority: 'Normal', active: true },
   { id: 'Issue', name: 'Technical Issue', code: 'ISS', description: 'Underlying hardware, peripheral, or application defect requiring troubleshooting', defaultWorkflow: 'Standard Ticket Workflow (Published)', defaultPriority: 'Normal', active: true },
-  { id: 'Change Request', name: 'Change Request', code: 'CR', description: 'Addition, modification, or removal of anything that could affect IT services (Section 3.6 & 7)', defaultWorkflow: 'Change Request Workflow (Draft)', defaultPriority: 'Urgent', active: true },
+  { id: 'Change Request', name: 'Change Request', code: 'CR', description: 'Addition, modification, or removal of IT services, configurations, or infrastructure', defaultWorkflow: 'Change Request Workflow (Draft)', defaultPriority: 'Urgent', active: true },
 ]
 
 export const ticketStatusesList = [

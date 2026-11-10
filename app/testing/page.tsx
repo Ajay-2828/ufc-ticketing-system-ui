@@ -1,22 +1,24 @@
 'use client'
 
 import React from 'react'
+import { useRouter } from 'next/navigation'
 import { TestingQueue } from '@/components/queues/testing-queue'
 import { useTicketContext } from '@/context/ticket-context'
-import { Ticket } from '@/app/ticket-data'
+import { Ticket, TicketStatus } from '@/app/ticket-data'
 
 export default function TestingPage() {
-  const { visibleTickets, setSelectedTicket, handleUpdateTicket, triggerToast } =
+  const router = useRouter()
+  const { visibleTickets, handleUpdateTicket, triggerToast } =
     useTicketContext()
 
   return (
     <TestingQueue
       tickets={visibleTickets}
-      onSelectTicket={(t: Ticket) => setSelectedTicket(t)}
+      onSelectTicket={(t: Ticket) => router.push(`/tickets/${t.id}`)}
       onPassTest={(t: Ticket) => {
         const updated: Ticket = {
           ...t,
-          status: 'Resolved',
+          status: 'Resolved' as TicketStatus,
           timeline: [
             ...t.timeline,
             {
@@ -36,7 +38,7 @@ export default function TestingPage() {
       onFailTest={(t: Ticket) => {
         const updated: Ticket = {
           ...t,
-          status: 'In Progress',
+          status: 'In Progress' as TicketStatus,
           timeline: [
             ...t.timeline,
             {

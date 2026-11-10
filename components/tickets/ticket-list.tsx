@@ -10,6 +10,11 @@ import {
   ChevronRight,
   ArrowUpDown,
   RefreshCw,
+  CheckCircle2,
+  AlertCircle,
+  X,
+  User,
+  SlidersHorizontal,
 } from 'lucide-react'
 import { Ticket, TicketType, TicketStatus, TicketSeverity } from '@/app/ticket-data'
 
@@ -40,15 +45,23 @@ export function TicketList({
 
   const filteredTickets = useMemo(() => {
     return tickets.filter((t) => {
+      const query = searchQuery.trim().toLowerCase()
       const matchesSearch =
-        searchQuery === '' ||
-        t.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        t.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        t.app.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        t.assignee.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        t.department.toLowerCase().includes(searchQuery.toLowerCase())
+        query === '' ||
+        t.id.toLowerCase().includes(query) ||
+        t.subject.toLowerCase().includes(query) ||
+        t.app.toLowerCase().includes(query) ||
+        t.assignee.toLowerCase().includes(query) ||
+        t.department.toLowerCase().includes(query) ||
+        t.creator.toLowerCase().includes(query)
 
-      const matchesType = selectedType === 'All' || t.type === selectedType
+      const matchesType =
+        selectedType === 'All' ||
+        (selectedType === 'Incidents' && t.type === 'Incident') ||
+        (selectedType === 'Service Requests' && t.type === 'Service Request') ||
+        (selectedType === 'Change Requests' && t.type === 'Change Request') ||
+        t.type === selectedType
+
       const matchesStatus = selectedStatus === 'All' || t.status === selectedStatus
       const matchesSeverity = selectedSeverity === 'All' || t.severity === selectedSeverity
 
@@ -72,6 +85,19 @@ export function TicketList({
       setSelectedTickets([...selectedTickets, id])
     }
   }
+
+  const resetFilters = () => {
+    setSearchQuery('')
+    setSelectedType('All')
+    setSelectedStatus('All')
+    setSelectedSeverity('All')
+  }
+
+  const hasActiveFilters =
+    searchQuery !== '' ||
+    selectedType !== 'All' ||
+    selectedStatus !== 'All' ||
+    selectedSeverity !== 'All'
 
   const getStatusBadge = (status: TicketStatus) => {
     switch (status) {
@@ -114,9 +140,9 @@ export function TicketList({
       <div className="page-header-flex">
         <div>
           <div className="page-eyebrow">
-            <span>UFC Desk Operations</span>
-            <span style={{ color: 'var(--text-muted)' }}>·</span>
-            <span>{filteredTickets.length} Requests</span>
+            <span>Support &amp; Service Desk</span>
+            <span style={{ color: 'var(--text-muted)' }}>&bull;</span>
+            <span>{filteredTickets.length} {filteredTickets.length === 1 ? 'Ticket' : 'Tickets'}</span>
           </div>
           <h1 className="page-title-main">{title}</h1>
           <p className="page-desc-sub">{subtitle}</p>
@@ -126,12 +152,12 @@ export function TicketList({
           <div style={{ position: 'relative' }}>
             <button
               type="button"
-              className="btn-primary"
+              className="btn-gold"
               disabled={createDisabled}
               onClick={onOpenCreateModal}
               title={createDisabled ? createDisabledReason : undefined}
             >
-              <Plus size={16} /> New Request
+              <Plus size={16} /> Create Ticket
             </button>
           </div>
         )}
@@ -142,7 +168,7 @@ export function TicketList({
         {/* Table Toolbar */}
         <div
           style={{
-            padding: '16px 20px',
+            padding: '14px 20px',
             borderBottom: '1px solid var(--border)',
             display: 'flex',
             flexWrap: 'wrap',
@@ -151,44 +177,71 @@ export function TicketList({
             gap: '12px',
           }}
         >
-          {/* Search */}
-          <div className="search-input-box" style={{ width: '280px' }}>
+          {/* Search Box */}
+          <div className="search-input-box" style={{ width: '300px' }}>
             <Search size={16} />
             <input
               type="text"
-              placeholder="Search by ID, subject, engineer..."
+              placeholder="Search by ID, keyword, requester..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: 0,
+                  color: 'var(--text-muted)',
+                }}
+              >
+                <X size={14} />
+              </button>
+            )}
           </div>
 
           {/* Type Segmented Controls */}
-          <div style={{ display: 'flex', background: 'var(--surface-muted)', padding: '3px', borderRadius: '8px' }}>
-            {['All', 'Incident', 'Service Request', 'Change Request'].map((type) => (
+          <div
+            style={{
+              display: 'flex',
+              background: 'var(--surface-muted)',
+              padding: '3px',
+              borderRadius: '8px',
+            }}
+          >
+            {[
+              { id: 'All', label: 'All' },
+              { id: 'Incidents', label: 'Incidents' },
+              { id: 'Service Requests', label: 'Service Requests' },
+              { id: 'Change Requests', label: 'Change Requests' },
+            ].map((tab) => (
               <button
-                key={type}
+                key={tab.id}
                 type="button"
-                onClick={() => setSelectedType(type)}
+                onClick={() => setSelectedType(tab.id)}
                 style={{
                   border: 'none',
                   borderRadius: '6px',
                   padding: '6px 12px',
                   fontSize: '12.5px',
-                  fontWeight: selectedType === type ? 600 : 500,
-                  background: selectedType === type ? 'var(--surface)' : 'transparent',
-                  color: selectedType === type ? 'var(--primary)' : 'var(--text-secondary)',
-                  boxShadow: selectedType === type ? 'var(--shadow-sm)' : 'none',
+                  fontWeight: selectedType === tab.id ? 600 : 500,
+                  background: selectedType === tab.id ? 'var(--surface)' : 'transparent',
+                  color: selectedType === tab.id ? 'var(--primary)' : 'var(--text-secondary)',
+                  boxShadow: selectedType === tab.id ? 'var(--shadow-sm)' : 'none',
                   cursor: 'pointer',
-                  transition: 'all 0.12s',
+                  transition: 'all 0.12s ease',
                 }}
               >
-                {type}
+                {tab.label}
               </button>
             ))}
           </div>
 
-          {/* Severity & Status Dropdowns */}
-          <div style={{ display: 'flex', gap: '8px' }}>
+          {/* Status & Priority Dropdowns */}
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             <select
               className="form-input-control"
               style={{ width: 'auto', height: '36px', fontSize: '12.5px' }}
@@ -210,21 +263,63 @@ export function TicketList({
               value={selectedSeverity}
               onChange={(e) => setSelectedSeverity(e.target.value)}
             >
-              <option value="All">All Severities</option>
+              <option value="All">All Priorities</option>
               <option value="Critical">Critical</option>
               <option value="High">High</option>
               <option value="Medium">Medium</option>
               <option value="Low">Low</option>
             </select>
+
+            {hasActiveFilters && (
+              <button
+                type="button"
+                className="btn-secondary"
+                style={{ height: '36px', padding: '0 10px', fontSize: '12px' }}
+                onClick={resetFilters}
+                title="Reset all filters"
+              >
+                <X size={14} /> Clear
+              </button>
+            )}
           </div>
         </div>
+
+        {/* Bulk Selection Notification Bar */}
+        {selectedTickets.length > 0 && (
+          <div
+            style={{
+              padding: '10px 20px',
+              background: '#EFF6FF',
+              borderBottom: '1px solid #BFDBFE',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              fontSize: '12.5px',
+              color: '#1D4ED8',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <strong>{selectedTickets.length} {selectedTickets.length === 1 ? 'ticket' : 'tickets'} selected</strong>
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                style={{ height: '28px', padding: '0 10px', fontSize: '11.5px', background: '#FFFFFF' }}
+                onClick={() => setSelectedTickets([])}
+              >
+                Deselect All
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Responsive Table */}
         <div className="table-responsive-container">
           <table className="custom-data-table">
             <thead>
               <tr>
-                <th style={{ width: '40px', paddingLeft: '20px' }}>
+                <th style={{ width: '38px', paddingLeft: '20px' }}>
                   <input
                     type="checkbox"
                     checked={
@@ -234,29 +329,60 @@ export function TicketList({
                     onChange={toggleSelectAll}
                   />
                 </th>
-                <th>Ticket ID</th>
-                <th>Subject & Department</th>
+                <th>Ticket</th>
+                <th>Subject &amp; Requester</th>
                 <th>Type</th>
                 <th>Status</th>
-                <th>Severity</th>
+                <th>Priority</th>
                 <th>Application</th>
                 <th>Assignee</th>
-                <th>SLA Countdown</th>
+                <th>SLA Remaining</th>
                 <th style={{ width: '40px' }}></th>
               </tr>
             </thead>
             <tbody>
               {filteredTickets.length === 0 ? (
                 <tr>
-                  <td colSpan={10} style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
-                    No tickets match the selected filters.
+                  <td colSpan={10} style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--text-muted)' }}>
+                    <div style={{ maxWidth: '340px', margin: '0 auto' }}>
+                      <AlertCircle size={32} style={{ margin: '0 auto 10px', color: 'var(--text-muted)' }} />
+                      <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text-main)', marginBottom: '4px' }}>
+                        No tickets found
+                      </div>
+                      <p style={{ margin: 0, fontSize: '12.5px' }}>
+                        {hasActiveFilters
+                          ? 'Try adjusting your search query or clearing active filters.'
+                          : 'There are currently no tickets matching this view.'}
+                      </p>
+                      {hasActiveFilters && (
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          style={{ marginTop: '12px', height: '30px', fontSize: '12px' }}
+                          onClick={resetFilters}
+                        >
+                          Clear Filters
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ) : (
                 filteredTickets.map((t) => {
                   const isChecked = selectedTickets.includes(t.id)
+                  const initials = t.assignee === 'Unassigned'
+                    ? '—'
+                    : t.assignee
+                        .split(' ')
+                        .map((x) => x[0])
+                        .join('')
+
                   return (
-                    <tr key={t.id} onClick={() => onSelectTicket(t)}>
+                    <tr
+                      key={t.id}
+                      onClick={() => onSelectTicket(t)}
+                      style={{ cursor: 'pointer' }}
+                    >
                       <td style={{ paddingLeft: '20px' }} onClick={(e) => e.stopPropagation()}>
                         <input
                           type="checkbox"
@@ -264,20 +390,35 @@ export function TicketList({
                           onChange={(e) => toggleSelectOne(t.id, e as never)}
                         />
                       </td>
+
+                      {/* Ticket Code & Created Date */}
                       <td>
                         <strong className="ticket-id-link">{t.id}</strong>
-                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
                           {t.created}
                         </div>
                       </td>
+
+                      {/* Subject & Requester Attribution */}
                       <td>
-                        <div style={{ fontWeight: 600, color: 'var(--text-main)', maxWidth: '340px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <div
+                          style={{
+                            fontWeight: 600,
+                            color: 'var(--text-main)',
+                            maxWidth: '320px',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
                           {t.subject}
                         </div>
-                        <div style={{ fontSize: '11.5px', color: 'var(--text-secondary)' }}>
-                          {t.department} · By {t.creator}
+                        <div style={{ fontSize: '11.5px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                          {t.department} &bull; {t.creator}
                         </div>
                       </td>
+
+                      {/* Type */}
                       <td>
                         <span
                           className="badge-tag badge-tag-sm"
@@ -294,52 +435,91 @@ export function TicketList({
                                 : t.type === 'Service Request'
                                 ? '#15803D'
                                 : '#1D4ED8',
+                            fontWeight: 600,
                           }}
                         >
                           {t.type}
                         </span>
                       </td>
+
+                      {/* Status */}
                       <td>
                         <span className={`badge-tag badge-tag-sm ${getStatusBadge(t.status)}`}>
                           {t.status}
                         </span>
                       </td>
+
+                      {/* Priority / Severity */}
                       <td>
                         <span className={`badge-tag badge-tag-sm ${getSeverityBadge(t.severity)}`}>
                           {t.severity}
                         </span>
                       </td>
+
+                      {/* Application */}
                       <td>
-                        <span style={{ fontWeight: 500 }}>{t.app}</span>
+                        <span style={{ fontWeight: 500, fontSize: '13px', color: 'var(--text-main)' }}>
+                          {t.app}
+                        </span>
                       </td>
+
+                      {/* Assignee */}
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <span
                             className="user-avatar-circle avatar-indigo"
-                            style={{ width: '24px', height: '24px', fontSize: '10px' }}
+                            style={{
+                              width: '24px',
+                              height: '24px',
+                              fontSize: '10px',
+                              background: t.assignee === 'Unassigned' ? '#F1F5F9' : undefined,
+                              color: t.assignee === 'Unassigned' ? '#64748B' : undefined,
+                            }}
                           >
-                            {t.assignee === 'Unassigned'
-                              ? 'HD'
-                              : t.assignee
-                                  .split(' ')
-                                  .map((x) => x[0])
-                                  .join('')}
+                            {initials}
                           </span>
-                          <span style={{ fontSize: '13px' }}>
-                            {t.assignee === 'Unassigned' ? 'Awaiting HOD' : t.assignee}
+                          <span
+                            style={{
+                              fontSize: '12.5px',
+                              color: t.assignee === 'Unassigned' ? 'var(--text-muted)' : 'var(--text-main)',
+                              fontStyle: t.assignee === 'Unassigned' ? 'italic' : 'normal',
+                            }}
+                          >
+                            {t.assignee}
                           </span>
                         </div>
                       </td>
+
+                      {/* SLA Remaining Timer */}
                       <td>
-                        <span
-                          className={`sla-badge-box ${
-                            t.slaBreached ? 'sla-breached-box' : ''
-                          }`}
+                        <div
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            fontFamily: 'var(--font-mono)',
+                            padding: '3px 8px',
+                            borderRadius: '6px',
+                            background: t.slaBreached
+                              ? '#FEF2F2'
+                              : t.slaTimeRemaining.startsWith('00:') || t.slaTimeRemaining.startsWith('01:')
+                              ? '#FFFBEB'
+                              : '#F0FDF4',
+                            color: t.slaBreached
+                              ? '#B91C1C'
+                              : t.slaTimeRemaining.startsWith('00:') || t.slaTimeRemaining.startsWith('01:')
+                              ? '#B45309'
+                              : '#15803D',
+                          }}
                         >
-                          <Clock size={13} />
-                          {t.sla}
-                        </span>
+                          <Clock size={12} />
+                          {t.slaBreached ? 'Breached' : t.slaTimeRemaining}
+                        </div>
                       </td>
+
+                      {/* Chevron Arrow */}
                       <td>
                         <ChevronRight size={16} color="var(--text-muted)" />
                       </td>
@@ -351,7 +531,7 @@ export function TicketList({
           </table>
         </div>
 
-        {/* Footer */}
+        {/* Footer Pagination */}
         <div
           style={{
             padding: '12px 20px',
@@ -368,13 +548,24 @@ export function TicketList({
             Showing {filteredTickets.length} of {tickets.length} total tickets
           </span>
           <div style={{ display: 'flex', gap: '6px' }}>
-            <button className="btn-secondary" style={{ height: '30px', padding: '0 10px', fontSize: '12px' }}>
+            <button
+              className="btn-secondary"
+              style={{ height: '30px', padding: '0 10px', fontSize: '12px' }}
+              disabled
+            >
               Previous
             </button>
-            <button className="btn-primary" style={{ height: '30px', padding: '0 12px', fontSize: '12px' }}>
+            <button
+              className="btn-primary"
+              style={{ height: '30px', padding: '0 12px', fontSize: '12px' }}
+            >
               1
             </button>
-            <button className="btn-secondary" style={{ height: '30px', padding: '0 10px', fontSize: '12px' }}>
+            <button
+              className="btn-secondary"
+              style={{ height: '30px', padding: '0 10px', fontSize: '12px' }}
+              disabled
+            >
               Next
             </button>
           </div>
@@ -383,4 +574,3 @@ export function TicketList({
     </div>
   )
 }
-

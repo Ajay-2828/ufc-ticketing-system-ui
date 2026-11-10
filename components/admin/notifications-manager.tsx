@@ -96,11 +96,11 @@ export function NotificationsManager() {
       <div className="page-header-flex">
         <div>
           <div className="page-eyebrow">
-            <Bell size={14} /> Section 11 & 15 · Administration Module
+            <Bell size={14} /> Notification Settings
           </div>
-          <h1 className="page-title-main">Notification Gateway & Templates</h1>
+          <h1 className="page-title-main">Notification Gateway &amp; Templates</h1>
           <p className="page-desc-sub">
-            Channels: In-app and Email. Under Section 11, if a user replies to an email notification, the response is automatically appended to the ticket history.
+            In-app and email notification templates. When a user replies to an email notification, their response is automatically synced into the ticket timeline.
           </p>
         </div>
 

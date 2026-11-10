@@ -33,8 +33,6 @@ import {
 import { useTicketContext } from '@/context/ticket-context'
 import { roles } from '@/app/ticket-data'
 
-import { TicketDetailDrawer } from '@/components/tickets/ticket-detail-drawer'
-import { CreateTicketModal } from '@/components/tickets/create-ticket-modal'
 import { CloseTicketModal } from '@/components/tickets/close-ticket-modal'
 import { ReopenTicketModal } from '@/components/tickets/reopen-ticket-modal'
 import { AssignTicketModal } from '@/components/tickets/assign-ticket-modal'
@@ -50,7 +48,6 @@ interface NavItem {
   href: string
   icon: LucideIcon
   badge?: number
-  isAction?: boolean
 }
 
 export function AppShell({ children }: AppShellProps) {
@@ -65,10 +62,6 @@ export function AppShell({ children }: AppShellProps) {
     globalSearch,
     setGlobalSearch,
     toastMessage,
-    selectedTicket,
-    setSelectedTicket,
-    showCreateModal,
-    setShowCreateModal,
     ticketToClose,
     setTicketToClose,
     ticketToReopen,
@@ -79,10 +72,6 @@ export function AppShell({ children }: AppShellProps) {
     setTicketToResolve,
     ticketToRefer,
     setTicketToRefer,
-    unclosedResolvedCount,
-    classificationTreeData,
-    handleCreateTicket,
-    handleUpdateTicket,
     handleConfirmClose,
     handleConfirmReopen,
     handleConfirmAssign,
@@ -100,7 +89,7 @@ export function AppShell({ children }: AppShellProps) {
       case 'End User':
         return [
           { label: 'Home', href: '/', icon: LayoutDashboard },
-          { label: 'Create Ticket', href: '#create', icon: FilePlus2, isAction: true },
+          { label: 'Create Ticket', href: '/tickets/new', icon: FilePlus2 },
           { label: 'My Tickets', href: '/tickets', icon: TicketIcon },
         ]
       case 'Technician':
@@ -156,7 +145,7 @@ export function AppShell({ children }: AppShellProps) {
         return [
           { label: 'Home', href: '/', icon: LayoutDashboard },
           {
-            label: 'Exceptions',
+            label: 'Admin Queue',
             href: '/exceptions',
             icon: AlertCircle,
             badge: tickets.filter(
@@ -172,11 +161,10 @@ export function AppShell({ children }: AppShellProps) {
     }
   }, [currentRole, tickets])
 
-  // Section 15: The 6 Administration Pages
+  // Standard Administration Pages (ITSM Industry Standard)
   const adminPages: NavItem[] = [
     { label: 'Classification', href: '/admin/classification', icon: FolderKanban },
     { label: 'Workflows & Timers', href: '/admin/workflows', icon: GitBranch },
-    { label: 'Forms & Fields', href: '/admin/forms', icon: FileText },
     { label: 'Users & Access', href: '/admin/users', icon: Users },
     { label: 'Notifications', href: '/admin/notifications', icon: Bell },
     { label: 'Security & System', href: '/admin/security', icon: Lock },
@@ -248,23 +236,7 @@ export function AppShell({ children }: AppShellProps) {
           <div className="nav-group-label">WORKSPACE</div>
           {navItems.map((item) => {
             const Icon = item.icon
-            const isAction = !!item.isAction
-            const isActive = !isAction && pathname === item.href
-
-            if (isAction) {
-              return (
-                <button
-                  key={item.label}
-                  type="button"
-                  onClick={() => setShowCreateModal(true)}
-                  className="nav-link-btn"
-                  title={sidebarCollapsed ? item.label : undefined}
-                >
-                  <Icon size={18} />
-                  {!sidebarCollapsed && <span>{item.label}</span>}
-                </button>
-              )
-            }
+            const isActive = pathname === item.href
 
             return (
               <Link
@@ -458,32 +430,7 @@ export function AppShell({ children }: AppShellProps) {
         <main className="app-content-body">{children}</main>
       </div>
 
-      {/* Global Modals & Drawers */}
-      {selectedTicket && (
-        <TicketDetailDrawer
-          ticket={selectedTicket}
-          currentRole={currentRole}
-          onClose={() => setSelectedTicket(null)}
-          onUpdateTicket={handleUpdateTicket}
-          onOpenCloseModal={(t) => setTicketToClose(t)}
-          onOpenReopenModal={(t) => setTicketToReopen(t)}
-          onOpenAssignModal={(t) => setTicketToAssign(t)}
-          onOpenResolveModal={(t) => setTicketToResolve(t)}
-          onOpenReferModal={(t) => setTicketToRefer(t)}
-        />
-      )}
-
-      {showCreateModal && (
-        <CreateTicketModal
-          onClose={() => setShowCreateModal(false)}
-          onCreateTicket={handleCreateTicket}
-          currentRole={currentRole}
-          currentUser={currentUser}
-          unclosedResolvedCount={unclosedResolvedCount}
-          classificationTree={classificationTreeData}
-        />
-      )}
-
+      {/* Action Modals */}
       {ticketToClose && (
         <CloseTicketModal
           ticket={ticketToClose}

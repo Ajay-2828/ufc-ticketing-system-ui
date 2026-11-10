@@ -855,6 +855,20 @@ body {
   min-width: 36px;
 }
 
+/* Layout Split View for Hierarchy Admin & 2-Column Panels */
+.layout-split-view {
+  display: grid;
+  grid-template-columns: 360px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .layout-split-view {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Modern Card System */
 .modern-card {
   background: var(--surface);
@@ -1033,29 +1047,41 @@ body {
 }
 
 /* Modal and Drawer */
-.modal-overlay-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.45);
-  backdrop-filter: blur(4px);
-  z-index: 50;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
+.modal-overlay-backdrop,
+.modal-dialog-backdrop {
+  position: fixed !important;
+  inset: 0 !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: rgba(15, 23, 42, 0.6) !important;
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
+  z-index: 99999 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 20px !important;
   animation: fadeIn 0.15s ease-out;
 }
 
 .modal-dialog-box {
   background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 16px;
-  box-shadow: var(--shadow-xl);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05);
   width: 100%;
-  max-width: 720px;
+  max-width: 620px;
   max-height: 90vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative !important;
+  z-index: 100000 !important;
+  margin: auto !important;
   animation: scaleUp 0.15s ease-out;
 }
 

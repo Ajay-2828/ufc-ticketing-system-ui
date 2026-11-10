@@ -100,7 +100,7 @@ export function UsersAndAccess() {
       <div className="page-header-flex">
         <div>
           <div className="page-eyebrow">
-            <Users size={14} /> Section 15 · Administration Module
+            <Users size={14} /> Users &amp; Roles
           </div>
           <h1 className="page-title-main">Users & Access Governance</h1>
           <p className="page-desc-sub">
@@ -290,7 +290,7 @@ export function UsersAndAccess() {
       {activeTab === 'roles' && (
         <div className="modern-card" style={{ padding: '24px' }}>
           <h3 style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: 700 }}>
-            Role-Based Access Control (RBAC) Matrix (Section 3)
+            Role-Based Access Control (RBAC) Matrix
           </h3>
           <p style={{ margin: '0 0 18px', fontSize: '12.5px', color: 'var(--text-muted)' }}>
             Strict role segregation: users only see tickets and applications they are entitled to.
@@ -322,7 +322,7 @@ export function UsersAndAccess() {
                 <tr>
                   <td><strong style={{ color: 'var(--primary)' }}>Department Head (HOD)</strong></td>
                   <td>Approve or reject tickets from own department, refer to other departments for clarification, receives reminders & reports.</td>
-                  <td><span className="badge-tag badge-tag-sm" style={{ background: '#ECFDF5', color: '#047857' }}>All Departments (Section 3)</span></td>
+                  <td><span className="badge-tag badge-tag-sm" style={{ background: '#ECFDF5', color: '#047857' }}>All Departments</span></td>
                   <td>Department requests, pending approvals, and operational reports.</td>
                 </tr>
                 <tr>
@@ -359,7 +359,7 @@ export function UsersAndAccess() {
       {activeTab === 'departments' && (
         <div className="modern-card" style={{ padding: '24px' }}>
           <h3 style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: 700 }}>
-            Organizational Departments & Application Entitlement (Section 4)
+            Organizational Departments &amp; Application Entitlement
           </h3>
           <p style={{ margin: '0 0 18px', fontSize: '12.5px', color: 'var(--text-muted)' }}>
             Each department has an assigned HOD from AD. Users can only create tickets for applications mapped to their department.
@@ -410,7 +410,7 @@ export function UsersAndAccess() {
       {activeTab === 'vendors' && (
         <div className="modern-card" style={{ padding: '24px' }}>
           <h3 style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: 700 }}>
-            Authorized External Vendors (Section 12)
+            Authorized External Vendors
           </h3>
           <p style={{ margin: '0 0 18px', fontSize: '12.5px', color: 'var(--text-muted)' }}>
             External partner organizations with secure, isolated portal access to tickets forwarded by Admin or HOD.

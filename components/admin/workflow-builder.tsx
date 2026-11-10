@@ -148,7 +148,7 @@ export function WorkflowBuilder() {
             <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
                 <strong style={{ fontSize: '13.5px', color: 'var(--text-main)', display: 'block' }}>
-                  Require QA Verification Before Final Closure (Section 3.11)
+                  Require QA Verification Before Final Closure
                 </strong>
                 <span style={{ fontSize: '12.5px', color: 'var(--text-secondary)' }}>
                   Assigned solutions must be tested and passed by QA team prior to resolution.

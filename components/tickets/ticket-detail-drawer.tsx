@@ -23,6 +23,8 @@ import {
   Download,
 } from 'lucide-react'
 import { Ticket, Role, usersByRole } from '@/app/ticket-data'
+import { ClassifyChangeRequestModal } from '@/components/tickets/classify-change-request-modal'
+import { ForwardToTestingModal } from '@/components/tickets/forward-to-testing-modal'
 
 interface TicketDetailDrawerProps {
   ticket: Ticket
@@ -51,22 +53,24 @@ export function TicketDetailDrawer({
   const [activeTab, setActiveTab] = useState<'overview' | 'timeline' | 'clarifications' | 'attachments' | 'testing'>('overview')
   const [newClarificationMessage, setNewClarificationMessage] = useState('')
   const [clarificationTargetRole, setClarificationTargetRole] = useState('End User')
+  const [showClassifyCRModal, setShowClassifyCRModal] = useState(false)
+  const [showTestingModal, setShowTestingModal] = useState(false)
 
   const currentUser = usersByRole[currentRole]
 
   // Data-driven Stepper based on ticket type (Section 8 & 13)
   const isCR = ticket.type === 'Change Request' || ticket.status === 'Admin Review'
 
-  // Stepper stages for Standard Ticket vs Change Request
+  // Stepper stages matching Scope of Work 3.6 (User ➔ Admin Review ➔ HOD Approval ➔ Management ➔ Implementation ➔ Testing ➔ Closure)
   const stepperStages = isCR
     ? [
-        { label: 'Submitted', key: 'Submitted', isSkipped: false },
-        { label: 'HOD Approval', key: 'Pending Approval', isSkipped: false },
+        { label: 'User Intake', key: 'Submitted', isSkipped: false },
         { label: 'Admin Review', key: 'Admin Review', isSkipped: false },
+        { label: 'HOD Approval', key: 'Pending Approval', isSkipped: false },
         { label: 'Management', key: 'Management', isSkipped: false },
         { label: 'Implementation', key: 'In Progress', isSkipped: false },
         { label: 'Testing QA', key: 'In Testing', isSkipped: false },
-        { label: 'Resolved & Closed', key: 'Resolved', isSkipped: false },
+        { label: 'Closed', key: 'Closed', isSkipped: false },
       ]
     : [
         { label: 'Submitted', key: 'Submitted', isSkipped: false },
@@ -79,25 +83,42 @@ export function TicketDetailDrawer({
       ]
 
   const getStepIndex = (status: Ticket['status']) => {
-    switch (status) {
-      case 'Pending Approval':
-        return 1
-      case 'Admin Review':
-        return 2
-      case 'Assigned':
-      case 'In Progress':
-      case 'Awaiting Clarification':
-        return isCR ? 4 : 3
-      case 'In Testing':
-        return isCR ? 5 : 4
-      case 'Resolved':
-        return isCR ? 6 : 5
-      case 'Closed':
-        return isCR ? 6 : 6
-      case 'Reopened':
-        return 2
-      default:
-        return 0
+    if (isCR) {
+      switch (status) {
+        case 'Admin Review':
+          return 1
+        case 'Pending Approval':
+          return 2
+        case 'Assigned':
+        case 'In Progress':
+        case 'Awaiting Clarification':
+          return 4
+        case 'In Testing':
+          return 5
+        case 'Resolved':
+        case 'Closed':
+          return 6
+        default:
+          return 0
+      }
+    } else {
+      switch (status) {
+        case 'Pending Approval':
+          return 1
+        case 'Assigned':
+          return 2
+        case 'In Progress':
+        case 'Awaiting Clarification':
+          return 3
+        case 'Resolved':
+          return 5
+        case 'Closed':
+          return 6
+        case 'Reopened':
+          return 2
+        default:
+          return 0
+      }
     }
   }
 
@@ -191,21 +212,131 @@ export function TicketDetailDrawer({
     onUpdateTicket(updated)
   }
 
-  const handleTechnicianMarkCR = () => {
+  const handleConfirmClassifyCR = (
+    targetTicketId: string,
+    justification: string,
+    requiresHodApproval: boolean
+  ) => {
     const updated: Ticket = {
       ...ticket,
       type: 'Change Request',
-      status: 'Admin Review',
+      status: 'Admin Review', // Always Admin Review 1st per SOW 3.6
       timeline: [
         ...ticket.timeline,
         {
           id: `t-${Date.now()}`,
           time: 'Just now',
           user: currentUser.name,
-          role: 'Technician',
-          action: 'Flagged as Change Request (CR)',
-          note: 'Requires architectural review and maintenance window authorization.',
+          role: currentRole,
+          action: 'Classified as Change Request (Routed to Admin Team for Review)',
+          note: `Classified as Change Request. Routed to Administration Team for initial review and assessment. Justification: ${justification}. Department Head Approval: ${requiresHodApproval ? 'Required' : 'Waived'}.`,
           tone: 'purple',
+        },
+        {
+          id: `t-${Date.now() + 1}`,
+          time: 'Just now',
+          user: 'System Notification Service',
+          role: 'System',
+          action: 'Admin Review Intake Dispatched',
+          note: 'Admin Queue received Change Request awaiting technical review and CAB planning.',
+          tone: 'blue',
+        },
+      ],
+    }
+    onUpdateTicket(updated)
+  }
+
+  const handleAdminApproveCR = () => {
+    const updated: Ticket = {
+      ...ticket,
+      status: 'Pending Approval',
+      timeline: [
+        ...ticket.timeline,
+        {
+          id: `t-${Date.now()}`,
+          time: 'Just now',
+          user: currentUser.name,
+          role: 'Admin Team',
+          action: 'Change Request Authorized by Admin Team (Stage 2 Complete)',
+          note: 'Admin Team reviewed change risk, system scope, and impact. Dispatched to Department Head for 2nd Approval, followed by Management.',
+          tone: 'purple',
+        },
+        {
+          id: `t-${Date.now() + 1}`,
+          time: 'Just now',
+          user: 'System Notification Service',
+          role: 'System',
+          action: 'Department Head Approval Dispatched',
+          note: 'Department Head received Change Request pending authorization.',
+          tone: 'blue',
+        },
+      ],
+    }
+    onUpdateTicket(updated)
+  }
+
+  const handleAdminRejectCR = () => {
+    const reason = prompt('Mandatory: Please provide reason for rejecting Change Request:')
+    if (!reason || !reason.trim()) return
+
+    const updated: Ticket = {
+      ...ticket,
+      type: 'Incident',
+      status: 'In Progress',
+      timeline: [
+        ...ticket.timeline,
+        {
+          id: `t-${Date.now()}`,
+          time: 'Just now',
+          user: currentUser.name,
+          role: 'Admin Team',
+          action: 'Change Request Rejected by Admin Team',
+          note: `Rejection justification: ${reason}. Reverted to standard Incident and returned to technician.`,
+          tone: 'amber',
+        },
+        {
+          id: `t-${Date.now() + 1}`,
+          time: 'Just now',
+          user: 'System Notification Service',
+          role: 'System',
+          action: 'Rejection Notification Dispatched',
+          note: `Appropriate notifications sent to requester (${ticket.creator}), HOD, and technician: ${reason}`,
+          tone: 'red',
+        },
+      ],
+    }
+    onUpdateTicket(updated)
+  }
+
+  const handleConfirmForwardToTesting = (
+    targetTicketId: string,
+    notes: string,
+    environment: string,
+    tester: string
+  ) => {
+    const updated: Ticket = {
+      ...ticket,
+      status: 'In Testing',
+      tester: tester,
+      timeline: [
+        ...ticket.timeline,
+        {
+          id: `t-${Date.now()}`,
+          time: 'Just now',
+          user: currentUser.name,
+          role: currentRole,
+          action: 'Implementation Complete & Forwarded to Testing Team',
+          note: `Technician completed implementation work on ${environment}. Forwarded to Testing Team (${tester}) for QA verification. Notes: ${notes}`,
+          tone: 'blue',
+        },
+        {
+          id: `t-${Date.now() + 1}`,
+          time: 'Just now',
+          user: 'System Notification Service',
+          role: 'System',
+          action: 'Testing Queue Intake Dispatched',
+          note: `QA tester ${tester} alerted for staging verification.`,
+          tone: 'green',
         },
       ],
     }
@@ -280,7 +411,7 @@ export function TicketDetailDrawer({
           user: currentUser.name,
           role: currentRole,
           action: 'Clarification Requested',
-          note: `Target: ${clarificationTargetRole}. Question: "${newClarificationMessage.trim()}". Under Section 11, reply emails are ingested automatically.`,
+          note: `Target: ${clarificationTargetRole}. Question: "${newClarificationMessage.trim()}". Email replies sync automatically into this thread.`,
           tone: 'amber',
         },
       ],
@@ -389,6 +520,28 @@ export function TicketDetailDrawer({
                 {ticket.slaBreached ? 'SLA Breached' : ticket.sla}
               </div>
             </div>
+
+            {/* Quick Technician Action in Drawer Header */}
+            {currentRole === 'Technician' && ticket.type !== 'Change Request' && ticket.status !== 'Resolved' && ticket.status !== 'Closed' && (
+              <button
+                type="button"
+                className="btn-secondary"
+                style={{
+                  height: '30px',
+                  fontSize: '11.5px',
+                  color: '#7C3AED',
+                  borderColor: '#DDD6FE',
+                  background: '#FFFFFF',
+                  fontWeight: 700,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                }}
+                onClick={() => setShowClassifyCRModal(true)}
+              >
+                <GitBranch size={13} /> Classify as CR
+              </button>
+            )}
           </div>
         </div>
 
@@ -537,7 +690,7 @@ export function TicketDetailDrawer({
               {(ticket.status === 'Resolved' || ticket.status === 'Closed') && (
                 <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: '12px', padding: '16px 20px' }}>
                   <h4 style={{ margin: '0 0 10px', fontSize: '13.5px', fontWeight: 700, color: '#047857' }}>
-                    Resolution Summary & Root Cause (Section 13)
+                    Resolution Summary &amp; Root Cause
                   </h4>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', fontSize: '13px' }}>
                     <div>
@@ -574,7 +727,7 @@ export function TicketDetailDrawer({
           {activeTab === 'timeline' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div style={{ fontSize: '12.5px', color: 'var(--text-muted)' }}>
-                Immutable audit log written automatically per Section 2, Principle 5.
+                Activity history and lifecycle events logged automatically.
               </div>
 
               <div style={{ position: 'relative', paddingLeft: '24px' }}>
@@ -622,7 +775,7 @@ export function TicketDetailDrawer({
           {activeTab === 'clarifications' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
               <div style={{ fontSize: '12.5px', color: 'var(--text-muted)' }}>
-                Direct stakeholder clarifications. Under Section 11, email replies automatically sync into this thread.
+                Direct stakeholder clarifications. Email replies sync automatically into this thread.
               </div>
 
               {ticket.clarifications.length === 0 ? (
@@ -790,34 +943,90 @@ export function TicketDetailDrawer({
               </>
             )}
 
-            {/* Admin Actions: Assign, Reassign, Refer (Section 13) */}
+            {/* Admin Actions: Assign, Reassign, Refer, and Change Request Review */}
             {currentRole === 'Admin Team' && (
               <>
-                <button type="button" className="btn-secondary" onClick={() => onOpenReferModal(ticket)}>
-                  <Share2 size={14} /> Refer
-                </button>
-                <button type="button" className="btn-primary" onClick={() => onOpenAssignModal(ticket)}>
-                  <UserCheck size={14} /> Reassign Technician
-                </button>
+                {ticket.status === 'Admin Review' ? (
+                  <>
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      style={{ color: '#DC2626', borderColor: '#FCA5A5' }}
+                      onClick={handleAdminRejectCR}
+                    >
+                      Reject Change Request
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      onClick={handleAdminApproveCR}
+                    >
+                      <CheckCircle2 size={14} /> Approve Change Request
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button type="button" className="btn-secondary" onClick={() => onOpenReferModal(ticket)}>
+                      <Share2 size={14} /> Refer
+                    </button>
+                    <button type="button" className="btn-primary" onClick={() => onOpenAssignModal(ticket)}>
+                      <UserCheck size={14} /> Reassign Technician
+                    </button>
+                  </>
+                )}
               </>
             )}
 
-            {/* Technician Actions: Resolve, Mark as Change Request, Refer to Admin (Section 13) */}
+            {/* Technician Actions: Resolve, Mark as Change Request, Forward to Testing (Section 13) */}
             {currentRole === 'Technician' && ticket.status !== 'Resolved' && ticket.status !== 'Closed' && (
               <>
                 {ticket.status === 'Assigned' && (
-                  <button type="button" className="btn-secondary" onClick={handleTechnicianStart}>
-                    Start Work
-                  </button>
+                  <>
+                    {ticket.type !== 'Change Request' && (
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        onClick={() => setShowClassifyCRModal(true)}
+                      >
+                        <GitBranch size={14} /> Classify as Change Request
+                      </button>
+                    )}
+                    <button type="button" className="btn-secondary" onClick={handleTechnicianStart}>
+                      Start Work
+                    </button>
+                  </>
                 )}
-                {ticket.type !== 'Change Request' && (
-                  <button type="button" className="btn-secondary" onClick={handleTechnicianMarkCR}>
-                    <GitBranch size={14} /> Mark as Change Request
-                  </button>
+                {ticket.status === 'In Progress' && (
+                  <>
+                    {ticket.type === 'Change Request' ? (
+                      <button
+                        type="button"
+                        className="btn-primary"
+                        style={{ background: '#BE185D', borderColor: '#9D174D' }}
+                        onClick={() => setShowTestingModal(true)}
+                      >
+                        <FlaskConical size={14} /> Complete Work &amp; Forward to Testing
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          onClick={() => setShowClassifyCRModal(true)}
+                        >
+                          <GitBranch size={14} /> Classify / Refer as Change Request
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-primary"
+                          onClick={() => onOpenResolveModal(ticket)}
+                        >
+                          <CheckCircle2 size={14} /> Mark Resolved
+                        </button>
+                      </>
+                    )}
+                  </>
                 )}
-                <button type="button" className="btn-primary" onClick={() => onOpenResolveModal(ticket)}>
-                  <CheckCircle2 size={14} /> Mark Resolved
-                </button>
               </>
             )}
 
@@ -834,7 +1043,7 @@ export function TicketDetailDrawer({
             )}
 
             {/* Testing Team Actions: Pass or Fail (Section 13) */}
-            {currentRole === 'Testing Team' && (
+            {currentRole === 'Testing Team' && ticket.status === 'In Testing' && (
               <>
                 <button type="button" className="btn-secondary" style={{ color: 'var(--rose)' }} onClick={handleTestingFail}>
                   Fail QA Test
@@ -847,6 +1056,24 @@ export function TicketDetailDrawer({
           </div>
         </div>
       </div>
+
+      {/* Classify / Refer as Change Request Modal */}
+      {showClassifyCRModal && (
+        <ClassifyChangeRequestModal
+          ticket={ticket}
+          onClose={() => setShowClassifyCRModal(false)}
+          onConfirm={handleConfirmClassifyCR}
+        />
+      )}
+
+      {/* Forward to Testing Team Modal */}
+      {showTestingModal && (
+        <ForwardToTestingModal
+          ticket={ticket}
+          onClose={() => setShowTestingModal(false)}
+          onConfirm={handleConfirmForwardToTesting}
+        />
+      )}
     </div>
   )
 }

@@ -263,7 +263,7 @@ export function ReportsView({ tickets }: ReportsViewProps) {
           <div className="page-header-flex">
             <div>
               <div className="page-eyebrow">
-                <BarChart3 size={14} /> Section 14 · Operational Intelligence Library
+                <BarChart3 size={14} /> Reports &amp; Analytics Library
               </div>
               <h1 className="page-title-main">Reports & Analytics Library</h1>
               <p className="page-desc-sub">
@@ -720,7 +720,7 @@ export function ReportsView({ tickets }: ReportsViewProps) {
           <div className="modal-dialog-box" style={{ maxWidth: '520px' }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-dialog-header">
               <div>
-                <div className="page-eyebrow">Section 14 · Automated Delivery</div>
+                <div className="page-eyebrow">Automated Delivery</div>
                 <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 800 }}>Schedule Automated Report</h2>
               </div>
               <button onClick={() => setShowScheduleModal(false)} className="icon-action-btn" style={{ width: '32px', height: '32px' }}>
@@ -753,7 +753,7 @@ export function ReportsView({ tickets }: ReportsViewProps) {
                 </div>
 
                 <div className="form-field-group">
-                  <label className="form-field-label">Recipient Roles (Section 14) *</label>
+                  <label className="form-field-label">Recipient Roles *</label>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
                     {['Department Head (HOD)', 'Admin Team', 'Technicians', 'End Users', 'Management'].map((role) => (
                       <label key={role} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px' }}>

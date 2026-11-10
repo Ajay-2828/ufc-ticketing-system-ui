@@ -57,7 +57,7 @@ export function AssignTicketModal({
         <div className="modal-dialog-header">
           <div>
             <div className="page-eyebrow">
-              <UserCheck size={14} /> Admin Assignment (Section 3.7)
+              <UserCheck size={14} /> Assign Specialist
             </div>
             <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 800 }}>
               Assign Ticket {ticket.id}

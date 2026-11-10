@@ -45,7 +45,7 @@ export function ReferralModal({
         <div className="modal-dialog-header">
           <div>
             <div className="page-eyebrow">
-              <Share2 size={14} /> Cross-Department Collaboration (Section 3.9)
+              <Share2 size={14} /> Cross-Department Referral
             </div>
             <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 800 }}>
               Refer Ticket {ticket.id}

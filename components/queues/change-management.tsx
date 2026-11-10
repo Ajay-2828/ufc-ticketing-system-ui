@@ -41,12 +41,12 @@ export function ChangeManagement({
       <div className="page-header-flex">
         <div>
           <div className="page-eyebrow" style={{ color: 'var(--purple)' }}>
-            <GitBranch size={14} /> Section 3.6 Change Governance
+            <GitBranch size={14} /> Change Request Management
           </div>
           <h1 className="page-title-main">Change Request Management</h1>
           <p className="page-desc-sub">
             Review architectural modifications, core system upgrades, and partner firewall rules
-            through the formal 6-stage UFC Change Governance lifecycle.
+            through a structured multi-stage change governance workflow.
           </p>
         </div>
       </div>
@@ -54,7 +54,7 @@ export function ChangeManagement({
       {/* Change Request Pipeline Visualizer */}
       <div className="modern-card" style={{ padding: '20px 24px' }}>
         <h3 style={{ margin: '0 0 16px', fontSize: '15px', fontWeight: 700 }}>
-          Change Request Workflow Lifecycle (Section 3.6)
+          Change Request Lifecycle Stages
         </h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '12px' }}>
           {stages.map((st, i) => (

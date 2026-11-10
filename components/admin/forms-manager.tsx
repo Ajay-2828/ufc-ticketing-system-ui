@@ -59,7 +59,7 @@ export function FormsManager() {
       <div className="page-header-flex">
         <div>
           <div className="page-eyebrow">
-            <FileText size={14} /> Section 3.2 Dynamic Application Questionnaires
+            <FileText size={14} /> Application Questionnaires
           </div>
           <h1 className="page-title-main">Dynamic Form & Custom Fields Manager</h1>
           <p className="page-desc-sub">

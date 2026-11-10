@@ -1,13 +1,15 @@
 'use client'
 
 import React from 'react'
+import { useRouter } from 'next/navigation'
 import { ApprovalQueue } from '@/components/queues/approval-queue'
 import { useTicketContext } from '@/context/ticket-context'
+import { Ticket } from '@/app/ticket-data'
 
 export default function ApprovalsPage() {
+  const router = useRouter()
   const {
     visibleTickets,
-    setSelectedTicket,
     handleUpdateTicket,
     setTicketToRefer,
     triggerToast,
@@ -20,7 +22,7 @@ export default function ApprovalsPage() {
       tickets={visibleTickets.filter(
         (t) => t.status === 'Pending Approval' || t.status === 'Admin Review'
       )}
-      onSelectTicket={setSelectedTicket}
+      onSelectTicket={(t: Ticket) => router.push(`/tickets/${t.id}`)}
       onApproveTicket={(t) => {
         const updated = {
           ...t,
@@ -66,4 +68,3 @@ export default function ApprovalsPage() {
     />
   )
 }
-

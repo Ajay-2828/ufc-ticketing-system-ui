@@ -55,12 +55,14 @@ export function ExceptionsQueue({
       {/* Header */}
       <div className="page-header-flex">
         <div>
-          <div className="page-eyebrow" style={{ color: 'var(--rose)' }}>
-            <ShieldAlert size={14} /> Section 9 · Exception Governance Queue
+          <div className="page-eyebrow" style={{ color: 'var(--primary)' }}>
+            <span>IT Service Management</span>
+            <span style={{ color: 'var(--text-muted)' }}>·</span>
+            <span>Admin Triage & Escalations</span>
           </div>
-          <h1 className="page-title-main">Admin Queue (Exceptions)</h1>
+          <h1 className="page-title-main">Admin Queue</h1>
           <p className="page-desc-sub">
-            Contains only non-standard tickets: Reopened items rejected by users, and architectural Change Requests awaiting review. Normal tickets never appear here.
+            Review and triage non-standard requests: reopened incident tickets requiring reassignment and architectural Change Requests awaiting review.
           </p>
         </div>
       </div>
@@ -129,9 +131,9 @@ export function ExceptionsQueue({
       <div className="modern-card">
         <div className="modern-card-header">
           <div>
-            <h3 className="card-title-lg">Active Exception Items</h3>
+            <h3 className="card-title-lg">Queue Items</h3>
             <p className="card-subtitle-sm">
-              Rows near SLA breach display an urgent red left border.
+              Urgent tickets nearing SLA breach are highlighted for immediate action.
             </p>
           </div>
         </div>
@@ -141,10 +143,10 @@ export function ExceptionsQueue({
             <div style={{ padding: '48px', textAlign: 'center', color: 'var(--text-muted)' }}>
               <CheckCircle2 size={40} style={{ margin: '0 auto 12px', color: 'var(--emerald)' }} />
               <h3 style={{ margin: '0 0 4px', fontSize: '16px', color: 'var(--text-main)', fontWeight: 700 }}>
-                No active exceptions!
+                No pending queue items
               </h3>
               <p style={{ margin: 0, fontSize: '13px' }}>
-                All standard tickets are progressing smoothly along their automated routing paths.
+                All standard tickets are progressing along their automated routing paths.
               </p>
             </div>
           ) : (
@@ -153,10 +155,10 @@ export function ExceptionsQueue({
                 <thead>
                   <tr>
                     <th>Ticket</th>
-                    <th>Status Badge</th>
-                    <th>Raised by / Sent by</th>
-                    <th>Waiting For</th>
-                    <th>SLA Timer Bar</th>
+                    <th>Status</th>
+                    <th>Requester</th>
+                    <th>Wait Time</th>
+                    <th>SLA Countdown</th>
                     <th style={{ textAlign: 'right' }}>Action</th>
                   </tr>
                 </thead>

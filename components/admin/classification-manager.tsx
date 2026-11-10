@@ -3,6 +3,8 @@
 import React, { useState, useMemo } from 'react'
 import {
   FolderKanban,
+  Laptop,
+  HardDrive,
   Plus,
   Users,
   Clock,
@@ -53,6 +55,10 @@ import {
   ticketTypesList as initialTicketTypesList,
   ticketStatusesList as initialTicketStatusesList,
   DepartmentConfig,
+  COMMON_MASTER_ISSUES,
+  COMMON_HARDWARE_ISSUES,
+  applicationQuestionnaires,
+  DynamicQuestion,
 } from '@/app/ticket-data'
 
 interface ClassificationManagerProps {
@@ -204,17 +210,7 @@ const ENTERPRISE_IT_PRESET: ClassificationConfig[] = [
   },
 ]
 
-const ALL_SYSTEM_APPLICATIONS = [
-  'Flexcube',
-  'Atomverse',
-  'Firewall',
-  'Network Access',
-  'SWIFT Alliance Gateway',
-  'ATM & POS Switch',
-  'Active Directory & Identity',
-  'Database & Storage',
-  'Workstations & Peripherals',
-]
+
 
 export function ClassificationManager({
   classificationTree,
@@ -232,19 +228,32 @@ export function ClassificationManager({
     setTimeout(() => setToastMessage(null), 3000)
   }
 
-  // TAB 1: Tree State & Sub-views
-  const [viewMode, setViewMode] = useState<'matrix' | 'hierarchy'>('matrix')
+  // TAB 1: Tree State & Sub-views - Defaults to 3-Tier Hierarchy Tree
+  const [viewMode, setViewMode] = useState<'hierarchy' | 'matrix'>('hierarchy')
   const [matrixSearch, setMatrixSearch] = useState('')
   const [matrixCategoryFilter, setMatrixCategoryFilter] = useState('All')
   const [matrixSeverityFilter, setMatrixSeverityFilter] = useState('All')
   const [matrixWorkflowFilter, setMatrixWorkflowFilter] = useState('All')
 
   const [selectedMain, setSelectedMain] = useState(
-    classificationTree[0]?.name || 'Core Banking & Applications'
+    classificationTree[0]?.name || 'Software'
   )
   const [selectedSub, setSelectedSub] = useState(
-    classificationTree[0]?.subClassifications[0]?.name || 'Flexcube'
+    classificationTree[0]?.subClassifications[0]?.name || 'Pro People'
   )
+
+  // Intake Questionnaire State (Industry standard: Embedded directly in catalog item)
+  const [questionnaires, setQuestionnaires] = useState<Record<string, DynamicQuestion[]>>(applicationQuestionnaires)
+  const [showAddQuestionModal, setShowAddQuestionModal] = useState(false)
+  const [newQuestionLabel, setNewQuestionLabel] = useState('')
+  const [newQuestionType, setNewQuestionType] = useState<'text' | 'number' | 'dropdown' | 'attachment'>('text')
+  const [newQuestionOptions, setNewQuestionOptions] = useState('')
+  const [newQuestionPlaceholder, setNewQuestionPlaceholder] = useState('')
+  const [newQuestionRequired, setNewQuestionRequired] = useState(true)
+
+  // Pick from Common Issues modal state
+  const [showPickCommonIssuesModal, setShowPickCommonIssuesModal] = useState(false)
+  const [selectedCommonIssueNames, setSelectedCommonIssueNames] = useState<string[]>([])
 
   // Modals state
   const [showAddMainModal, setShowAddMainModal] = useState(false)
@@ -296,10 +305,28 @@ export function ClassificationManager({
   const [newIssueResolutionHours, setNewIssueResolutionHours] = useState(4)
   const [newIssueHodLimitHours, setNewIssueHodLimitHours] = useState(2)
   const [newIssueIsCR, setNewIssueIsCR] = useState(false)
+  const [newIssueRequiresHodApproval, setNewIssueRequiresHodApproval] = useState(true)
 
   // TAB 2: Applications & Access State
   const [departments, setDepartments] = useState<DepartmentConfig[]>(initialDepartmentsData)
   const [deptSearch, setDeptSearch] = useState('')
+  const [deptCategoryFilter, setDeptCategoryFilter] = useState<'All' | 'Software' | 'Hardware'>('All')
+
+  // Dynamically extract all sub-classifications directly from the active classificationTree
+  const allSubClassifications = useMemo(() => {
+    const list: { mainName: string; subName: string; issueCount: number }[] = []
+    classificationTree.forEach((main) => {
+      main.subClassifications.forEach((sub) => {
+        list.push({ mainName: main.name, subName: sub.name, issueCount: sub.issueTypes.length })
+      })
+    })
+    return list
+  }, [classificationTree])
+
+  const visibleEntitlementSystems = useMemo(() => {
+    if (deptCategoryFilter === 'All') return allSubClassifications
+    return allSubClassifications.filter((s) => s.mainName.toLowerCase().includes(deptCategoryFilter.toLowerCase()))
+  }, [allSubClassifications, deptCategoryFilter])
 
   // TAB 3: Ticket Types State
   const [ticketTypes, setTicketTypes] = useState(initialTicketTypesList)
@@ -530,6 +557,7 @@ export function ClassificationManager({
       slaResolutionHours: Number(newIssueResolutionHours) || 4,
       hodApprovalLimitHours: Number(newIssueHodLimitHours) || 2,
       isChangeRequest: newIssueIsCR,
+      crRequiresHodApproval: newIssueIsCR ? newIssueRequiresHodApproval : undefined,
     }
 
     const updated = classificationTree.map((main) => {
@@ -551,6 +579,102 @@ export function ClassificationManager({
     setShowAddIssueModal(false)
     setHasUnsavedChanges(true)
     triggerToast(`Added "${newIssue.name}" under ${targetSubName}`)
+  }
+
+  // 3b. Intake Questionnaire Handlers (Embedded in Service Catalog)
+  const handleAddQuestion = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newQuestionLabel.trim() || !selectedSub) return
+
+    const newQ: DynamicQuestion = {
+      id: `q-${Date.now()}`,
+      label: newQuestionLabel.trim(),
+      type: newQuestionType,
+      placeholder: newQuestionPlaceholder.trim() || undefined,
+      options:
+        newQuestionType === 'dropdown'
+          ? newQuestionOptions
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean)
+          : undefined,
+      required: newQuestionRequired,
+    }
+
+    const updatedList = [...(questionnaires[selectedSub] || []), newQ]
+    setQuestionnaires((prev) => ({
+      ...prev,
+      [selectedSub]: updatedList,
+    }))
+    applicationQuestionnaires[selectedSub] = updatedList
+
+    setNewQuestionLabel('')
+    setNewQuestionOptions('')
+    setNewQuestionPlaceholder('')
+    setNewQuestionRequired(true)
+    setShowAddQuestionModal(false)
+    setHasUnsavedChanges(true)
+    triggerToast(`Added intake question to ${selectedSub}`)
+  }
+
+  const handleDeleteQuestion = (qId: string) => {
+    if (!selectedSub) return
+    const updatedList = (questionnaires[selectedSub] || []).filter((q) => q.id !== qId)
+    setQuestionnaires((prev) => ({
+      ...prev,
+      [selectedSub]: updatedList,
+    }))
+    applicationQuestionnaires[selectedSub] = updatedList
+    setHasUnsavedChanges(true)
+    triggerToast('Intake question removed.')
+  }
+
+  // 3c. Add Common Issues from Master Pool to Active Sub (Software or Hardware)
+  const handleAddCommonIssuesToActiveSub = (issueNames: string[]) => {
+    if (!activeSub || issueNames.length === 0) return
+
+    const pool = selectedMain === 'Hardware' ? COMMON_HARDWARE_ISSUES : COMMON_MASTER_ISSUES
+
+    const issuesToAdd: IssueTypeConfig[] = issueNames
+      .filter((name) => !activeSub.issueTypes.some((it) => it.name === name))
+      .map((name) => {
+        const master =
+          pool.find((m) => m.name === name) ||
+          COMMON_MASTER_ISSUES.find((m) => m.name === name) ||
+          COMMON_HARDWARE_ISSUES.find((m) => m.name === name)
+        return {
+          name: name,
+          autoSeverity: master?.autoSeverity || 'Medium',
+          slaResponseHours: master?.slaResponseHours || 1,
+          slaResolutionHours: master?.slaResolutionHours || 4,
+          hodApprovalLimitHours: master?.hodApprovalLimitHours || 2,
+        }
+      })
+
+    if (issuesToAdd.length === 0) {
+      triggerToast('All selected issues are already added to this software.')
+      setShowPickCommonIssuesModal(false)
+      return
+    }
+
+    const updated = classificationTree.map((main) => {
+      if (main.name !== selectedMain) return main
+      return {
+        ...main,
+        subClassifications: main.subClassifications.map((sub) => {
+          if (sub.name !== selectedSub) return sub
+          return {
+            ...sub,
+            issueTypes: [...sub.issueTypes, ...issuesToAdd],
+          }
+        }),
+      }
+    })
+
+    onUpdateClassificationTree(updated)
+    setShowPickCommonIssuesModal(false)
+    setHasUnsavedChanges(true)
+    triggerToast(`Added ${issuesToAdd.length} common issue(s) to ${selectedSub}`)
   }
 
   // 4. Update Technicians (1 or 2 Rule)
@@ -691,7 +815,7 @@ export function ClassificationManager({
       r.issue.slaResponseHours,
       r.issue.slaResolutionHours,
       r.issue.hodApprovalLimitHours,
-      `"${r.issue.isChangeRequest ? 'Change Request' : 'Standard'}"`,
+      `"${r.issue.isChangeRequest ? (r.issue.crRequiresHodApproval !== false ? 'Change Request (Admin ➔ HOD)' : 'Change Request (Admin Only)') : 'Standard'}"`,
     ])
 
     const csvContent =
@@ -751,16 +875,16 @@ export function ClassificationManager({
   }
 
   // TAB 2: Applications & Access Handlers
-  const handleToggleDepartmentApp = (deptName: string, appName: string) => {
+  const handleToggleDepartmentApp = (deptName: string, systemName: string) => {
     setDepartments((prev) =>
       prev.map((dept) => {
         if (dept.name !== deptName) return dept
-        const hasApp = dept.assignedApplications.includes(appName)
+        const hasSystem = dept.assignedApplications.includes(systemName)
         return {
           ...dept,
-          assignedApplications: hasApp
-            ? dept.assignedApplications.filter((a) => a !== appName)
-            : [...dept.assignedApplications, appName],
+          assignedApplications: hasSystem
+            ? dept.assignedApplications.filter((a) => a !== systemName)
+            : [...dept.assignedApplications, systemName],
         }
       })
     )
@@ -768,56 +892,58 @@ export function ClassificationManager({
   }
 
   const handleRowSelectAll = (deptName: string) => {
+    const visibleNames = visibleEntitlementSystems.map((s) => s.subName)
     setDepartments((prev) =>
       prev.map((dept) => {
         if (dept.name !== deptName) return dept
         return {
           ...dept,
-          assignedApplications: [...ALL_SYSTEM_APPLICATIONS],
+          assignedApplications: Array.from(new Set([...dept.assignedApplications, ...visibleNames])),
         }
       })
     )
     setHasUnsavedChanges(true)
-    triggerToast(`Granted all applications to ${deptName}`)
+    triggerToast(`Granted visible systems to ${deptName}`)
   }
 
   const handleRowDeselectAll = (deptName: string) => {
+    const visibleNames = visibleEntitlementSystems.map((s) => s.subName)
     setDepartments((prev) =>
       prev.map((dept) => {
         if (dept.name !== deptName) return dept
         return {
           ...dept,
-          assignedApplications: [],
+          assignedApplications: dept.assignedApplications.filter((a) => !visibleNames.includes(a)),
         }
       })
     )
     setHasUnsavedChanges(true)
-    triggerToast(`Removed all application access for ${deptName}`)
+    triggerToast(`Removed visible systems access for ${deptName}`)
   }
 
-  const handleColumnSelectAll = (appName: string) => {
+  const handleColumnSelectAll = (systemName: string) => {
     setDepartments((prev) =>
       prev.map((dept) => {
-        if (dept.assignedApplications.includes(appName)) return dept
+        if (dept.assignedApplications.includes(systemName)) return dept
         return {
           ...dept,
-          assignedApplications: [...dept.assignedApplications, appName],
+          assignedApplications: [...dept.assignedApplications, systemName],
         }
       })
     )
     setHasUnsavedChanges(true)
-    triggerToast(`Granted ${appName} access to all departments`)
+    triggerToast(`Granted ${systemName} to all departments`)
   }
 
-  const handleColumnDeselectAll = (appName: string) => {
+  const handleColumnDeselectAll = (systemName: string) => {
     setDepartments((prev) =>
       prev.map((dept) => ({
         ...dept,
-        assignedApplications: dept.assignedApplications.filter((a) => a !== appName),
+        assignedApplications: dept.assignedApplications.filter((a) => a !== systemName),
       }))
     )
     setHasUnsavedChanges(true)
-    triggerToast(`Revoked ${appName} access from all departments`)
+    triggerToast(`Revoked ${systemName} from all departments`)
   }
 
   // TAB 3: Ticket Types Handlers
@@ -907,1868 +1033,782 @@ export function ClassificationManager({
         </div>
       )}
 
-      {/* Enterprise Page Header */}
-      <div className="page-header-flex" style={{ marginBottom: '18px' }}>
+      {/* Page Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <div className="page-eyebrow">
-            <ShieldCheck size={14} /> Administration / Classification & Service Catalog
-          </div>
-          <h1 className="page-title-main">Classification & Catalog Administration</h1>
-          <p className="page-desc-sub">
-            Configure multi-tier ITSM taxonomy, department-to-application entitlements, ticket types, SLAs, auto-severity, and lifecycle statuses.
+          <h1 className="page-title-main" style={{ fontSize: '22px', fontWeight: 800, margin: 0 }}>
+            Classification &amp; Issue SLA Manager
+          </h1>
+          <p className="page-desc-sub" style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '3px 0 0' }}>
+            3-Level Catalog: Main Classification &bull; Sub-Classification (1-2 Technicians) &bull; Issues &amp; SLAs
           </p>
         </div>
 
-        {/* Global Toolbar: Incomplete Configuration Indicator + Data Dump */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          {incompleteSubClassifications.length > 0 && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '6px 12px',
-                background: '#FEF2F2',
-                border: '1px solid #FECACA',
-                borderRadius: '8px',
-                fontSize: '12px',
-                color: '#DC2626',
-                fontWeight: 600,
-              }}
-              title="Taxonomy nodes missing technicians or issue rules"
-            >
-              <AlertTriangle size={14} />
-              <span>{incompleteSubClassifications.length} Incomplete Nodes</span>
-            </div>
-          )}
+        <button
+          type="button"
+          className="btn-primary"
+          style={{ height: '36px', fontSize: '12.5px', gap: '6px' }}
+          onClick={() => setShowAddMainModal(true)}
+        >
+          <Plus size={14} /> Add Main Category
+        </button>
+      </div>
 
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={() => {
-              setJsonInputText(JSON.stringify(classificationTree, null, 2))
-              setShowDataDumpModal(true)
-            }}
-            title="Import/Export data dumps and load standard industry packages"
-          >
-            <Database size={15} /> Data Dump Tools
-          </button>
-
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={handleExportCSV}
-            title="Export catalog matrix as CSV for Excel"
-          >
-            <FileSpreadsheet size={15} /> Export CSV
-          </button>
+      <div>
+        {/* LEVEL 1: Main Classification Selector (Software vs Hardware) */}
+        <div style={{ marginBottom: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '12px' }}>
+            {classificationTree.map((main) => {
+              const isSelected = main.name === selectedMain
+              const isSoftware = main.name.toLowerCase().includes('soft')
+              return (
+                <div
+                  key={main.name}
+                  onClick={() => {
+                    setSelectedMain(main.name)
+                    if (main.subClassifications.length > 0) {
+                      setSelectedSub(main.subClassifications[0].name)
+                    }
+                  }}
+                  style={{
+                    padding: '14px 18px',
+                    borderRadius: '10px',
+                    border: `2px solid ${isSelected ? 'var(--primary)' : 'var(--border)'}`,
+                    background: isSelected ? 'var(--primary-soft)' : '#FFFFFF',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    boxShadow: isSelected ? '0 2px 10px rgba(37, 99, 235, 0.1)' : 'var(--shadow-xs)',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div
+                      style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '8px',
+                        background: isSelected ? 'var(--primary)' : '#F1F5F9',
+                        color: isSelected ? '#FFFFFF' : 'var(--text-secondary)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {isSoftware ? <Laptop size={20} /> : <HardDrive size={20} />}
+                    </div>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: 'var(--text-main)' }}>
+                          {main.name}
+                        </h3>
+                        {isSelected && (
+                          <span style={{ fontSize: '10px', background: 'var(--primary)', color: '#FFFFFF', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                            Active
+                          </span>
+                        )}
+                      </div>
+                      <span style={{ fontSize: '11.5px', color: 'var(--text-muted)', marginTop: '2px', display: 'block' }}>
+                        {isSoftware
+                          ? 'Applications: Pro People, Pro Biz, Pro Pupil, Flexcube...'
+                          : 'Devices: Laptops, Printers, Monitors, Peripherals, Network...'}
+                      </span>
+                    </div>
+                  </div>
+                  <span
+                    className="badge-tag"
+                    style={{
+                      background: isSelected ? 'var(--primary)' : '#E2E8F0',
+                      color: isSelected ? '#FFFFFF' : '#475569',
+                      fontWeight: 700,
+                      fontSize: '11px',
+                      padding: '3px 8px',
+                    }}
+                  >
+                    {main.subClassifications.length} Subs
+                  </span>
+                </div>
+              )
+            })}
+          </div>
         </div>
-      </div>
 
-      {/* 5 SUB-TABS (Section 15: Administration Page 1) */}
-      <div
-        style={{
-          display: 'flex',
-          gap: '8px',
-          borderBottom: '1px solid var(--border)',
-          marginBottom: '22px',
-          paddingBottom: '2px',
-          overflowX: 'auto',
-        }}
-      >
-        <button
-          type="button"
-          onClick={() => setActiveTab('tree')}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '10px 16px',
-            background: 'none',
-            border: 'none',
-            borderBottom: activeTab === 'tree' ? '2.5px solid var(--primary)' : '2.5px solid transparent',
-            color: activeTab === 'tree' ? 'var(--primary)' : 'var(--text-secondary)',
-            fontWeight: activeTab === 'tree' ? 700 : 500,
-            fontSize: '13.5px',
-            cursor: 'pointer',
-            transition: 'all 0.15s ease',
-          }}
-        >
-          <FolderKanban size={16} />
-          <span>Classification Tree</span>
-          <span
-            className="badge-tag badge-tag-sm"
-            style={{
-              background: activeTab === 'tree' ? 'var(--primary)' : '#E2E8F0',
-              color: activeTab === 'tree' ? '#FFFFFF' : '#475569',
-              fontSize: '11px',
-              padding: '1px 6px',
-            }}
-          >
-            {allMatrixRows.length} Items
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('access')}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '10px 16px',
-            background: 'none',
-            border: 'none',
-            borderBottom: activeTab === 'access' ? '2.5px solid var(--primary)' : '2.5px solid transparent',
-            color: activeTab === 'access' ? 'var(--primary)' : 'var(--text-secondary)',
-            fontWeight: activeTab === 'access' ? 700 : 500,
-            fontSize: '13.5px',
-            cursor: 'pointer',
-            transition: 'all 0.15s ease',
-          }}
-        >
-          <Building2 size={16} />
-          <span>Applications & Access</span>
-          <span
-            className="badge-tag badge-tag-sm"
-            style={{
-              background: activeTab === 'access' ? 'var(--primary)' : '#E2E8F0',
-              color: activeTab === 'access' ? '#FFFFFF' : '#475569',
-              fontSize: '11px',
-              padding: '1px 6px',
-            }}
-          >
-            {departments.length} Depts
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('types')}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '10px 16px',
-            background: 'none',
-            border: 'none',
-            borderBottom: activeTab === 'types' ? '2.5px solid var(--primary)' : '2.5px solid transparent',
-            color: activeTab === 'types' ? 'var(--primary)' : 'var(--text-secondary)',
-            fontWeight: activeTab === 'types' ? 700 : 500,
-            fontSize: '13.5px',
-            cursor: 'pointer',
-            transition: 'all 0.15s ease',
-          }}
-        >
-          <FileText size={16} />
-          <span>Ticket Types</span>
-          <span
-            className="badge-tag badge-tag-sm"
-            style={{
-              background: activeTab === 'types' ? 'var(--primary)' : '#E2E8F0',
-              color: activeTab === 'types' ? '#FFFFFF' : '#475569',
-              fontSize: '11px',
-              padding: '1px 6px',
-            }}
-          >
-            {ticketTypes.length}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('severity')}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '10px 16px',
-            background: 'none',
-            border: 'none',
-            borderBottom: activeTab === 'severity' ? '2.5px solid var(--primary)' : '2.5px solid transparent',
-            color: activeTab === 'severity' ? 'var(--primary)' : 'var(--text-secondary)',
-            fontWeight: activeTab === 'severity' ? 700 : 500,
-            fontSize: '13.5px',
-            cursor: 'pointer',
-            transition: 'all 0.15s ease',
-          }}
-        >
-          <SlidersHorizontal size={16} />
-          <span>Severity & Priority</span>
-          <span
-            className="badge-tag badge-tag-sm"
-            style={{
-              background: activeTab === 'severity' ? 'var(--primary)' : '#E2E8F0',
-              color: activeTab === 'severity' ? '#FFFFFF' : '#475569',
-              fontSize: '11px',
-              padding: '1px 6px',
-            }}
-          >
-            P1 - P4
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('statuses')}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '10px 16px',
-            background: 'none',
-            border: 'none',
-            borderBottom: activeTab === 'statuses' ? '2.5px solid var(--primary)' : '2.5px solid transparent',
-            color: activeTab === 'statuses' ? 'var(--primary)' : 'var(--text-secondary)',
-            fontWeight: activeTab === 'statuses' ? 700 : 500,
-            fontSize: '13.5px',
-            cursor: 'pointer',
-            transition: 'all 0.15s ease',
-          }}
-        >
-          <CheckCircle2 size={16} />
-          <span>Statuses</span>
-          <span
-            className="badge-tag badge-tag-sm"
-            style={{
-              background: activeTab === 'statuses' ? 'var(--primary)' : '#E2E8F0',
-              color: activeTab === 'statuses' ? '#FFFFFF' : '#475569',
-              fontSize: '11px',
-              padding: '1px 6px',
-            }}
-          >
-            9 Lifecycle
-          </span>
-        </button>
-      </div>
-
-      {/* ========================================================================= */}
-      {/* TAB 1: CLASSIFICATION TREE & MATRIX (Section 15.1) */}
-      {/* ========================================================================= */}
-      {activeTab === 'tree' && (
-        <div>
-          {/* Sub-view switcher: Data Grid vs Hierarchy Tree */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: '16px',
-              flexWrap: 'wrap',
-              gap: '12px',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                background: 'var(--surface)',
-                border: '1.5px solid var(--border)',
-                borderRadius: '9px',
-                padding: '3px',
-                boxShadow: 'var(--shadow-sm)',
-              }}
-            >
-              <button
-                type="button"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '7px',
-                  padding: '6px 14px',
-                  fontSize: '12.5px',
-                  fontWeight: viewMode === 'matrix' ? 700 : 500,
-                  border: 'none',
-                  borderRadius: '6px',
-                  background: viewMode === 'matrix' ? 'var(--primary-soft)' : 'transparent',
-                  color: viewMode === 'matrix' ? 'var(--primary)' : 'var(--text-secondary)',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
-                onClick={() => setViewMode('matrix')}
-                title="Unified Enterprise Data Grid"
-              >
-                <Table size={15} />
-                <span>Unified Data Grid</span>
-              </button>
-
-              <button
-                type="button"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '7px',
-                  padding: '6px 14px',
-                  fontSize: '12.5px',
-                  fontWeight: viewMode === 'hierarchy' ? 700 : 500,
-                  border: 'none',
-                  borderRadius: '6px',
-                  background: viewMode === 'hierarchy' ? 'var(--primary-soft)' : 'transparent',
-                  color: viewMode === 'hierarchy' ? 'var(--primary)' : 'var(--text-secondary)',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
-                onClick={() => setViewMode('hierarchy')}
-                title="Taxonomy Hierarchy Tree"
-              >
-                <Layers size={15} />
-                <span>Hierarchy Tree</span>
-              </button>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => {
-                  const firstRow = allMatrixRows[0]
-                  if (firstRow) {
-                    setRoutingPreviewTarget({
-                      main: firstRow.category,
-                      sub: firstRow.sub,
-                      issueName: firstRow.issue.name,
-                      severity: firstRow.issue.autoSeverity,
-                      responseHours: firstRow.issue.slaResponseHours,
-                      resolutionHours: firstRow.issue.slaResolutionHours,
-                      hodLimitHours: firstRow.issue.hodApprovalLimitHours,
-                      isCR: !!firstRow.issue.isChangeRequest,
-                      technicians: firstRow.technicians,
-                    })
-                    setShowRoutingPreviewModal(true)
-                  }
-                }}
-              >
-                <Eye size={15} /> Preview Routing
-              </button>
-
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => setShowAddMainModal(true)}
-              >
-                <Plus size={15} /> Add Main Category
-              </button>
-
-              <button
-                type="button"
-                className="btn-primary"
-                onClick={() => setShowAddIssueModal(true)}
-              >
-                <Plus size={15} /> Add Issue Type
-              </button>
-            </div>
-          </div>
-
-          {/* Operational Metrics Bar */}
-          <div
-            className="modern-card"
-            style={{
-              padding: '16px 24px',
-              marginBottom: '20px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              background: '#FFFFFF',
-              flexWrap: 'wrap',
-              gap: '16px',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-              <div
-                style={{
-                  width: '42px',
-                  height: '42px',
-                  borderRadius: '10px',
-                  background: 'var(--primary-soft)',
-                  color: 'var(--primary)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <FolderKanban size={22} />
-              </div>
+        <div className="layout-split-view">
+          {/* Left Column: Level 2 — Sub-Classifications under selectedMain */}
+          <div className="modern-card" style={{ padding: '18px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
               <div>
-                <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  Catalog Coverage
+                <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.6px', fontWeight: 800, color: 'var(--primary)' }}>
+                  Level 2: Sub-Classification
                 </span>
-                <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-main)' }}>
-                  {classificationTree.length} Main Categories &bull; {classificationTree.reduce((acc, m) => acc + m.subClassifications.length, 0)} Sub-Services
-                </div>
+                <h3 style={{ margin: '2px 0 0', fontSize: '15px', fontWeight: 800, color: 'var(--text-main)' }}>
+                  {selectedMain} Systems
+                </h3>
               </div>
+              <button
+                type="button"
+                className="btn-secondary"
+                style={{ height: '30px', fontSize: '11.5px', padding: '0 10px' }}
+                onClick={() => setShowAddSubModal(true)}
+              >
+                <Plus size={13} /> Add Sub
+              </button>
             </div>
 
-            <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
-              <div>
-                <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>TOTAL RULES</span>
-                <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-main)' }}>{allMatrixRows.length}</div>
-              </div>
-              <div>
-                <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>P1 CRITICAL</span>
-                <div style={{ fontSize: '16px', fontWeight: 700, color: '#DC2626' }}>
-                  {allMatrixRows.filter((r) => r.issue.autoSeverity === 'Critical').length}
-                </div>
-              </div>
-              <div>
-                <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>CHANGE REQUESTS</span>
-                <div style={{ fontSize: '16px', fontWeight: 700, color: '#7C3AED' }}>
-                  {allMatrixRows.filter((r) => r.issue.isChangeRequest).length}
-                </div>
-              </div>
-              <div>
-                <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>DESIGNATED TECHS</span>
-                <div style={{ fontSize: '16px', fontWeight: 700, color: '#059669' }}>
-                  {Array.from(new Set(allMatrixRows.flatMap((r) => r.technicians))).length} Specialists
-                </div>
-              </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {(activeMain?.subClassifications || []).map((sub) => {
+                const isSubSelected = sub.name === selectedSub
+                const hasNoTechs = !sub.technicians || sub.technicians.length === 0
+                return (
+                  <div
+                    key={sub.name}
+                    style={{
+                      padding: '12px 14px',
+                      borderRadius: '8px',
+                      border: `1.5px solid ${isSubSelected ? 'var(--primary)' : 'var(--border)'}`,
+                      background: isSubSelected ? 'var(--primary-soft)' : '#FFFFFF',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      transition: 'all 0.15s ease',
+                    }}
+                    onClick={() => setSelectedSub(sub.name)}
+                  >
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <ChevronRight size={14} color={isSubSelected ? 'var(--primary)' : 'var(--text-muted)'} />
+                        <strong style={{ fontSize: '13.5px', color: isSubSelected ? 'var(--primary)' : 'var(--text-main)' }}>
+                          {sub.name}
+                        </strong>
+                        {hasNoTechs && (
+                          <span style={{ color: '#DC2626', fontSize: '11px' }} title="No technicians assigned">⚠️</span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '3px', paddingLeft: '20px' }}>
+                        👤 {sub.technicians && sub.technicians.length > 0 ? sub.technicians.join(', ') : 'Unassigned'}
+                      </div>
+                    </div>
+
+                    <span
+                      className="badge-tag"
+                      style={{
+                        background: isSubSelected ? '#DBEAFE' : '#F1F5F9',
+                        color: isSubSelected ? '#1E40AF' : '#475569',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        padding: '3px 8px',
+                      }}
+                    >
+                      {sub.issueTypes.length} Issues
+                    </span>
+                  </div>
+                )
+              })}
             </div>
           </div>
 
-          {/* VIEW MODE 1: MATRIX (Unified Data Grid) */}
-          {viewMode === 'matrix' && (
-            <div className="modern-card" style={{ padding: '0', overflow: 'hidden' }}>
-              {/* Matrix Filter & Search Bar */}
-              <div
-                style={{
-                  padding: '16px 20px',
-                  borderBottom: '1px solid var(--border)',
-                  background: 'var(--surface-subtle)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '12px',
-                  flexWrap: 'wrap',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: '1 1 320px' }}>
-                  <div className="search-bar" style={{ width: '100%', maxWidth: '340px' }}>
-                    <Search size={15} color="var(--text-muted)" />
-                    <input
-                      type="text"
-                      placeholder="Search category, system, issue or engineer..."
-                      value={matrixSearch}
-                      onChange={(e) => setMatrixSearch(e.target.value)}
-                    />
-                    {matrixSearch && (
-                      <button
-                        type="button"
-                        onClick={() => setMatrixSearch('')}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-                      >
-                        <X size={14} color="var(--text-muted)" />
-                      </button>
-                    )}
+          {/* Right Column: Active Sub-Classification Configuration */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {activeSub ? (
+              <>
+                {/* Header Breadcrumb & Quick Actions */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '12px 16px',
+                    background: '#FFFFFF',
+                    border: '1px solid var(--border)',
+                    borderRadius: '10px',
+                    boxShadow: 'var(--shadow-xs)',
+                    flexWrap: 'wrap',
+                    gap: '10px',
+                  }}
+                >
+                  <div>
+                    <div
+                      style={{
+                        fontSize: '11.5px',
+                        color: 'var(--primary)',
+                        fontWeight: 700,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        marginBottom: '2px',
+                      }}
+                    >
+                      <span>{selectedMain}</span>
+                      <ChevronRight size={12} color="var(--text-muted)" />
+                      <span style={{ color: 'var(--text-main)' }}>{selectedSub}</span>
+                    </div>
+                    <h2 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: 'var(--text-main)' }}>
+                      {selectedSub}
+                    </h2>
                   </div>
 
-                  {/* Category Filter */}
-                  <select
-                    className="form-input-control"
-                    style={{ width: 'auto', minWidth: '160px', padding: '7px 12px', fontSize: '12.5px' }}
-                    value={matrixCategoryFilter}
-                    onChange={(e) => setMatrixCategoryFilter(e.target.value)}
-                  >
-                    <option value="All">All Categories</option>
-                    {classificationTree.map((m) => (
-                      <option key={m.name} value={m.name}>
-                        {m.name}
-                      </option>
-                    ))}
-                  </select>
-
-                  {/* Severity Filter */}
-                  <select
-                    className="form-input-control"
-                    style={{ width: 'auto', minWidth: '130px', padding: '7px 12px', fontSize: '12.5px' }}
-                    value={matrixSeverityFilter}
-                    onChange={(e) => setMatrixSeverityFilter(e.target.value)}
-                  >
-                    <option value="All">All Severities</option>
-                    <option value="Critical">Critical (P1)</option>
-                    <option value="High">High (P2)</option>
-                    <option value="Medium">Medium (P3)</option>
-                    <option value="Low">Low (P4)</option>
-                  </select>
-
-                  {/* Workflow Path Filter */}
-                  <select
-                    className="form-input-control"
-                    style={{ width: 'auto', minWidth: '130px', padding: '7px 12px', fontSize: '12.5px' }}
-                    value={matrixWorkflowFilter}
-                    onChange={(e) => setMatrixWorkflowFilter(e.target.value)}
-                  >
-                    <option value="All">All Workflows</option>
-                    <option value="Standard">Standard Tickets</option>
-                    <option value="Change Request">Change Requests</option>
-                  </select>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      style={{ height: '32px', fontSize: '11.5px', padding: '0 10px', gap: '5px' }}
+                      onClick={() => {
+                        const first = activeSub.issueTypes[0]
+                        if (first) {
+                          setRoutingPreviewTarget({
+                            main: selectedMain,
+                            sub: selectedSub,
+                            issueName: first.name,
+                            severity: first.autoSeverity,
+                            responseHours: first.slaResponseHours,
+                            resolutionHours: first.slaResolutionHours,
+                            hodLimitHours: first.hodApprovalLimitHours,
+                            isCR: !!first.isChangeRequest,
+                            technicians: activeSub.technicians,
+                          })
+                          setShowRoutingPreviewModal(true)
+                        }
+                      }}
+                    >
+                      <Eye size={13} /> Preview Routing
+                    </button>
+                  </div>
                 </div>
 
-                <div style={{ fontSize: '12.5px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                  Showing <strong>{filteredMatrixRows.length}</strong> of {allMatrixRows.length} rules
-                </div>
-              </div>
-
-              {/* Data Table */}
-              <div className="table-responsive-container">
-                <table className="custom-data-table">
-                  <thead>
-                    <tr>
-                      <th style={{ width: '22%' }}>Category &rarr; Sub-Service</th>
-                      <th style={{ width: '24%' }}>Catalog Issue Type</th>
-                      <th style={{ width: '18%' }}>Designated Techs (1 or 2)</th>
-                      <th style={{ width: '10%' }}>Auto Severity</th>
-                      <th style={{ width: '8%', textAlign: 'center' }}>Resp / Resol</th>
-                      <th style={{ width: '8%', textAlign: 'center' }}>HOD Limit</th>
-                      <th style={{ width: '10%', textAlign: 'right' }}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredMatrixRows.map((r) => {
-                      const hasIncompleteTechs = !r.technicians || r.technicians.length === 0
-                      return (
-                        <tr
-                          key={`${r.category}-${r.sub}-${r.issue.name}`}
-                          style={{
-                            background: r.issue.isChangeRequest ? '#FAF5FF' : undefined,
-                            borderLeft: hasIncompleteTechs ? '3px solid #DC2626' : undefined,
-                          }}
-                        >
-                          <td>
-                            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                              <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>
-                                {r.category}
-                              </span>
-                              <strong style={{ fontSize: '13px', color: 'var(--text-main)', marginTop: '2px' }}>
-                                {r.sub}
-                              </strong>
-                            </div>
-                          </td>
-
-                          <td>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <strong style={{ fontSize: '13px', color: 'var(--text-main)' }}>
-                                {r.issue.name}
-                              </strong>
-                              {r.issue.isChangeRequest && (
-                                <span
-                                  className="badge-tag"
-                                  style={{ background: '#F3E8FF', color: '#7C3AED', fontSize: '10.5px' }}
-                                >
-                                  CR
-                                </span>
-                              )}
-                            </div>
-                            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                              Workflow: {r.issue.isChangeRequest ? 'Change Request (Draft)' : 'Standard Published'}
-                            </span>
-                          </td>
-
-                          <td>
-                            {hasIncompleteTechs ? (
-                              <span style={{ fontSize: '11.5px', color: '#DC2626', fontWeight: 600 }}>
-                                ⚠️ 0 Techs Assigned
-                              </span>
-                            ) : (
-                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                                {r.technicians.map((t) => (
-                                  <span
-                                    key={t}
-                                    className="badge-tag"
-                                    style={{
-                                      background: '#EEF4FF',
-                                      color: '#2563EB',
-                                      fontSize: '11px',
-                                      fontWeight: 600,
-                                    }}
-                                  >
-                                    {t}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-                          </td>
-
-                          <td>
-                            <span
-                              className={`badge-tag badge-severity-${r.issue.autoSeverity.toLowerCase()}`}
-                            >
-                              {r.issue.autoSeverity}
-                            </span>
-                          </td>
-
-                          <td style={{ textAlign: 'center' }}>
-                            <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-main)' }}>
-                              {r.issue.slaResponseHours}h / {r.issue.slaResolutionHours}h
-                            </div>
-                            <span style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>SLA target</span>
-                          </td>
-
-                          <td style={{ textAlign: 'center' }}>
-                            <span style={{ fontSize: '12px', fontWeight: 600, color: '#D97706' }}>
-                              {r.issue.hodApprovalLimitHours}h
-                            </span>
-                          </td>
-
-                          <td style={{ textAlign: 'right' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' }}>
-                              <button
-                                type="button"
-                                style={{
-                                  background: 'none',
-                                  border: 'none',
-                                  cursor: 'pointer',
-                                  padding: '5px',
-                                  color: 'var(--text-muted)',
-                                }}
-                                onClick={() => {
-                                  setRoutingPreviewTarget({
-                                    main: r.category,
-                                    sub: r.sub,
-                                    issueName: r.issue.name,
-                                    severity: r.issue.autoSeverity,
-                                    responseHours: r.issue.slaResponseHours,
-                                    resolutionHours: r.issue.slaResolutionHours,
-                                    hodLimitHours: r.issue.hodApprovalLimitHours,
-                                    isCR: !!r.issue.isChangeRequest,
-                                    technicians: r.technicians,
-                                  })
-                                  setShowRoutingPreviewModal(true)
-                                }}
-                                title="Preview live ticket routing"
-                              >
-                                <Eye size={15} />
-                              </button>
-
-                              <button
-                                type="button"
-                                style={{
-                                  background: 'none',
-                                  border: 'none',
-                                  cursor: 'pointer',
-                                  padding: '5px',
-                                  color: 'var(--text-muted)',
-                                }}
-                                onClick={() =>
-                                  setEditingIssue({
-                                    mainName: r.category,
-                                    subName: r.sub,
-                                    issue: { ...r.issue },
-                                  })
-                                }
-                                title="Edit SLA & Rules"
-                              >
-                                <Edit2 size={15} />
-                              </button>
-
-                              <button
-                                type="button"
-                                style={{
-                                  background: 'none',
-                                  border: 'none',
-                                  cursor: 'pointer',
-                                  padding: '5px',
-                                  color: '#EF4444',
-                                }}
-                                onClick={() =>
-                                  handleDeleteIssueType(r.category, r.sub, r.issue.name)
-                                }
-                                title="Delete catalog issue"
-                              >
-                                <Trash2 size={15} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* VIEW MODE 2: HIERARCHY TREE */}
-          {viewMode === 'hierarchy' && (
-            <div className="layout-split-view">
-              {/* Left Column: Category Hierarchy Tree */}
-              <div className="modern-card" style={{ padding: '20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-                  <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: 'var(--text-main)' }}>
-                    Taxonomy Hierarchy
-                  </h3>
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    style={{ height: '30px', fontSize: '11.5px', padding: '0 10px' }}
-                    onClick={() => setShowAddMainModal(true)}
+                {/* Designated Technicians Card (Section 4 Rule: 1 or 2 Technicians) */}
+                <div
+                  className="modern-card"
+                  style={{
+                    padding: '14px 18px',
+                    background: '#FFFFFF',
+                    border: '1px solid var(--border)',
+                    borderRadius: '10px',
+                    marginBottom: 0,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: '10px',
+                      flexWrap: 'wrap',
+                      gap: '8px',
+                    }}
                   >
-                    <Plus size={13} /> Main
-                  </button>
-                </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <UserCheck size={16} color="var(--primary)" />
+                      <strong style={{ fontSize: '13.5px', color: 'var(--text-main)' }}>
+                        Designated Technicians ({activeSub.technicians.length} of 2)
+                      </strong>
+                    </div>
+                    <span style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>
+                      Approved tickets for {selectedSub} auto-assign here
+                    </span>
+                  </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {classificationTree.map((main) => {
-                    const isMainSelected = main.name === selectedMain
-                    return (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                    {activeSub.technicians.map((tech) => (
                       <div
-                        key={main.name}
+                        key={tech}
                         style={{
-                          border: `1.5px solid ${isMainSelected ? 'var(--primary)' : 'var(--border)'}`,
-                          borderRadius: '10px',
-                          overflow: 'hidden',
-                          background: isMainSelected ? 'var(--surface-subtle)' : '#FFFFFF',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          background: 'var(--primary-soft)',
+                          border: '1px solid #BFDBFE',
+                          borderRadius: '8px',
+                          padding: '6px 12px',
                         }}
                       >
                         <div
                           style={{
-                            padding: '10px 14px',
+                            width: '24px',
+                            height: '24px',
+                            borderRadius: '50%',
+                            background: 'var(--primary)',
+                            color: '#FFFFFF',
+                            fontSize: '10.5px',
+                            fontWeight: 700,
                             display: 'flex',
                             alignItems: 'center',
-                            justifyContent: 'space-between',
-                            cursor: 'pointer',
-                          }}
-                          onClick={() => {
-                            setSelectedMain(main.name)
-                            if (main.subClassifications.length > 0) {
-                              setSelectedSub(main.subClassifications[0].name)
-                            }
+                            justifyContent: 'center',
                           }}
                         >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <FolderKanban
-                              size={16}
-                              color={isMainSelected ? 'var(--primary)' : 'var(--text-muted)'}
-                            />
-                            <strong style={{ fontSize: '13px', color: 'var(--text-main)' }}>
-                              {main.name}
-                            </strong>
-                          </div>
-                          <span
-                            className="badge-tag"
-                            style={{
-                              background: '#E2E8F0',
-                              color: '#475569',
-                              fontSize: '11px',
-                              padding: '2px 6px',
-                            }}
-                          >
-                            {main.subClassifications.length} subs
-                          </span>
+                          {tech
+                            .split(' ')
+                            .map((n) => n[0])
+                            .join('')}
                         </div>
-
-                        {/* Sub-classifications list */}
-                        {isMainSelected && (
-                          <div
-                            style={{
-                              padding: '6px 12px 10px',
-                              background: '#FFFFFF',
-                              borderTop: '1px solid var(--border)',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              gap: '4px',
-                            }}
-                          >
-                            {main.subClassifications.map((sub) => {
-                              const isSubSelected = sub.name === selectedSub
-                              const hasNoTechs = !sub.technicians || sub.technicians.length === 0
-                              return (
-                                <div
-                                  key={sub.name}
-                                  style={{
-                                    padding: '8px 12px',
-                                    borderRadius: '7px',
-                                    background: isSubSelected ? 'var(--primary-soft)' : 'transparent',
-                                    color: isSubSelected ? 'var(--primary)' : 'var(--text-main)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    cursor: 'pointer',
-                                    fontSize: '12.5px',
-                                    fontWeight: isSubSelected ? 700 : 500,
-                                  }}
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    setSelectedSub(sub.name)
-                                  }}
-                                >
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <ChevronRight size={14} />
-                                    <span>{sub.name}</span>
-                                    {hasNoTechs && (
-                                      <span style={{ color: '#DC2626', fontSize: '11px' }}>⚠️</span>
-                                    )}
-                                  </div>
-                                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                                    {sub.issueTypes.length} issues
-                                  </span>
-                                </div>
-                              )
-                            })}
-
-                            <button
-                              type="button"
-                              style={{
-                                marginTop: '4px',
-                                padding: '6px 10px',
-                                background: 'transparent',
-                                border: '1px dashed var(--border)',
-                                borderRadius: '6px',
-                                color: 'var(--primary)',
-                                fontSize: '12px',
-                                fontWeight: 600,
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '6px',
-                              }}
-                              onClick={() => setShowAddSubModal(true)}
-                            >
-                              <Plus size={13} /> Add sub-category under {main.name}...
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-
-              {/* Right Column: Active Sub-Classification Configuration */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-                {activeSub ? (
-                  <>
-                    {/* Designated Technicians Card (Section 4 Rule: 1 or 2 Technicians) */}
-                    <div className="modern-card" style={{ padding: '20px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-                        <div>
-                          <div style={{ fontSize: '11.5px', color: 'var(--primary)', fontWeight: 600 }}>
-                            {selectedMain} &rarr; Sub-Classification: {selectedSub}
-                          </div>
-                          <h3 style={{ margin: '3px 0 0', fontSize: '17px', fontWeight: 700, color: 'var(--text-main)' }}>
-                            {selectedSub} Configuration
-                          </h3>
-                        </div>
-
+                        <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--primary)' }}>
+                          {tech}
+                        </span>
                         <button
                           type="button"
-                          className="btn-primary"
-                          style={{ height: '32px', fontSize: '12px' }}
-                          onClick={() => setShowAddIssueModal(true)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            padding: '2px',
+                            color: 'var(--primary)',
+                            display: 'flex',
+                            alignItems: 'center',
+                          }}
+                          onClick={() => handleRemoveTechnicianFromActiveSub(tech)}
+                          title="Remove technician"
                         >
-                          <Plus size={14} /> Add Issue Type
+                          <X size={13} />
                         </button>
                       </div>
+                    ))}
 
-                      {/* Designated Technicians Panel */}
-                      <div
-                        style={{
-                          background: 'var(--surface-subtle)',
-                          border: '1px solid var(--border)',
-                          borderRadius: '10px',
-                          padding: '16px',
+                    {activeSub.technicians.length < 2 && (
+                      <select
+                        className="form-input-control"
+                        style={{ height: '34px', fontSize: '12px', width: 'auto', padding: '0 10px' }}
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            handleAddTechnicianToActiveSub(e.target.value)
+                            e.target.value = ''
+                          }
                         }}
+                        defaultValue=""
                       >
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <UserCheck size={16} color="var(--primary)" />
-                            <strong style={{ fontSize: '13px', color: 'var(--text-main)' }}>
-                              Designated Technicians for Auto-Assignment
-                            </strong>
-                          </div>
-                          <span
-                            className="badge-tag"
-                            style={{
-                              background: activeSub.technicians.length === 0 ? '#FEF2F2' : '#EEF4FF',
-                              color: activeSub.technicians.length === 0 ? '#DC2626' : '#2563EB',
-                              fontSize: '11px',
-                            }}
-                          >
-                            {activeSub.technicians.length} of 2 Assigned
-                          </span>
-                        </div>
-
-                        <p style={{ margin: '0 0 12px', fontSize: '12px', color: 'var(--text-muted)' }}>
-                          Every ticket raised under {selectedSub} is automatically assigned to these engineers. UFC rules allow <strong>one or two technicians</strong> per sub-classification.
-                        </p>
-
-                        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                          {activeSub.technicians.map((tech) => (
-                            <div
-                              key={tech}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '10px',
-                                background: '#FFFFFF',
-                                border: '1.5px solid var(--border)',
-                                borderRadius: '8px',
-                                padding: '8px 14px',
-                                boxShadow: 'var(--shadow-xs)',
-                              }}
-                            >
-                              <div
-                                style={{
-                                  width: '28px',
-                                  height: '28px',
-                                  borderRadius: '50%',
-                                  background: 'var(--primary-soft)',
-                                  color: 'var(--primary)',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  fontSize: '11px',
-                                  fontWeight: 700,
-                                }}
-                              >
-                                {tech
-                                  .split(' ')
-                                  .map((n) => n[0])
-                                  .join('')}
-                              </div>
-                              <div>
-                                <strong style={{ fontSize: '12.5px', color: 'var(--text-main)' }}>
-                                  {tech}
-                                </strong>
-                                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                                  Primary Auto-Assignee
-                                </div>
-                              </div>
-                              <button
-                                type="button"
-                                style={{
-                                  background: 'none',
-                                  border: 'none',
-                                  cursor: 'pointer',
-                                  padding: '2px',
-                                  color: '#94A3B8',
-                                  marginLeft: '6px',
-                                }}
-                                onClick={() => handleRemoveTechnicianFromActiveSub(tech)}
-                                title="Remove technician"
-                              >
-                                <X size={14} />
-                              </button>
-                            </div>
+                        <option value="" disabled>
+                          + Assign designated technician...
+                        </option>
+                        {availableITStaff
+                          .filter((staff) => !activeSub.technicians.includes(staff.name))
+                          .map((staff) => (
+                            <option key={staff.name} value={staff.name}>
+                              {staff.name} &bull; {staff.title}
+                            </option>
                           ))}
+                      </select>
+                    )}
+                  </div>
+                </div>
 
-                          {activeSub.technicians.length < 2 && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <select
-                                className="form-input-control"
-                                style={{ height: '38px', fontSize: '12px', width: 'auto' }}
-                                onChange={(e) => {
-                                  if (e.target.value) {
-                                    handleAddTechnicianToActiveSub(e.target.value)
-                                    e.target.value = ''
-                                  }
-                                }}
-                                defaultValue=""
-                              >
-                                <option value="" disabled>
-                                  + Assign designated IT specialist...
-                                </option>
-                                {availableITStaff
-                                  .filter((staff) => !activeSub.technicians.includes(staff.name))
-                                  .map((staff) => (
-                                    <option key={staff.name} value={staff.name}>
-                                      {staff.name} &bull; {staff.title}
-                                    </option>
-                                  ))}
-                              </select>
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                {/* Level 3: Clean 4-Column Issue Types & SLA Matrix */}
+                <div className="modern-card" style={{ padding: '18px' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: '14px',
+                      flexWrap: 'wrap',
+                      gap: '10px',
+                    }}
+                  >
+                    <div>
+                      <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: 'var(--text-main)' }}>
+                        Configured Issues &amp; SLAs ({activeSub.issueTypes.length})
+                      </h4>
+                      <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                        Target resolution times and severity levels for {selectedSub}
+                      </span>
                     </div>
 
-                    {/* Issue Types & SLA Matrix under Active Sub */}
-                    <div className="modern-card" style={{ padding: '20px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-                        <div>
-                          <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: 'var(--text-main)' }}>
-                            Configured Issue Types & SLA Matrix ({activeSub.issueTypes.length})
-                          </h4>
-                          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                            Faster SLAs apply for disruptive events (e.g. login failures) vs standard changes.
-                          </span>
-                        </div>
-                      </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        style={{ height: '32px', fontSize: '12px', padding: '0 10px', gap: '5px' }}
+                        onClick={() => {
+                          setSelectedCommonIssueNames([])
+                          setShowPickCommonIssuesModal(true)
+                        }}
+                      >
+                        <Plus size={13} /> Common Issues Library
+                      </button>
 
-                      <div className="table-responsive-container">
-                        <table className="custom-data-table">
-                          <thead>
-                            <tr>
-                              <th>Configured Issue Type</th>
-                              <th>Auto-Severity</th>
-                              <th style={{ textAlign: 'center' }}>Response SLA</th>
-                              <th style={{ textAlign: 'center' }}>Resolution SLA</th>
-                              <th style={{ textAlign: 'center' }}>HOD Approval Limit</th>
-                              <th style={{ textAlign: 'center' }}>Workflow Path</th>
-                              <th style={{ textAlign: 'right' }}>Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {activeSub.issueTypes.map((issue) => (
-                              <tr key={issue.name}>
-                                <td>
-                                  <strong style={{ fontSize: '13px', color: 'var(--text-main)' }}>
-                                    {issue.name}
-                                  </strong>
-                                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                                    Auto-routes to: {activeSub.technicians.join(' & ')}
-                                  </div>
-                                </td>
+                      <button
+                        type="button"
+                        className="btn-primary"
+                        style={{ height: '32px', fontSize: '12px', padding: '0 12px', gap: '5px' }}
+                        onClick={() => {
+                          setNewIssueMainTarget(selectedMain)
+                          setNewIssueSubTarget(selectedSub)
+                          setShowAddIssueModal(true)
+                        }}
+                      >
+                        <Plus size={13} /> Add Custom Issue
+                      </button>
+                    </div>
+                  </div>
 
-                                <td>
+                  <div className="table-responsive-container">
+                    <table className="custom-data-table">
+                      <thead>
+                        <tr>
+                          <th style={{ width: '38%' }}>Issue Name</th>
+                          <th style={{ width: '26%' }}>Severity &amp; SLA</th>
+                          <th style={{ width: '22%' }}>Workflow Path</th>
+                          <th style={{ width: '14%', textAlign: 'right' }}>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {activeSub.issueTypes.length === 0 ? (
+                          <tr>
+                            <td colSpan={4} style={{ textAlign: 'center', padding: '36px 16px', color: 'var(--text-muted)' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                                <AlertCircle size={24} color="#94A3B8" />
+                                <span style={{ fontSize: '13.5px', fontWeight: 500 }}>No issues configured for {selectedSub} yet.</span>
+                                <button
+                                  type="button"
+                                  className="btn-primary"
+                                  style={{ height: '32px', fontSize: '12px', marginTop: '6px' }}
+                                  onClick={() => {
+                                    setSelectedCommonIssueNames([])
+                                    setShowPickCommonIssuesModal(true)
+                                  }}
+                                >
+                                  <Plus size={13} /> Pick from Common Issues
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ) : (
+                          activeSub.issueTypes.map((issue) => (
+                            <tr key={issue.name}>
+                              {/* 1. Issue Name */}
+                              <td>
+                                <strong style={{ fontSize: '13.5px', color: 'var(--text-main)', display: 'block' }}>
+                                  {issue.name}
+                                </strong>
+                              </td>
+
+                              {/* 2. Combined Severity & SLA Target */}
+                              <td>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                                   <span
                                     className={`badge-tag badge-severity-${issue.autoSeverity.toLowerCase()}`}
+                                    style={{ fontSize: '11px', padding: '2px 8px', fontWeight: 700 }}
                                   >
                                     {issue.autoSeverity}
                                   </span>
-                                </td>
+                                  <span style={{ fontSize: '12.5px', fontWeight: 700, color: 'var(--primary)' }}>
+                                    {issue.slaResolutionHours >= 1
+                                      ? `${issue.slaResolutionHours}h resolution`
+                                      : `${Math.round(issue.slaResolutionHours * 60)}m resolution`}
+                                  </span>
+                                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                                    ({issue.slaResponseHours >= 1 ? `${issue.slaResponseHours}h` : `${Math.round(issue.slaResponseHours * 60)}m`} resp)
+                                  </span>
+                                </div>
+                              </td>
 
-                                <td style={{ textAlign: 'center' }}>
-                                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                    <input
-                                      type="number"
-                                      step="0.5"
-                                      min="0.25"
-                                      className="form-input-control"
-                                      style={{ width: '56px', textAlign: 'center', padding: '4px' }}
-                                      value={issue.slaResponseHours}
-                                      onChange={(e) => {
-                                        const val = parseFloat(e.target.value) || 0.5
-                                        const updated = classificationTree.map((main) => {
-                                          if (main.name !== selectedMain) return main
-                                          return {
-                                            ...main,
-                                            subClassifications: main.subClassifications.map((s) => {
-                                              if (s.name !== selectedSub) return s
-                                              return {
-                                                ...s,
-                                                issueTypes: s.issueTypes.map((it) =>
-                                                  it.name === issue.name ? { ...it, slaResponseHours: val } : it
-                                                ),
-                                              }
-                                            }),
-                                          }
-                                        })
-                                        onUpdateClassificationTree(updated)
-                                        setHasUnsavedChanges(true)
-                                      }}
-                                    />
-                                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>hrs</span>
-                                  </div>
-                                </td>
-
-                                <td style={{ textAlign: 'center' }}>
-                                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                    <input
-                                      type="number"
-                                      step="0.5"
-                                      min="0.5"
-                                      className="form-input-control"
-                                      style={{ width: '56px', textAlign: 'center', padding: '4px' }}
-                                      value={issue.slaResolutionHours}
-                                      onChange={(e) => {
-                                        const val = parseFloat(e.target.value) || 1
-                                        const updated = classificationTree.map((main) => {
-                                          if (main.name !== selectedMain) return main
-                                          return {
-                                            ...main,
-                                            subClassifications: main.subClassifications.map((s) => {
-                                              if (s.name !== selectedSub) return s
-                                              return {
-                                                ...s,
-                                                issueTypes: s.issueTypes.map((it) =>
-                                                  it.name === issue.name ? { ...it, slaResolutionHours: val } : it
-                                                ),
-                                              }
-                                            }),
-                                          }
-                                        })
-                                        onUpdateClassificationTree(updated)
-                                        setHasUnsavedChanges(true)
-                                      }}
-                                    />
-                                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>hrs</span>
-                                  </div>
-                                </td>
-
-                                <td style={{ textAlign: 'center' }}>
-                                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                    <input
-                                      type="number"
-                                      step="0.5"
-                                      min="0.5"
-                                      className="form-input-control"
-                                      style={{ width: '56px', textAlign: 'center', padding: '4px' }}
-                                      value={issue.hodApprovalLimitHours}
-                                      onChange={(e) => {
-                                        const val = parseFloat(e.target.value) || 2
-                                        const updated = classificationTree.map((main) => {
-                                          if (main.name !== selectedMain) return main
-                                          return {
-                                            ...main,
-                                            subClassifications: main.subClassifications.map((s) => {
-                                              if (s.name !== selectedSub) return s
-                                              return {
-                                                ...s,
-                                                issueTypes: s.issueTypes.map((it) =>
-                                                  it.name === issue.name ? { ...it, hodApprovalLimitHours: val } : it
-                                                ),
-                                              }
-                                            }),
-                                          }
-                                        })
-                                        onUpdateClassificationTree(updated)
-                                        setHasUnsavedChanges(true)
-                                      }}
-                                    />
-                                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>hrs</span>
-                                  </div>
-                                </td>
-
-                                <td style={{ textAlign: 'center' }}>
+                              {/* 3. Workflow Path */}
+                              <td>
+                                {issue.isChangeRequest ? (
                                   <span
                                     className="badge-tag"
                                     style={{
-                                      background: issue.isChangeRequest ? '#F3E8FF' : '#F1F5F9',
-                                      color: issue.isChangeRequest ? '#7C3AED' : '#475569',
+                                      background: issue.crRequiresHodApproval !== false ? '#F3E8FF' : '#EFF6FF',
+                                      color: issue.crRequiresHodApproval !== false ? '#7C3AED' : '#2563EB',
                                       fontSize: '11px',
+                                      padding: '3px 8px',
+                                      fontWeight: 700,
+                                      border: `1px solid ${issue.crRequiresHodApproval !== false ? '#E9D5FF' : '#BFDBFE'}`,
                                     }}
                                   >
-                                    {issue.isChangeRequest ? 'Change Request' : 'Standard'}
+                                    {issue.crRequiresHodApproval !== false
+                                      ? 'Change Request (Admin ➔ HOD)'
+                                      : 'Change Request (Admin Only)'}
                                   </span>
-                                </td>
-
-                                <td style={{ textAlign: 'right' }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' }}>
-                                    <button
-                                      type="button"
-                                      style={{
-                                        background: 'none',
-                                        border: 'none',
-                                        cursor: 'pointer',
-                                        padding: '4px',
-                                        color: 'var(--text-muted)',
-                                      }}
-                                      onClick={() => {
-                                        setRoutingPreviewTarget({
-                                          main: selectedMain,
-                                          sub: selectedSub,
-                                          issueName: issue.name,
-                                          severity: issue.autoSeverity,
-                                          responseHours: issue.slaResponseHours,
-                                          resolutionHours: issue.slaResolutionHours,
-                                          hodLimitHours: issue.hodApprovalLimitHours,
-                                          isCR: !!issue.isChangeRequest,
-                                          technicians: activeSub.technicians,
-                                        })
-                                        setShowRoutingPreviewModal(true)
-                                      }}
-                                      title="Preview routing"
-                                    >
-                                      <Eye size={14} />
-                                    </button>
-
-                                    <button
-                                      type="button"
-                                      style={{
-                                        background: 'none',
-                                        border: 'none',
-                                        cursor: 'pointer',
-                                        padding: '4px',
-                                        color: '#EF4444',
-                                      }}
-                                      onClick={() =>
-                                        handleDeleteIssueType(selectedMain, selectedSub, issue.name)
-                                      }
-                                      title="Delete issue"
-                                    >
-                                      <Trash2 size={14} />
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <div className="modern-card" style={{ padding: '40px', textAlign: 'center' }}>
-                    <AlertTriangle size={32} color="var(--text-muted)" style={{ margin: '0 auto 12px' }} />
-                    <h3 style={{ margin: '0 0 6px', fontSize: '16px', color: 'var(--text-main)' }}>
-                      No sub-classification selected
-                    </h3>
-                    <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)' }}>
-                      Select a category and sub-service on the left or create a new one to begin.
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* TAB 2: APPLICATIONS & ACCESS ENTITLEMENT MATRIX (Section 15.2) */}
-      {/* ========================================================================= */}
-      {activeTab === 'access' && (
-        <div>
-          {/* Header Banner & Context */}
-          <div
-            className="modern-card"
-            style={{
-              padding: '18px 22px',
-              marginBottom: '20px',
-              background: '#FFFFFF',
-              borderLeft: '4px solid var(--primary)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px' }}>
-              <div>
-                <h3 style={{ margin: '0 0 4px', fontSize: '15px', fontWeight: 700, color: 'var(--text-main)' }}>
-                  Department-to-Application Entitlement Matrix (Role-Based Visibility)
-                </h3>
-                <p style={{ margin: 0, fontSize: '12.5px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                  Section 5 Rule: When an end user creates a ticket, cascading application and sub-classification dropdowns only display systems that their department is entitled to access. Changes take effect across user sessions immediately.
-                </p>
-              </div>
-
-              <div className="search-bar" style={{ width: '260px', flexShrink: 0 }}>
-                <Search size={15} color="var(--text-muted)" />
-                <input
-                  type="text"
-                  placeholder="Filter departments..."
-                  value={deptSearch}
-                  onChange={(e) => setDeptSearch(e.target.value)}
-                />
-                {deptSearch && (
-                  <button
-                    type="button"
-                    onClick={() => setDeptSearch('')}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-                  >
-                    <X size={14} color="var(--text-muted)" />
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Entitlement Grid Table */}
-          <div className="modern-card" style={{ padding: 0, overflow: 'hidden' }}>
-            <div className="table-responsive-container">
-              <table className="custom-data-table" style={{ borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th style={{ width: '22%', position: 'sticky', left: 0, background: '#F8FAFC', zIndex: 2 }}>
-                      Department & Head (HOD)
-                    </th>
-                    {ALL_SYSTEM_APPLICATIONS.map((app) => {
-                      const allDeptsHaveApp = departments.every((d) =>
-                        d.assignedApplications.includes(app)
-                      )
-                      return (
-                        <th
-                          key={app}
-                          style={{
-                            textAlign: 'center',
-                            minWidth: '120px',
-                            padding: '12px 8px',
-                            fontSize: '11.5px',
-                          }}
-                        >
-                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                            <span>{app}</span>
-                            <button
-                              type="button"
-                              style={{
-                                background: 'none',
-                                border: 'none',
-                                cursor: 'pointer',
-                                fontSize: '10px',
-                                color: 'var(--primary)',
-                                textDecoration: 'underline',
-                                padding: 0,
-                              }}
-                              onClick={() => {
-                                if (allDeptsHaveApp) {
-                                  handleColumnDeselectAll(app)
-                                } else {
-                                  handleColumnSelectAll(app)
-                                }
-                              }}
-                            >
-                              {allDeptsHaveApp ? 'Deselect Col' : 'Select Col'}
-                            </button>
-                          </div>
-                        </th>
-                      )
-                    })}
-                    <th style={{ width: '12%', textAlign: 'right' }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredDepts.map((dept) => {
-                    const permittedCount = dept.assignedApplications.length
-                    const allPermitted = permittedCount === ALL_SYSTEM_APPLICATIONS.length
-                    return (
-                      <tr key={dept.name}>
-                        <td style={{ position: 'sticky', left: 0, background: '#FFFFFF', zIndex: 1 }}>
-                          <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <strong style={{ fontSize: '13px', color: 'var(--text-main)' }}>
-                              {dept.name}
-                            </strong>
-                            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                              HOD: {dept.hodName} ({dept.hodEmail})
-                            </span>
-                            <div style={{ marginTop: '4px' }}>
-                              <span
-                                className="badge-tag badge-tag-sm"
-                                style={{
-                                  background: permittedCount > 0 ? '#EEF4FF' : '#FEF2F2',
-                                  color: permittedCount > 0 ? '#2563EB' : '#DC2626',
-                                  fontSize: '10.5px',
-                                }}
-                              >
-                                {permittedCount} of {ALL_SYSTEM_APPLICATIONS.length} Allowed
-                              </span>
-                            </div>
-                          </div>
-                        </td>
-
-                        {ALL_SYSTEM_APPLICATIONS.map((app) => {
-                          const isAssigned = dept.assignedApplications.includes(app)
-                          return (
-                            <td
-                              key={app}
-                              style={{
-                                textAlign: 'center',
-                                verticalAlign: 'middle',
-                                background: isAssigned ? '#F0FDF4' : 'transparent',
-                              }}
-                            >
-                              <button
-                                type="button"
-                                style={{
-                                  background: 'none',
-                                  border: 'none',
-                                  cursor: 'pointer',
-                                  padding: '6px',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                }}
-                                onClick={() => handleToggleDepartmentApp(dept.name, app)}
-                                title={`${isAssigned ? 'Revoke' : 'Grant'} ${app} access for ${dept.name}`}
-                              >
-                                {isAssigned ? (
-                                  <CheckSquare size={18} color="#059669" />
                                 ) : (
-                                  <Square size={18} color="#CBD5E1" />
+                                  <span
+                                    style={{
+                                      color: '#64748B',
+                                      fontSize: '12px',
+                                      fontWeight: 500,
+                                    }}
+                                  >
+                                    Standard
+                                  </span>
                                 )}
-                              </button>
-                            </td>
-                          )
-                        })}
+                              </td>
 
-                        <td style={{ textAlign: 'right' }}>
-                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
-                            <button
-                              type="button"
-                              style={{
-                                background: 'none',
-                                border: 'none',
-                                cursor: 'pointer',
-                                fontSize: '11px',
-                                color: 'var(--primary)',
-                                textDecoration: 'underline',
-                                padding: 0,
-                              }}
-                              onClick={() => {
-                                if (allPermitted) {
-                                  handleRowDeselectAll(dept.name)
-                                } else {
-                                  handleRowSelectAll(dept.name)
-                                }
-                              }}
-                            >
-                              {allPermitted ? 'Deselect Row' : 'Select All Row'}
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
+                              {/* 4. Actions */}
+                              <td style={{ textAlign: 'right' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' }}>
+                                  <button
+                                    type="button"
+                                    className="btn-secondary"
+                                    style={{ height: '28px', fontSize: '11.5px', padding: '0 8px', gap: '4px' }}
+                                    onClick={() =>
+                                      setEditingIssue({
+                                        mainName: selectedMain,
+                                        subName: selectedSub,
+                                        issue: { ...issue },
+                                      })
+                                    }
+                                    title="Edit SLA & Severity"
+                                  >
+                                    <Edit2 size={12} /> Edit SLA
+                                  </button>
 
-      {/* ========================================================================= */}
-      {/* TAB 3: TICKET TYPES & WORKFLOW TEMPLATES (Section 15.3) */}
-      {/* ========================================================================= */}
-      {activeTab === 'types' && (
-        <div>
-          {/* Top Banner explaining Type vs Classification separation */}
-          <div
-            className="modern-card"
-            style={{
-              padding: '18px 22px',
-              marginBottom: '20px',
-              background: '#FFFFFF',
-              borderLeft: '4px solid #7C3AED',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px' }}>
-              <div>
-                <h3 style={{ margin: '0 0 4px', fontSize: '15px', fontWeight: 700, color: 'var(--text-main)' }}>
-                  Ticket Types & Associated Workflow Templates (Section 4 Architecture)
-                </h3>
-                <p style={{ margin: 0, fontSize: '12.5px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                  Ticket type and classification are separate dimensions. Example: Type = Incident, Main = Applications, Sub = Flexcube, Issue = Login not working. <strong>Type decides which workflow template runs.</strong> The classification tree decides assignee, SLA, and auto-severity.
-                </p>
-              </div>
+                                  <button
+                                    type="button"
+                                    style={{
+                                      background: 'none',
+                                      border: 'none',
+                                      cursor: 'pointer',
+                                      padding: '5px',
+                                      color: '#EF4444',
+                                      borderRadius: '4px',
+                                    }}
+                                    onClick={() =>
+                                      handleDeleteIssueType(selectedMain, selectedSub, issue.name)
+                                    }
+                                    title="Delete issue"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
 
-              <button
-                type="button"
-                className="btn-primary"
-                onClick={() => setShowAddTypeModal(true)}
-              >
-                <Plus size={15} /> Add Ticket Type
-              </button>
-            </div>
-          </div>
-
-          {/* Ticket Types Table */}
-          <div className="modern-card" style={{ padding: 0, overflow: 'hidden' }}>
-            <div className="table-responsive-container">
-              <table className="custom-data-table">
-                <thead>
-                  <tr>
-                    <th style={{ width: '22%' }}>Ticket Type Name & Code</th>
-                    <th style={{ width: '32%' }}>Description & Use Case</th>
-                    <th style={{ width: '22%' }}>Associated Workflow Template</th>
-                    <th style={{ width: '12%', textAlign: 'center' }}>Default Priority</th>
-                    <th style={{ width: '12%', textAlign: 'center' }}>Active Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {ticketTypes.map((t) => (
-                    <tr key={t.id}>
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span
-                            className="badge-tag"
-                            style={{
-                              background: t.id === 'Change Request' ? '#F3E8FF' : '#EEF4FF',
-                              color: t.id === 'Change Request' ? '#7C3AED' : '#2563EB',
-                              fontWeight: 700,
-                              fontSize: '11px',
-                            }}
-                          >
-                            {t.code || t.id.slice(0, 3).toUpperCase()}
-                          </span>
-                          <strong style={{ fontSize: '13.5px', color: 'var(--text-main)' }}>
-                            {t.name}
-                          </strong>
-                        </div>
-                      </td>
-
-                      <td>
-                        <span style={{ fontSize: '12.5px', color: 'var(--text-secondary)' }}>
-                          {t.description}
-                        </span>
-                      </td>
-
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <Layers size={14} color="var(--primary)" />
-                          <span style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--text-main)' }}>
-                            {t.defaultWorkflow}
-                          </span>
-                        </div>
-                      </td>
-
-                      <td style={{ textAlign: 'center' }}>
-                        <span
-                          className="badge-tag"
-                          style={{
-                            background: t.defaultPriority === 'Urgent' ? '#FEF2F2' : '#F1F5F9',
-                            color: t.defaultPriority === 'Urgent' ? '#DC2626' : '#475569',
-                            fontSize: '11.5px',
-                          }}
-                        >
-                          {t.defaultPriority || 'Normal'}
-                        </span>
-                      </td>
-
-                      <td style={{ textAlign: 'center' }}>
-                        <button
-                          type="button"
-                          style={{
-                            padding: '4px 10px',
-                            borderRadius: '12px',
-                            border: 'none',
-                            fontSize: '11px',
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            background: t.active !== false ? '#DCFCE7' : '#F1F5F9',
-                            color: t.active !== false ? '#15803D' : '#64748B',
-                          }}
-                          onClick={() => handleToggleTypeActive(t.id)}
-                        >
-                          {t.active !== false ? 'Active' : 'Disabled'}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* TAB 4: SEVERITY & PRIORITY (Section 15.4) */}
-      {/* ========================================================================= */}
-      {activeTab === 'severity' && (
-        <div>
-          {/* Important Principle Banner */}
-          <div
-            className="modern-card"
-            style={{
-              padding: '18px 22px',
-              marginBottom: '20px',
-              background: '#FFFFFF',
-              borderLeft: '4px solid #D97706',
-            }}
-          >
-            <h3 style={{ margin: '0 0 4px', fontSize: '15px', fontWeight: 700, color: 'var(--text-main)' }}>
-              Severity vs Priority Architecture (Section 2 & 5 Core Principles)
-            </h3>
-            <p style={{ margin: 0, fontSize: '12.5px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-              <strong>Severity</strong> is an objective measure of system impact auto-calculated from the issue type configuration. End users can never edit severity. <strong>Priority</strong> is a subjective measure of business urgency that can only be manually set or overridden by permitted IT staff (Technicians, Admin Team).
-            </p>
-          </div>
-
-          <div className="layout-split-view">
-            {/* Left: Severity Levels (P1 - P4) */}
-            <div className="modern-card" style={{ padding: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-                <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: 'var(--text-main)' }}>
-                  Auto-Severity Matrix (Impact-Based)
-                </h4>
-                <span className="badge-tag" style={{ background: '#FEF3C7', color: '#B45309', fontSize: '11px' }}>
-                  Auto-Calculated
-                </span>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {severitySettings.map((sev, idx) => (
+                {/* Level 3b: Intake Questionnaire Fields (Industry standard: configured directly with catalog item) */}
+                <div className="modern-card" style={{ padding: '18px' }}>
                   <div
-                    key={sev.level}
                     style={{
-                      border: '1px solid var(--border)',
-                      borderRadius: '10px',
-                      padding: '14px',
-                      background: sev.bg,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: '14px',
+                      flexWrap: 'wrap',
+                      gap: '10px',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Flame size={16} color={sev.color} />
-                        <strong style={{ fontSize: '13.5px', color: sev.color }}>
-                          {sev.level}
-                        </strong>
-                      </div>
-                      <div style={{ display: 'flex', gap: '10px', fontSize: '12px' }}>
-                        <span>
-                          Resp: <strong>{sev.defaultResponseHours}h</strong>
-                        </span>
-                        <span>
-                          Resol: <strong>{sev.defaultResolutionHours}h</strong>
+                        <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: 'var(--text-main)' }}>
+                          Intake Questionnaire for {selectedSub}
+                        </h4>
+                        <span
+                          className="badge-tag"
+                          style={{ background: '#EFF6FF', color: '#1D4ED8', fontSize: '11px', fontWeight: 700 }}
+                        >
+                          {(questionnaires[selectedSub] || []).length} Custom Fields
                         </span>
                       </div>
+                      <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                        Fields presented to end-users when raising a ticket under {selectedSub}
+                      </span>
                     </div>
 
-                    <p style={{ margin: '0 0 8px', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                      {sev.definition}
-                    </p>
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      style={{ height: '32px', fontSize: '12px', padding: '0 12px', gap: '5px' }}
+                      onClick={() => setShowAddQuestionModal(true)}
+                    >
+                      <Plus size={13} /> Add Intake Question
+                    </button>
+                  </div>
 
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                      <strong>Scope:</strong> {sev.scope}
+                  {!(questionnaires[selectedSub] && questionnaires[selectedSub].length > 0) ? (
+                    <div
+                      style={{
+                        padding: '24px 16px',
+                        textAlign: 'center',
+                        background: '#F8FAFC',
+                        borderRadius: '8px',
+                        border: '1px dashed var(--border)',
+                        color: 'var(--text-muted)',
+                      }}
+                    >
+                      <p style={{ margin: '0 0 6px', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                        Standard Ticket Form Active
+                      </p>
+                      <span style={{ fontSize: '12px' }}>
+                        Users will complete standard fields (Title, Description, Priority, Attachment). Click &quot;Add Intake Question&quot; to prompt for system-specific data (e.g. Account No, Screen Error, Asset Tag).
+                      </span>
                     </div>
-                  </div>
-                ))}
+                  ) : (
+                    <div className="table-responsive-container">
+                      <table className="custom-data-table">
+                        <thead>
+                          <tr>
+                            <th style={{ width: '40%' }}>Field Label &amp; Placeholder</th>
+                            <th style={{ width: '22%' }}>Input Type</th>
+                            <th style={{ width: '24%' }}>Validation</th>
+                            <th style={{ width: '14%', textAlign: 'right' }}>Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {questionnaires[selectedSub].map((q) => (
+                            <tr key={q.id}>
+                              <td>
+                                <strong style={{ fontSize: '13.5px', color: 'var(--text-main)', display: 'block' }}>
+                                  {q.label}
+                                </strong>
+                                {q.placeholder && (
+                                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                                    Placeholder: &quot;{q.placeholder}&quot;
+                                  </span>
+                                )}
+                                {q.options && q.options.length > 0 && (
+                                  <div style={{ fontSize: '11px', color: '#2563EB', marginTop: '2px' }}>
+                                    Options: {q.options.slice(0, 3).join(', ')}{q.options.length > 3 ? ` +${q.options.length - 3} more` : ''}
+                                  </div>
+                                )}
+                              </td>
+                              <td>
+                                <span
+                                  className="badge-tag"
+                                  style={{ background: '#F1F5F9', color: '#475569', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase' }}
+                                >
+                                  {q.type}
+                                </span>
+                              </td>
+                              <td>
+                                {q.required ? (
+                                  <span
+                                    className="badge-tag"
+                                    style={{ background: '#FEF2F2', color: '#DC2626', fontSize: '11px', fontWeight: 700 }}
+                                  >
+                                    Mandatory *
+                                  </span>
+                                ) : (
+                                  <span
+                                    className="badge-tag"
+                                    style={{ background: '#F8FAFC', color: '#64748B', fontSize: '11px', fontWeight: 600 }}
+                                  >
+                                    Optional
+                                  </span>
+                                )}
+                              </td>
+                              <td style={{ textAlign: 'right' }}>
+                                <button
+                                  type="button"
+                                  style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    padding: '5px',
+                                    color: '#EF4444',
+                                    borderRadius: '4px',
+                                  }}
+                                  onClick={() => handleDeleteQuestion(q.id)}
+                                  title="Delete question"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="modern-card" style={{ padding: '40px', textAlign: 'center' }}>
+                <AlertTriangle size={32} color="var(--text-muted)" style={{ margin: '0 auto 12px' }} />
+                <h3 style={{ margin: '0 0 6px', fontSize: '16px', color: 'var(--text-main)' }}>
+                  No system selected
+                </h3>
+                <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)' }}>
+                  Select a category and system on the left or create a new one to begin.
+                </p>
               </div>
-            </div>
-
-            {/* Right: Priority Levels (Urgency / Override) */}
-            <div className="modern-card" style={{ padding: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-                <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: 'var(--text-main)' }}>
-                  Operational Priority Levels (Urgency-Based)
-                </h4>
-                <span className="badge-tag" style={{ background: '#EEF4FF', color: '#2563EB', fontSize: '11px' }}>
-                  IT Role Override Only
-                </span>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div
-                  style={{
-                    border: '1px solid var(--border)',
-                    borderRadius: '10px',
-                    padding: '14px',
-                    background: '#FFFFFF',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                    <strong style={{ fontSize: '13px', color: '#DC2626' }}>Urgent Priority</strong>
-                    <span className="badge-tag" style={{ background: '#FEF2F2', color: '#DC2626', fontSize: '10.5px' }}>
-                      Immediate Queue Jump
-                    </span>
-                  </div>
-                  <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
-                    Immediate operational necessity. Escalates the ticket to the top of all technician workbenches regardless of creation timestamp.
-                  </p>
-                </div>
-
-                <div
-                  style={{
-                    border: '1px solid var(--border)',
-                    borderRadius: '10px',
-                    padding: '14px',
-                    background: '#FFFFFF',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                    <strong style={{ fontSize: '13px', color: '#EA580C' }}>High Priority</strong>
-                    <span className="badge-tag" style={{ background: '#FFF7ED', color: '#EA580C', fontSize: '10.5px' }}>
-                      Accelerated
-                    </span>
-                  </div>
-                  <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
-                    High business impact, prioritizing work ahead of standard tickets to ensure compliance with strict SLA thresholds.
-                  </p>
-                </div>
-
-                <div
-                  style={{
-                    border: '1px solid var(--border)',
-                    borderRadius: '10px',
-                    padding: '14px',
-                    background: '#FFFFFF',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                    <strong style={{ fontSize: '13px', color: '#0284C7' }}>Normal Priority (Default)</strong>
-                    <span className="badge-tag" style={{ background: '#E0F2FE', color: '#0284C7', fontSize: '10.5px' }}>
-                      Standard Queue
-                    </span>
-                  </div>
-                  <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
-                    Standard processing order. Handled under normal dispatch order and standard published SLA timelines.
-                  </p>
-                </div>
-
-                <div
-                  style={{
-                    border: '1px solid var(--border)',
-                    borderRadius: '10px',
-                    padding: '14px',
-                    background: '#FFFFFF',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                    <strong style={{ fontSize: '13px', color: '#64748B' }}>Low Priority</strong>
-                    <span className="badge-tag" style={{ background: '#F1F5F9', color: '#64748B', fontSize: '10.5px' }}>
-                      Discretionary
-                    </span>
-                  </div>
-                  <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
-                    Minor operational impact or planned future tasks. Technicians service these during low-load intervals.
-                  </p>
-                </div>
-              </div>
-            </div>
+            )}
           </div>
         </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* TAB 5: LIFECYCLE STATUSES (Section 15.5) */}
-      {/* ========================================================================= */}
-      {activeTab === 'statuses' && (
-        <div>
-          {/* Status Header Banner & Category Filter */}
+          {/* Workflow Governance & Change Request Exception Guide */}
           <div
             className="modern-card"
             style={{
-              padding: '16px 20px',
-              marginBottom: '20px',
+              padding: '20px 24px',
+              marginTop: '24px',
               background: '#FFFFFF',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '12px',
+              border: '1.5px solid var(--border)',
+              borderRadius: '12px',
             }}
           >
-            <div>
-              <h3 style={{ margin: '0 0 4px', fontSize: '15px', fontWeight: 700, color: 'var(--text-main)' }}>
-                The 9 Standard Lifecycle Statuses (Section 15.5)
+            <div style={{ marginBottom: '16px' }}>
+              <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.6px', fontWeight: 800, color: 'var(--primary)' }}>
+                Workflow & Lifecycle Governance
+              </span>
+              <h3 style={{ margin: '2px 0 0', fontSize: '16px', fontWeight: 800, color: 'var(--text-main)' }}>
+                Standard Ticket Workflow vs. Change Request Exception Path
               </h3>
-              <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
-                Each status defines SLA clock behavior, category assignment, terminal closure rules, and reopen eligibility.
+              <p style={{ margin: '4px 0 0', fontSize: '12.5px', color: 'var(--text-secondary)' }}>
+                Every ticket follows the Standard Workflow by default. The only exception is a Change Request (system patch/upgrade or elevated by technician).
               </p>
             </div>
 
-            {/* Category Filter Chips */}
-            <div style={{ display: 'flex', gap: '6px' }}>
-              {(['All', 'Open', 'In Progress', 'Waiting', 'Closed'] as const).map((cat) => (
-                <button
-                  key={cat}
-                  type="button"
-                  style={{
-                    padding: '6px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid var(--border)',
-                    fontSize: '12px',
-                    fontWeight: statusCategoryFilter === cat ? 700 : 500,
-                    background: statusCategoryFilter === cat ? 'var(--primary-soft)' : '#FFFFFF',
-                    color: statusCategoryFilter === cat ? 'var(--primary)' : 'var(--text-secondary)',
-                    cursor: 'pointer',
-                  }}
-                  onClick={() => setStatusCategoryFilter(cat)}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-          </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
+              {/* Standard Workflow Card */}
+              <div
+                style={{
+                  padding: '16px 18px',
+                  borderRadius: '10px',
+                  background: '#F0FDF4',
+                  border: '1.5px solid #BBF7D0',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                  <span style={{ background: '#16A34A', color: '#FFFFFF', fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px' }}>
+                    Standard Workflow (Default)
+                  </span>
+                  <span style={{ fontSize: '11.5px', color: '#166534', fontWeight: 600 }}>All Normal Incidents & Requests</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px', color: '#14532D' }}>
+                  <div><strong>1. User Submission:</strong> User files ticket under Software or Hardware</div>
+                  <div><strong>2. HOD Approval:</strong> User's Department Head (Active Directory) approves/rejects</div>
+                  <div><strong>3. Auto-Assignment:</strong> Routed directly to 1 or 2 designated technicians</div>
+                  <div><strong>4. Resolution:</strong> Technician works and marks ticket as resolved</div>
+                  <div><strong>5. User Closure:</strong> Requester confirms resolution and closes ticket</div>
+                </div>
+              </div>
 
-          {/* Statuses Data Table */}
-          <div className="modern-card" style={{ padding: 0, overflow: 'hidden' }}>
-            <div className="table-responsive-container">
-              <table className="custom-data-table">
-                <thead>
-                  <tr>
-                    <th style={{ width: '22%' }}>Status Name & Token</th>
-                    <th style={{ width: '14%' }}>Category</th>
-                    <th style={{ width: '12%', textAlign: 'center' }}>Terminal Flag</th>
-                    <th style={{ width: '14%', textAlign: 'center' }}>Allow Reopen</th>
-                    <th style={{ width: '16%' }}>SLA Clock Behavior</th>
-                    <th style={{ width: '22%' }}>Description</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredStatuses.map((st) => (
-                    <tr key={st.id}>
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <span
-                            style={{
-                              width: '10px',
-                              height: '10px',
-                              borderRadius: '50%',
-                              background: st.color,
-                              flexShrink: 0,
-                            }}
-                          />
-                          <strong style={{ fontSize: '13px', color: 'var(--text-main)' }}>
-                            {st.name}
-                          </strong>
-                        </div>
-                      </td>
-
-                      <td>
-                        <span
-                          className="badge-tag"
-                          style={{
-                            background:
-                              st.category === 'Closed'
-                                ? '#F1F5F9'
-                                : st.category === 'Waiting'
-                                ? '#FEF3C7'
-                                : st.category === 'In Progress'
-                                ? '#E0F2FE'
-                                : '#EEF4FF',
-                            color:
-                              st.category === 'Closed'
-                                ? '#475569'
-                                : st.category === 'Waiting'
-                                ? '#B45309'
-                                : st.category === 'In Progress'
-                                ? '#0369A1'
-                                : '#1D4ED8',
-                            fontSize: '11px',
-                          }}
-                        >
-                          {st.category}
-                        </span>
-                      </td>
-
-                      <td style={{ textAlign: 'center' }}>
-                        {st.terminal ? (
-                          <span className="badge-tag" style={{ background: '#F1F5F9', color: '#475569', fontSize: '11px' }}>
-                            Yes (Terminal)
-                          </span>
-                        ) : (
-                          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>No</span>
-                        )}
-                      </td>
-
-                      <td style={{ textAlign: 'center' }}>
-                        {st.allowReopen ? (
-                          <span className="badge-tag" style={{ background: '#DCFCE7', color: '#15803D', fontSize: '11px' }}>
-                            Eligible for Reopen
-                          </span>
-                        ) : (
-                          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Locked</span>
-                        )}
-                      </td>
-
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <Clock size={14} color={st.category === 'Waiting' ? '#D97706' : '#2563EB'} />
-                          <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-main)' }}>
-                            {st.category === 'Waiting'
-                              ? 'Paused (Waiting on Actor)'
-                              : st.terminal
-                              ? 'Stopped (Permanently Closed)'
-                              : 'Active (Ticking)'}
-                          </span>
-                        </div>
-                      </td>
-
-                      <td>
-                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                          {st.desc}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              {/* Change Request Exception Card */}
+              <div
+                style={{
+                  padding: '16px 18px',
+                  borderRadius: '10px',
+                  background: '#FAF5FF',
+                  border: '1.5px solid #E9D5FF',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                  <span style={{ background: '#7C3AED', color: '#FFFFFF', fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px' }}>
+                    Change Request (Exception Path)
+                  </span>
+                  <span style={{ fontSize: '11.5px', color: '#6B21A8', fontWeight: 600 }}>System Patches, Upgrades & Major Config</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px', color: '#581C87' }}>
+                  <div><strong>1. Elevation:</strong> Issue configured as Change Request or flagged by Technician/Admin</div>
+                  <div><strong>2. Admin &amp; HOD Review:</strong> Admin reviews package &bull; HOD re-approves impact</div>
+                  <div><strong>3. Managerial Approval:</strong> Management / CAB authorizes change window</div>
+                  <div><strong>4. Implementation:</strong> Designated technician executes patch/configuration</div>
+                  <div><strong>5. QA Testing &amp; Closure:</strong> Testing team tests and verifies &bull; Marked resolved &bull; User closes</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      )}
+      
 
       {/* ========================================================================= */}
       {/* ROUTING PREVIEW MODAL (Section 5 & 15.1) */}
       {/* ========================================================================= */}
       {showRoutingPreviewModal && routingPreviewTarget && (
-        <div className="modal-dialog-backdrop">
+        <div className="modal-overlay-backdrop">
           <div className="modal-dialog-box" style={{ maxWidth: '580px' }}>
             <div className="modal-dialog-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -2931,12 +1971,17 @@ export function ClassificationManager({
       {/* ADD MAIN CLASSIFICATION MODAL */}
       {/* ========================================================================= */}
       {showAddMainModal && (
-        <div className="modal-dialog-backdrop">
+        <div className="modal-overlay-backdrop">
           <div className="modal-dialog-box">
             <div className="modal-dialog-header">
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--text-main)' }}>
-                Add Main Classification Category
-              </h3>
+              <div>
+                <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.6px', fontWeight: 800, color: 'var(--primary)' }}>
+                  Level 1 &bull; Main Classification
+                </span>
+                <h3 style={{ margin: '2px 0 0', fontSize: '16px', fontWeight: 700, color: 'var(--text-main)' }}>
+                  Create Main Classification
+                </h3>
+              </div>
               <button
                 type="button"
                 className="btn-secondary"
@@ -2951,16 +1996,19 @@ export function ClassificationManager({
               <div className="modal-dialog-body" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div>
                   <label className="form-label-control">
-                    Category Name <span style={{ color: '#EF4444' }}>*</span>
+                    Main Classification Name <span style={{ color: '#EF4444' }}>*</span>
                   </label>
                   <input
                     type="text"
                     required
                     className="form-input-control"
-                    placeholder="e.g. Cloud Infrastructure, Database Services, Cyber Security"
+                    placeholder="e.g. Software, Hardware, Network Infrastructure"
                     value={newMainName}
                     onChange={(e) => setNewMainName(e.target.value)}
                   />
+                  <span style={{ fontSize: '11.5px', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
+                    Defines the top-level branch for all downstream sub-classifications and issues.
+                  </span>
                 </div>
               </div>
 
@@ -2973,7 +2021,7 @@ export function ClassificationManager({
                   Cancel
                 </button>
                 <button type="submit" className="btn-primary">
-                  Create Main Category
+                  Create Main Classification
                 </button>
               </div>
             </form>
@@ -2985,12 +2033,17 @@ export function ClassificationManager({
       {/* ADD SUB-CLASSIFICATION MODAL */}
       {/* ========================================================================= */}
       {showAddSubModal && (
-        <div className="modal-dialog-backdrop">
+        <div className="modal-overlay-backdrop">
           <div className="modal-dialog-box">
             <div className="modal-dialog-header">
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--text-main)' }}>
-                Add Sub-Classification under {selectedMain}
-              </h3>
+              <div>
+                <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.6px', fontWeight: 800, color: 'var(--primary)' }}>
+                  Level 2 &bull; Sub-Classification under {selectedMain}
+                </span>
+                <h3 style={{ margin: '2px 0 0', fontSize: '16px', fontWeight: 700, color: 'var(--text-main)' }}>
+                  Create Sub-Classification ({selectedMain})
+                </h3>
+              </div>
               <button
                 type="button"
                 className="btn-secondary"
@@ -3005,16 +2058,19 @@ export function ClassificationManager({
               <div className="modal-dialog-body" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div>
                   <label className="form-label-control">
-                    Sub-Service / Application Name <span style={{ color: '#EF4444' }}>*</span>
+                    Sub-Classification Name <span style={{ color: '#EF4444' }}>*</span>
                   </label>
                   <input
                     type="text"
                     required
                     className="form-input-control"
-                    placeholder="e.g. Oracle Database Engine, Firewall Gateway, Active Directory"
+                    placeholder={selectedMain === 'Software' ? 'e.g. Pro HR, Mobile Banking, CRM' : 'e.g. Laptops & Desktops, Printers, Scanners'}
                     value={newSubName}
                     onChange={(e) => setNewSubName(e.target.value)}
                   />
+                  <span style={{ fontSize: '11.5px', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
+                    Every ticket filed under this sub-classification will auto-assign to the technicians below.
+                  </span>
                 </div>
 
                 <div>
@@ -3075,13 +2131,210 @@ export function ClassificationManager({
       {/* ========================================================================= */}
       {/* ADD ISSUE TYPE MODAL */}
       {/* ========================================================================= */}
+      {/* ========================================================================= */}
+      {/* MODAL: PICK COMMON ISSUES FROM MASTER CATALOG */}
+      {/* ========================================================================= */}
+      {showPickCommonIssuesModal && activeSub && (() => {
+        const currentCommonPool = selectedMain === 'Hardware' ? COMMON_HARDWARE_ISSUES : COMMON_MASTER_ISSUES
+        return (
+          <div className="modal-overlay-backdrop">
+          <div className="modal-dialog-box" style={{ maxWidth: '640px' }}>
+            <div className="modal-dialog-header">
+              <div>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--text-main)' }}>
+                  Pick Issues for {selectedSub}
+                </h3>
+                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                  Select common IT issues from the master catalog to attach to {selectedSub}.
+                </span>
+              </div>
+              <button
+                type="button"
+                className="btn-secondary"
+                style={{ padding: '4px', border: 'none' }}
+                onClick={() => setShowPickCommonIssuesModal(false)}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="modal-dialog-body" style={{ maxHeight: '420px', overflowY: 'auto' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '12px',
+                  padding: '8px 12px',
+                  background: '#F8FAFC',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border)',
+                }}
+              >
+                <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                  {selectedMain} Master Issues Pool ({currentCommonPool.length} available)
+                </span>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    type="button"
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--primary)',
+                      fontSize: '11.5px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                    onClick={() => {
+                      const availableNames = currentCommonPool
+                        .filter((ci) => !activeSub.issueTypes.some((it) => it.name === ci.name))
+                        .map((ci) => ci.name)
+                      setSelectedCommonIssueNames(availableNames)
+                    }}
+                  >
+                    Select All Unadded
+                  </button>
+                  <span style={{ color: 'var(--border)' }}>|</span>
+                  <button
+                    type="button"
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--text-muted)',
+                      fontSize: '11.5px',
+                      cursor: 'pointer',
+                    }}
+                    onClick={() => setSelectedCommonIssueNames([])}
+                  >
+                    Clear Selection
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {currentCommonPool.map((masterIssue) => {
+                  const isAlreadyAdded = activeSub.issueTypes.some((it) => it.name === masterIssue.name)
+                  const isChecked = selectedCommonIssueNames.includes(masterIssue.name)
+
+                  return (
+                    <div
+                      key={masterIssue.name}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '10px 14px',
+                        borderRadius: '8px',
+                        border: `1.5px solid ${
+                          isAlreadyAdded
+                            ? '#E2E8F0'
+                            : isChecked
+                            ? 'var(--primary)'
+                            : 'var(--border)'
+                        }`,
+                        background: isAlreadyAdded
+                          ? '#F8FAFC'
+                          : isChecked
+                          ? 'var(--primary-soft)'
+                          : '#FFFFFF',
+                        opacity: isAlreadyAdded ? 0.65 : 1,
+                        cursor: isAlreadyAdded ? 'not-allowed' : 'pointer',
+                        transition: 'all 0.15s ease',
+                      }}
+                      onClick={() => {
+                        if (isAlreadyAdded) return
+                        if (isChecked) {
+                          setSelectedCommonIssueNames(
+                            selectedCommonIssueNames.filter((n) => n !== masterIssue.name)
+                          )
+                        } else {
+                          setSelectedCommonIssueNames([...selectedCommonIssueNames, masterIssue.name])
+                        }
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <input
+                          type="checkbox"
+                          disabled={isAlreadyAdded}
+                          checked={isAlreadyAdded || isChecked}
+                          onChange={() => {}}
+                          style={{ cursor: isAlreadyAdded ? 'not-allowed' : 'pointer' }}
+                        />
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <strong style={{ fontSize: '13px', color: 'var(--text-main)' }}>
+                              {masterIssue.name}
+                            </strong>
+                            <span
+                              className={`badge-tag badge-severity-${masterIssue.autoSeverity.toLowerCase()}`}
+                              style={{ fontSize: '10px', padding: '1px 6px' }}
+                            >
+                              {masterIssue.autoSeverity}
+                            </span>
+                          </div>
+                          {masterIssue.description && (
+                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                              {masterIssue.description}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ textAlign: 'right', fontSize: '11.5px', color: 'var(--text-secondary)' }}>
+                          <div>Resp: <strong>{masterIssue.slaResponseHours >= 1 ? `${masterIssue.slaResponseHours}h` : `${Math.round(masterIssue.slaResponseHours * 60)}m`}</strong></div>
+                          <div>Resol: <strong>{masterIssue.slaResolutionHours >= 1 ? `${masterIssue.slaResolutionHours}h` : `${Math.round(masterIssue.slaResolutionHours * 60)}m`}</strong></div>
+                        </div>
+
+                        {isAlreadyAdded && (
+                          <span
+                            className="badge-tag"
+                            style={{ background: '#ECFDF5', color: '#059669', fontSize: '10.5px' }}
+                          >
+                            ✓ Added
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div className="modal-dialog-footer">
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setShowPickCommonIssuesModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={selectedCommonIssueNames.length === 0}
+                onClick={() => handleAddCommonIssuesToActiveSub(selectedCommonIssueNames)}
+              >
+                Add {selectedCommonIssueNames.length > 0 ? `${selectedCommonIssueNames.length} ` : ''}Selected to {selectedSub}
+              </button>
+            </div>
+          </div>
+        </div>
+        )
+      })()}
+
       {showAddIssueModal && (
-        <div className="modal-dialog-backdrop">
+        <div className="modal-overlay-backdrop">
           <div className="modal-dialog-box" style={{ maxWidth: '520px' }}>
             <div className="modal-dialog-header">
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--text-main)' }}>
-                Add Catalog Issue Type & Tune SLA
-              </h3>
+              <div>
+                <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.6px', fontWeight: 800, color: 'var(--primary)' }}>
+                  Level 3 &bull; Sub-Sub Classification / Issue
+                </span>
+                <h3 style={{ margin: '2px 0 0', fontSize: '16px', fontWeight: 700, color: 'var(--text-main)' }}>
+                  Create Issue under {selectedMain} &gt; {selectedSub}
+                </h3>
+              </div>
               <button
                 type="button"
                 className="btn-secondary"
@@ -3138,13 +2391,13 @@ export function ClassificationManager({
 
                 <div>
                   <label className="form-label-control">
-                    Issue Type Name <span style={{ color: '#EF4444' }}>*</span>
+                    Issue / Sub-Sub Classification Name <span style={{ color: '#EF4444' }}>*</span>
                   </label>
                   <input
                     type="text"
                     required
                     className="form-input-control"
-                    placeholder="e.g. Application not opening, Password reset, Transaction timeout"
+                    placeholder={selectedMain === 'Software' ? 'e.g. Cannot login to Pro People, Session timeout' : 'e.g. Device will not turn on, Screen display blank'}
                     value={newIssueName}
                     onChange={(e) => setNewIssueName(e.target.value)}
                   />
@@ -3221,10 +2474,51 @@ export function ClassificationManager({
                     <input
                       type="checkbox"
                       checked={newIssueIsCR}
-                      onChange={(e) => setNewIssueIsCR(e.target.checked)}
+                      onChange={(e) => {
+                        setNewIssueIsCR(e.target.checked)
+                        if (e.target.checked) setNewIssueRequiresHodApproval(true)
+                      }}
                     />
-                    <span>Classify as Change Request (Requires CAB / Management Review & Testing)</span>
+                    <span>Classify as Change Request (Requires CAB / Management Review &amp; Testing)</span>
                   </label>
+
+                  {newIssueIsCR && (
+                    <div
+                      style={{
+                        marginTop: '10px',
+                        marginLeft: '24px',
+                        padding: '12px 14px',
+                        background: '#FAF5FF',
+                        borderRadius: '8px',
+                        border: '1px solid #E9D5FF',
+                      }}
+                    >
+                      <label
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          cursor: 'pointer',
+                          fontWeight: 700,
+                          fontSize: '13px',
+                          color: '#581C87',
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={newIssueRequiresHodApproval}
+                          onChange={(e) => setNewIssueRequiresHodApproval(e.target.checked)}
+                          style={{ accentColor: '#7C3AED' }}
+                        />
+                        Require Department Head (HOD) Approval
+                      </label>
+                      <p style={{ margin: '4px 0 0 24px', fontSize: '12px', color: '#6B21A8', lineHeight: 1.4 }}>
+                        {newIssueRequiresHodApproval
+                          ? '✓ Ticket routes to Admin Team first, then to requester\'s Department Head for sign-off.'
+                          : '⚡ HOD approval waived (routine change). Ticket routes to Admin Team, then directly to implementation.'}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -3249,7 +2543,7 @@ export function ClassificationManager({
       {/* EDIT ISSUE TYPE MODAL */}
       {/* ========================================================================= */}
       {editingIssue && (
-        <div className="modal-dialog-backdrop">
+        <div className="modal-overlay-backdrop">
           <div className="modal-dialog-box">
             <div className="modal-dialog-header">
               <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--text-main)' }}>
@@ -3267,6 +2561,127 @@ export function ClassificationManager({
 
             <form onSubmit={handleSaveEditedIssue}>
               <div className="modal-dialog-body" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                {/* Fast SLA Presets */}
+                <div>
+                  <label className="form-label-control" style={{ marginBottom: '6px' }}>
+                    Quick SLA Presets
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '6px' }}>
+                    <button
+                      type="button"
+                      style={{
+                        padding: '6px 8px',
+                        border: '1.5px solid #FEE2E2',
+                        background: '#FEF2F2',
+                        borderRadius: '6px',
+                        fontSize: '11.5px',
+                        fontWeight: 600,
+                        color: '#DC2626',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                      }}
+                      onClick={() => {
+                        setEditingIssue({
+                          ...editingIssue,
+                          issue: {
+                            ...editingIssue.issue,
+                            autoSeverity: 'Critical',
+                            slaResponseHours: 0.5,
+                            slaResolutionHours: 2,
+                            hodApprovalLimitHours: 1,
+                          },
+                        })
+                      }}
+                    >
+                      ⚡ Critical (30m / 2h)
+                    </button>
+                    <button
+                      type="button"
+                      style={{
+                        padding: '6px 8px',
+                        border: '1.5px solid #FFEDD5',
+                        background: '#FFF7ED',
+                        borderRadius: '6px',
+                        fontSize: '11.5px',
+                        fontWeight: 600,
+                        color: '#EA580C',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                      }}
+                      onClick={() => {
+                        setEditingIssue({
+                          ...editingIssue,
+                          issue: {
+                            ...editingIssue.issue,
+                            autoSeverity: 'High',
+                            slaResponseHours: 1,
+                            slaResolutionHours: 4,
+                            hodApprovalLimitHours: 2,
+                          },
+                        })
+                      }}
+                    >
+                      🟠 High (1h / 4h)
+                    </button>
+                    <button
+                      type="button"
+                      style={{
+                        padding: '6px 8px',
+                        border: '1.5px solid #FEF08A',
+                        background: '#FEFCE8',
+                        borderRadius: '6px',
+                        fontSize: '11.5px',
+                        fontWeight: 600,
+                        color: '#854D0E',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                      }}
+                      onClick={() => {
+                        setEditingIssue({
+                          ...editingIssue,
+                          issue: {
+                            ...editingIssue.issue,
+                            autoSeverity: 'Medium',
+                            slaResponseHours: 2,
+                            slaResolutionHours: 8,
+                            hodApprovalLimitHours: 4,
+                          },
+                        })
+                      }}
+                    >
+                      🟡 Medium (2h / 8h)
+                    </button>
+                    <button
+                      type="button"
+                      style={{
+                        padding: '6px 8px',
+                        border: '1.5px solid #E2E8F0',
+                        background: '#F8FAFC',
+                        borderRadius: '6px',
+                        fontSize: '11.5px',
+                        fontWeight: 600,
+                        color: '#475569',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                      }}
+                      onClick={() => {
+                        setEditingIssue({
+                          ...editingIssue,
+                          issue: {
+                            ...editingIssue.issue,
+                            autoSeverity: 'Low',
+                            slaResponseHours: 4,
+                            slaResolutionHours: 24,
+                            hodApprovalLimitHours: 8,
+                          },
+                        })
+                      }}
+                    >
+                      🟢 Routine (4h / 24h)
+                    </button>
+                  </div>
+                </div>
+
                 <div>
                   <label className="form-label-control">Auto-Calculated Severity</label>
                   <select
@@ -3371,12 +2786,61 @@ export function ClassificationManager({
                           issue: {
                             ...editingIssue.issue,
                             isChangeRequest: e.target.checked,
+                            crRequiresHodApproval: e.target.checked
+                              ? (editingIssue.issue.crRequiresHodApproval ?? true)
+                              : undefined,
                           },
                         })
                       }
                     />
-                    <span>Flag as Change Request (Requires Testing & CAB Review)</span>
+                    <span>Flag as Change Request (Requires Testing &amp; CAB Review)</span>
                   </label>
+
+                  {editingIssue.issue.isChangeRequest && (
+                    <div
+                      style={{
+                        marginTop: '10px',
+                        marginLeft: '24px',
+                        padding: '12px 14px',
+                        background: '#FAF5FF',
+                        borderRadius: '8px',
+                        border: '1px solid #E9D5FF',
+                      }}
+                    >
+                      <label
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          cursor: 'pointer',
+                          fontWeight: 700,
+                          fontSize: '13px',
+                          color: '#581C87',
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={editingIssue.issue.crRequiresHodApproval !== false}
+                          onChange={(e) =>
+                            setEditingIssue({
+                              ...editingIssue,
+                              issue: {
+                                ...editingIssue.issue,
+                                crRequiresHodApproval: e.target.checked,
+                              },
+                            })
+                          }
+                          style={{ accentColor: '#7C3AED' }}
+                        />
+                        Require Department Head (HOD) Approval
+                      </label>
+                      <p style={{ margin: '4px 0 0 24px', fontSize: '12px', color: '#6B21A8', lineHeight: 1.4 }}>
+                        {editingIssue.issue.crRequiresHodApproval !== false
+                          ? '✓ Ticket routes to Admin Team first, then to requester\'s Department Head for sign-off.'
+                          : '⚡ HOD approval waived (routine change). Ticket routes to Admin Team, then directly to implementation.'}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -3397,123 +2861,19 @@ export function ClassificationManager({
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* ADD TICKET TYPE MODAL (TAB 3) */}
-      {/* ========================================================================= */}
-      {showAddTypeModal && (
-        <div className="modal-dialog-backdrop">
-          <div className="modal-dialog-box">
-            <div className="modal-dialog-header">
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--text-main)' }}>
-                Add New Ticket Type
-              </h3>
-              <button
-                type="button"
-                className="btn-secondary"
-                style={{ padding: '4px', border: 'none' }}
-                onClick={() => setShowAddTypeModal(false)}
-              >
-                <X size={16} />
-              </button>
-            </div>
 
-            <form onSubmit={handleCreateTicketType}>
-              <div className="modal-dialog-body" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px' }}>
-                  <div>
-                    <label className="form-label-control">
-                      Type Name <span style={{ color: '#EF4444' }}>*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      className="form-input-control"
-                      placeholder="e.g. Vulnerability Remediation"
-                      value={newTypeName}
-                      onChange={(e) => setNewTypeName(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="form-label-control">
-                      Code <span style={{ color: '#EF4444' }}>*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      className="form-input-control"
-                      placeholder="e.g. VUL"
-                      value={newTypeCode}
-                      onChange={(e) => setNewTypeCode(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="form-label-control">Associated Workflow Template</label>
-                  <select
-                    className="form-input-control"
-                    value={newTypeWorkflow}
-                    onChange={(e) => setNewTypeWorkflow(e.target.value)}
-                  >
-                    <option value="Standard Ticket Workflow (Published)">Standard Ticket Workflow (Published)</option>
-                    <option value="Change Request Workflow (Draft)">Change Request Workflow (Draft)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="form-label-control">Default Priority</label>
-                  <select
-                    className="form-input-control"
-                    value={newTypePriority}
-                    onChange={(e) => setNewTypePriority(e.target.value)}
-                  >
-                    <option value="Urgent">Urgent</option>
-                    <option value="High">High</option>
-                    <option value="Normal">Normal</option>
-                    <option value="Low">Low</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="form-label-control">Description</label>
-                  <textarea
-                    rows={3}
-                    className="form-input-control"
-                    placeholder="Describe when this ticket type should be selected..."
-                    value={newTypeDesc}
-                    onChange={(e) => setNewTypeDesc(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="modal-dialog-footer">
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() => setShowAddTypeModal(false)}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="btn-primary">
-                  Create Ticket Type
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* ========================================================================= */}
       {/* DATA DUMP & PRESETS MODAL */}
       {/* ========================================================================= */}
       {showDataDumpModal && (
-        <div className="modal-dialog-backdrop">
+        <div className="modal-overlay-backdrop">
           <div className="modal-dialog-box" style={{ maxWidth: '640px' }}>
             <div className="modal-dialog-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <Database size={20} color="var(--primary)" />
                 <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 700, color: 'var(--text-main)' }}>
-                  ITSM Catalog Data Dumps & Presets
+                  ITSM Catalog Schema & Industry Presets
                 </h3>
               </div>
               <button
@@ -3607,7 +2967,7 @@ export function ClassificationManager({
                           Current Standard
                         </span>
                         <strong style={{ fontSize: '13.5px', color: 'var(--text-main)' }}>
-                          Banking Core & Scope of Work Matrix
+                          Enterprise Core Services &amp; Applications Matrix
                         </strong>
                       </div>
                       <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>
@@ -3624,7 +2984,7 @@ export function ClassificationManager({
                       type="button"
                       className="btn-secondary"
                       style={{ height: '34px', fontSize: '12px', whiteSpace: 'nowrap' }}
-                      onClick={() => handleLoadPreset(BANKING_CORE_PRESET, 'Banking Core & Scope of Work')}
+                      onClick={() => handleLoadPreset(BANKING_CORE_PRESET, 'Enterprise Core Services Matrix')}
                     >
                       <RotateCcw size={13} /> Reset Default
                     </button>
@@ -3836,6 +3196,132 @@ export function ClassificationManager({
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* ADD INTAKE QUESTION MODAL (Industry Standard: Catalog Builder) */}
+      {/* ========================================================================= */}
+      {showAddQuestionModal && (
+        <div className="modal-overlay-backdrop">
+          <div className="modal-dialog-box" style={{ maxWidth: '480px' }}>
+            <div className="modal-dialog-header">
+              <div>
+                <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.6px', fontWeight: 800, color: 'var(--primary)' }}>
+                  Service Catalog &bull; Intake Questionnaire
+                </span>
+                <h3 style={{ margin: '2px 0 0', fontSize: '16px', fontWeight: 700, color: 'var(--text-main)' }}>
+                  Add Intake Question for {selectedSub}
+                </h3>
+              </div>
+              <button
+                type="button"
+                className="btn-secondary"
+                style={{ padding: '4px', border: 'none' }}
+                onClick={() => setShowAddQuestionModal(false)}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddQuestion}>
+              <div className="modal-dialog-body" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div>
+                  <label className="form-label-control">
+                    Field Label <span style={{ color: '#EF4444' }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    className="form-input-control"
+                    placeholder="e.g. Account Number / CIF, Screen Error Code, Asset Tag"
+                    value={newQuestionLabel}
+                    onChange={(e) => setNewQuestionLabel(e.target.value)}
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <label className="form-label-control">Input Type</label>
+                    <select
+                      className="form-input-control"
+                      value={newQuestionType}
+                      onChange={(e) => setNewQuestionType(e.target.value as any)}
+                    >
+                      <option value="text">Text Input</option>
+                      <option value="number">Numeric Input</option>
+                      <option value="dropdown">Dropdown Select</option>
+                      <option value="attachment">File Attachment</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="form-label-control">Validation</label>
+                    <label
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        fontSize: '13px',
+                        cursor: 'pointer',
+                        height: '38px',
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={newQuestionRequired}
+                        onChange={(e) => setNewQuestionRequired(e.target.checked)}
+                      />
+                      <span>Mandatory on ticket submission</span>
+                    </label>
+                  </div>
+                </div>
+
+                {newQuestionType === 'dropdown' && (
+                  <div>
+                    <label className="form-label-control">
+                      Dropdown Options <span style={{ color: '#EF4444' }}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      className="form-input-control"
+                      placeholder="e.g. Production, UAT, Sandbox, DR"
+                      value={newQuestionOptions}
+                      onChange={(e) => setNewQuestionOptions(e.target.value)}
+                    />
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '3px', display: 'block' }}>
+                      Separate multiple options with commas
+                    </span>
+                  </div>
+                )}
+
+                <div>
+                  <label className="form-label-control">Placeholder / Hint (Optional)</label>
+                  <input
+                    type="text"
+                    className="form-input-control"
+                    placeholder="e.g. 021-998341-01 or UFC-LPT-2024"
+                    value={newQuestionPlaceholder}
+                    onChange={(e) => setNewQuestionPlaceholder(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="modal-dialog-footer">
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setShowAddQuestionModal(false)}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn-primary">
+                  Add Question to {selectedSub}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -179,7 +179,7 @@ export function PolicySettings({ threshold, onUpdateThreshold }: PolicySettingsP
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <strong style={{ fontSize: '16px', color: '#065F46' }}>
-                  Section 8 Database Security & Encryption
+                  Database Security &amp; Encryption
                 </strong>
                 <span className="badge-tag badge-tag-sm" style={{ background: '#D1FAE5', color: '#047857' }}>
                   AES-256 Enabled

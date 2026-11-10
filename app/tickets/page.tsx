@@ -1,11 +1,14 @@
 'use client'
 
 import React from 'react'
+import { useRouter } from 'next/navigation'
 import { TicketList } from '@/components/tickets/ticket-list'
 import { useTicketContext } from '@/context/ticket-context'
+import { Ticket } from '@/app/ticket-data'
 
 export default function TicketsPage() {
-  const { visibleTickets, currentRole, setSelectedTicket } = useTicketContext()
+  const router = useRouter()
+  const { visibleTickets, currentRole, isBlockedByThreshold } = useTicketContext()
 
   const title =
     currentRole === 'End User'
@@ -19,13 +22,19 @@ export default function TicketsPage() {
       ? 'Track the real-time status, technician ETA, and resolutions of requests you have raised'
       : 'Comprehensive directory of IT incidents, service requests, and issues across UFC'
 
+  // Show gold Create Ticket action in All Tickets page for Admin Team, End User, and Technicians
+  const canCreateInList =
+    currentRole === 'Admin Team' || currentRole === 'End User' || currentRole === 'Technician'
+
   return (
     <TicketList
       tickets={visibleTickets}
       title={title}
       subtitle={subtitle}
-      onSelectTicket={setSelectedTicket}
+      onSelectTicket={(t: Ticket) => router.push(`/tickets/${t.id}`)}
+      onOpenCreateModal={canCreateInList ? () => router.push('/tickets/new') : undefined}
+      createDisabled={isBlockedByThreshold}
+      createDisabledReason="Policy threshold of unclosed resolved tickets reached"
     />
   )
 }
-

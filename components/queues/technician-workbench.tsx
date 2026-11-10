@@ -11,6 +11,8 @@ import {
   Users,
   Send,
   MoreHorizontal,
+  GitBranch,
+  FlaskConical,
 } from 'lucide-react'
 import { Ticket, TicketStatus } from '@/app/ticket-data'
 
@@ -19,6 +21,7 @@ interface TechnicianWorkbenchProps {
   onSelectTicket: (t: Ticket) => void
   onResolveTicket: (t: Ticket) => void
   onSendTesting: (t: Ticket) => void
+  onClassifyCR?: (t: Ticket) => void
 }
 
 export function TechnicianWorkbench({
@@ -26,6 +29,7 @@ export function TechnicianWorkbench({
   onSelectTicket,
   onResolveTicket,
   onSendTesting,
+  onClassifyCR,
 }: TechnicianWorkbenchProps) {
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban')
 
@@ -171,16 +175,59 @@ export function TechnicianWorkbench({
                       </span>
 
                       {/* Quick Action */}
-                      <div onClick={(e) => e.stopPropagation()}>
-                        {t.status === 'In Progress' && (
+                      <div onClick={(e) => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        {t.type !== 'Change Request' && (t.status === 'Assigned' || t.status === 'In Progress') && onClassifyCR && (
                           <button
                             type="button"
-                            className="btn-success"
-                            style={{ height: '26px', padding: '0 8px', fontSize: '11px' }}
-                            onClick={() => onResolveTicket(t)}
+                            className="btn-secondary"
+                            style={{
+                              height: '26px',
+                              padding: '0 8px',
+                              fontSize: '11px',
+                              color: '#7C3AED',
+                              borderColor: '#DDD6FE',
+                              background: '#F5F3FF',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              fontWeight: 600,
+                            }}
+                            onClick={() => onClassifyCR(t)}
+                            title="Classify / Refer as Change Request"
                           >
-                            Resolve
+                            <GitBranch size={12} /> CR
                           </button>
+                        )}
+                        {t.status === 'In Progress' && (
+                          t.type === 'Change Request' ? (
+                            <button
+                              type="button"
+                              className="btn-primary"
+                              style={{
+                                height: '26px',
+                                padding: '0 8px',
+                                fontSize: '11px',
+                                background: '#BE185D',
+                                borderColor: '#9D174D',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                fontWeight: 600,
+                              }}
+                              onClick={() => onSendTesting(t)}
+                            >
+                              <FlaskConical size={12} /> Testing
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="btn-success"
+                              style={{ height: '26px', padding: '0 8px', fontSize: '11px' }}
+                              onClick={() => onResolveTicket(t)}
+                            >
+                              Resolve
+                            </button>
+                          )
                         )}
                         {t.status === 'Assigned' && (
                           <span style={{ fontSize: '11px', color: 'var(--primary)', fontWeight: 600 }}>
@@ -241,15 +288,59 @@ export function TechnicianWorkbench({
                   <td>{t.app}</td>
                   <td>{t.sla}</td>
                   <td onClick={(e) => e.stopPropagation()}>
-                    {t.status === 'In Progress' && (
-                      <button
-                        className="btn-success"
-                        style={{ height: '28px', fontSize: '11.5px', padding: '0 10px' }}
-                        onClick={() => onResolveTicket(t)}
-                      >
-                        Resolve
-                      </button>
-                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      {t.type !== 'Change Request' && (t.status === 'Assigned' || t.status === 'In Progress') && onClassifyCR && (
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          style={{
+                            height: '28px',
+                            fontSize: '11.5px',
+                            padding: '0 8px',
+                            color: '#7C3AED',
+                            borderColor: '#DDD6FE',
+                            background: '#F5F3FF',
+                            fontWeight: 600,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                          }}
+                          onClick={() => onClassifyCR(t)}
+                          title="Classify as Change Request"
+                        >
+                          <GitBranch size={13} /> Classify CR
+                        </button>
+                      )}
+                      {t.status === 'In Progress' && (
+                        t.type === 'Change Request' ? (
+                          <button
+                            type="button"
+                            className="btn-primary"
+                            style={{
+                              height: '28px',
+                              fontSize: '11.5px',
+                              padding: '0 10px',
+                              background: '#BE185D',
+                              borderColor: '#9D174D',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                            }}
+                            onClick={() => onSendTesting(t)}
+                          >
+                            <FlaskConical size={13} /> QA Testing
+                          </button>
+                        ) : (
+                          <button
+                            className="btn-success"
+                            style={{ height: '28px', fontSize: '11.5px', padding: '0 10px' }}
+                            onClick={() => onResolveTicket(t)}
+                          >
+                            Resolve
+                          </button>
+                        )
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

@@ -1,17 +1,20 @@
 'use client'
 
 import React from 'react'
+import { useRouter } from 'next/navigation'
 import { ChangeManagement } from '@/components/queues/change-management'
 import { useTicketContext } from '@/context/ticket-context'
+import { Ticket } from '@/app/ticket-data'
 
 export default function ChangeRequestsPage() {
-  const { visibleTickets, setSelectedTicket, handleUpdateTicket, triggerToast } =
+  const router = useRouter()
+  const { visibleTickets, handleUpdateTicket, triggerToast } =
     useTicketContext()
 
   return (
     <ChangeManagement
       tickets={visibleTickets}
-      onSelectTicket={setSelectedTicket}
+      onSelectTicket={(t: Ticket) => router.push(`/tickets/${t.id}`)}
       onApproveCR={(t) => {
         const updated = {
           ...t,
@@ -56,4 +59,3 @@ export default function ChangeRequestsPage() {
     />
   )
 }
-

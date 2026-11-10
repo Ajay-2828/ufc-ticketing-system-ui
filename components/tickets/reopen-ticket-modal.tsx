@@ -50,7 +50,7 @@ export function ReopenTicketModal({
             <div className="alert-card-banner alert-warning" style={{ margin: 0 }}>
               <AlertCircle size={20} style={{ flexShrink: 0 }} />
               <div style={{ fontSize: '12.5px' }}>
-                Under UFC Ticket Policy Section 3.12, reopened tickets bypass technician triage and are routed <strong>directly to the Service Desk Admin Team Exception Queue</strong> for priority review.
+                Reopened tickets bypass initial technician triage and are escalated <strong>directly to the Admin Exception Queue</strong> for priority review.
               </div>
             </div>
 

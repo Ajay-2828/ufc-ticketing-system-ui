@@ -47,27 +47,13 @@ export function CreateTicketModal({
     currentRole === 'End User' &&
     unclosedResolvedCount >= policySettings.unresolvedClosureThreshold
 
-  // Application-level access (Section 5 & 18):
-  // Filter sub-classifications by department entitlement if End User
+  // Active Directory lookup for user's HOD
   const userDeptConfig = departmentsData.find((d) => d.name === (currentUser.dept || 'Finance & Risk'))
-  const allowedApps = userDeptConfig?.assignedApplications || []
 
-  const availableCategories = useMemo(() => {
-    if (currentRole === 'Admin Team' || currentRole === 'Technician') {
-      return classificationTree
-    }
-    // Filter categories that have at least one allowed sub-classification
-    return classificationTree
-      .map((cat) => ({
-        ...cat,
-        subClassifications: cat.subClassifications.filter(
-          (sub) => allowedApps.length === 0 || allowedApps.includes(sub.name)
-        ),
-      }))
-      .filter((cat) => cat.subClassifications.length > 0)
-  }, [classificationTree, currentRole, allowedApps])
+  // All departments can report issues across software and hardware
+  const availableCategories = classificationTree
 
-  const initialMain = availableCategories[0]?.name || classificationTree[0]?.name || 'Core Banking & Applications'
+  const initialMain = availableCategories[0]?.name || classificationTree[0]?.name || 'Software'
   const [selectedClassification, setSelectedClassification] = useState(initialMain)
 
   const activeClassificationObj =
@@ -142,6 +128,7 @@ export function CreateTicketModal({
     if (!subject.trim()) return
 
     const isCR = activeIssueTypeObj?.isChangeRequest || false
+    const crRequiresHod = activeIssueTypeObj?.crRequiresHodApproval !== false
     const autoSeverity = activeIssueTypeObj?.autoSeverity || 'Medium'
     const calculatedPriority =
       autoSeverity === 'Critical'
@@ -162,6 +149,12 @@ export function CreateTicketModal({
       ? `CR-2026-${Math.floor(100 + Math.random() * 900)}`
       : `INC-2026-${Math.floor(1000 + Math.random() * 9000)}`
 
+    const initialStatus = isDraft
+      ? 'Awaiting Clarification'
+      : isCR
+      ? 'Admin Review'
+      : 'Pending Approval'
+
     const newTicket: Partial<Ticket> = {
       id: ticketId,
       subject,
@@ -173,7 +166,7 @@ export function CreateTicketModal({
       issueType: selectedIssueType,
       severity: autoSeverity,
       priority: finalPriority,
-      status: isDraft ? 'Awaiting Clarification' : 'Pending Approval',
+      status: initialStatus,
       department,
       creator: currentUser.name,
       creatorRole: currentRole,
@@ -192,23 +185,40 @@ export function CreateTicketModal({
           time: 'Just now',
           user: currentUser.name,
           role: currentRole,
-          action: isDraft ? 'Ticket Saved as Draft' : 'Ticket Submitted',
-          note: `Classification: ${selectedClassification} / ${selectedSubClass}. Auto-assigned to designated technician: ${primaryTechnician}${
-            coTechnician ? ` & ${coTechnician}` : ''
-          }. Auto-calculated Severity: ${autoSeverity}.`,
-          tone: 'blue',
+          action: isDraft
+            ? 'Ticket Saved as Draft'
+            : isCR
+            ? 'Change Request Submitted (Forwarded to Admin Team for 1st Review)'
+            : 'Ticket Submitted',
+          note: isCR
+            ? `Change Request raised under ${selectedClassification} / ${selectedSubClass}. Forwarded to Administration Team for initial review (Department Head Approval: ${crRequiresHod ? 'Required' : 'Waived'}).`
+            : `Classification: ${selectedClassification} / ${selectedSubClass}. Auto-assigned to designated technician: ${primaryTechnician}${
+                coTechnician ? ` & ${coTechnician}` : ''
+              }. Auto-calculated Severity: ${autoSeverity}.`,
+          tone: isCR ? 'purple' : 'blue',
         },
         ...(!isDraft
-          ? [
-              {
-                id: `t2-${Date.now()}`,
-                time: 'Just now',
-                user: 'System Notification',
-                action: 'Awaiting Department Head (HOD) Approval',
-                note: `Approval timer active: ${activeIssueTypeObj?.hodApprovalLimitHours || 2}h limit. Assigned HOD: ${userDeptConfig?.hodName || 'Grace Nsubuga'} (from AD).`,
-                tone: 'amber' as const,
-              },
-            ]
+          ? isCR
+            ? [
+                {
+                  id: `t2-${Date.now()}`,
+                  time: 'Just now',
+                  user: 'System Notification',
+                  action: 'Admin Review Queue Active',
+                  note: 'Ticket forwarded to Administration Team for initial review and change assessment.',
+                  tone: 'purple' as const,
+                },
+              ]
+            : [
+                {
+                  id: `t2-${Date.now()}`,
+                  time: 'Just now',
+                  user: 'System Notification',
+                  action: 'Awaiting Department Head (HOD) Approval',
+                  note: `Approval timer active: ${activeIssueTypeObj?.hodApprovalLimitHours || 2}h limit. Assigned HOD: ${userDeptConfig?.hodName || 'Grace Nwosu'} (from AD).`,
+                  tone: 'amber' as const,
+                },
+              ]
           : []),
       ],
       clarifications: [],
@@ -232,7 +242,7 @@ export function CreateTicketModal({
         <div className="modal-dialog-header">
           <div>
             <div className="page-eyebrow">
-              <Sparkles size={14} /> Section 5 &bull; IT Service Management Intake
+              <Sparkles size={14} /> New Support Ticket
             </div>
             <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800 }}>Create New Ticket</h2>
           </div>

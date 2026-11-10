@@ -51,7 +51,7 @@ export function ResolveTicketModal({
         <div className="modal-dialog-header">
           <div>
             <div className="page-eyebrow" style={{ color: 'var(--emerald)' }}>
-              <CheckCircle2 size={14} /> Technician Resolution (Section 3.12)
+              <CheckCircle2 size={14} /> Resolution Details
             </div>
             <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 800 }}>
               Resolve Ticket {ticket.id}
@@ -114,7 +114,7 @@ export function ResolveTicketModal({
             </div>
 
             <div style={{ fontSize: '12.5px', color: 'var(--text-secondary)', background: '#ECFDF5', border: '1px solid #A7F3D0', padding: '10px 14px', borderRadius: '8px' }}>
-              <strong>Lifecycle Rule (Section 3.12):</strong> Once marked resolved, this ticket will remain in <strong>Resolved</strong> status until confirmed and closed by the requester (End User).
+              <strong>Resolution Notice:</strong> Once marked resolved, the ticket will remain in <strong>Resolved</strong> status until verified and closed by the requester.
             </div>
           </div>
 

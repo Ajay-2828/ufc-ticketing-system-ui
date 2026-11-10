@@ -118,7 +118,7 @@ export function SecurityAndSystem() {
       <div className="page-header-flex">
         <div>
           <div className="page-eyebrow">
-            <Lock size={14} /> Section 2 & 15 · Security and System
+            <Lock size={14} /> Security &amp; System Policies
           </div>
           <h1 className="page-title-main">Security, Directory & Audit</h1>
           <p className="page-desc-sub">
@@ -365,7 +365,7 @@ export function SecurityAndSystem() {
               </div>
               <div>
                 <strong style={{ fontSize: '15px', color: 'var(--text-main)', display: 'block' }}>
-                  Database Encryption at Rest (Section 2, Rule 4)
+                  Database Encryption at Rest
                 </strong>
                 <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                   Hardware Security Module (HSM) Managed
@@ -402,7 +402,7 @@ export function SecurityAndSystem() {
               </div>
               <div>
                 <strong style={{ fontSize: '15px', color: 'var(--text-main)', display: 'block' }}>
-                  In-Transit & Attachment Security (Section 5)
+                  In-Transit &amp; Attachment Security
                 </strong>
                 <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                   Strict TLS 1.3 & Encrypted Blob Storage
