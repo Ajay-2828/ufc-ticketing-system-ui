@@ -952,7 +952,7 @@ export function DashboardView({
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '4px',
+                gap: '6px',
                 background: 'var(--surface-subtle)',
                 padding: '4px',
                 borderRadius: '10px',
@@ -965,7 +965,9 @@ export function DashboardView({
                 className={`filter-chip ${tableFilter === 'All' ? 'active' : ''}`}
                 onClick={() => setTableFilter('All')}
                 style={{
-                  padding: '5px 12px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  padding: '6px 14px',
                   borderRadius: '7px',
                   fontSize: '12px',
                   fontWeight: tableFilter === 'All' ? 700 : 500,
@@ -974,6 +976,7 @@ export function DashboardView({
                   border: tableFilter === 'All' ? '1px solid rgba(37, 99, 235, 0.2)' : '1px solid transparent',
                   boxShadow: tableFilter === 'All' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
                   cursor: 'pointer',
+                  whiteSpace: 'nowrap',
                   transition: 'all 0.15s',
                 }}
               >
@@ -984,7 +987,9 @@ export function DashboardView({
                 className={`filter-chip ${tableFilter === 'CriticalHigh' ? 'active' : ''}`}
                 onClick={() => setTableFilter('CriticalHigh')}
                 style={{
-                  padding: '5px 12px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  padding: '6px 14px',
                   borderRadius: '7px',
                   fontSize: '12px',
                   fontWeight: tableFilter === 'CriticalHigh' ? 700 : 500,
@@ -993,6 +998,7 @@ export function DashboardView({
                   border: tableFilter === 'CriticalHigh' ? '1px solid rgba(37, 99, 235, 0.2)' : '1px solid transparent',
                   boxShadow: tableFilter === 'CriticalHigh' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
                   cursor: 'pointer',
+                  whiteSpace: 'nowrap',
                   transition: 'all 0.15s',
                 }}
               >
@@ -1003,7 +1009,9 @@ export function DashboardView({
                 className={`filter-chip ${tableFilter === 'Pending' ? 'active' : ''}`}
                 onClick={() => setTableFilter('Pending')}
                 style={{
-                  padding: '5px 12px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  padding: '6px 14px',
                   borderRadius: '7px',
                   fontSize: '12px',
                   fontWeight: tableFilter === 'Pending' ? 700 : 500,
@@ -1012,6 +1020,7 @@ export function DashboardView({
                   border: tableFilter === 'Pending' ? '1px solid rgba(37, 99, 235, 0.2)' : '1px solid transparent',
                   boxShadow: tableFilter === 'Pending' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
                   cursor: 'pointer',
+                  whiteSpace: 'nowrap',
                   transition: 'all 0.15s',
                 }}
               >
@@ -1022,7 +1031,9 @@ export function DashboardView({
                 className={`filter-chip ${tableFilter === 'ChangeRequest' ? 'active' : ''}`}
                 onClick={() => setTableFilter('ChangeRequest')}
                 style={{
-                  padding: '5px 12px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  padding: '6px 14px',
                   borderRadius: '7px',
                   fontSize: '12px',
                   fontWeight: tableFilter === 'ChangeRequest' ? 700 : 500,
@@ -1031,6 +1042,7 @@ export function DashboardView({
                   border: tableFilter === 'ChangeRequest' ? '1px solid rgba(37, 99, 235, 0.2)' : '1px solid transparent',
                   boxShadow: tableFilter === 'ChangeRequest' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
                   cursor: 'pointer',
+                  whiteSpace: 'nowrap',
                   transition: 'all 0.15s',
                 }}
               >

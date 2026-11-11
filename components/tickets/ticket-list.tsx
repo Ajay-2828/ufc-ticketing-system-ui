@@ -250,7 +250,10 @@ export function TicketList({
             >
               <option value="All">All Statuses</option>
               <option value="Pending Approval">Pending Approval</option>
+              <option value="Admin Review">Admin Review</option>
+              <option value="Assigned">Assigned</option>
               <option value="In Progress">In Progress</option>
+              <option value="Awaiting Clarification">Awaiting Clarification</option>
               <option value="In Testing">In Testing</option>
               <option value="Resolved">Resolved</option>
               <option value="Closed">Closed</option>

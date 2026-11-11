@@ -294,6 +294,12 @@ export function TicketProvider({ children }: { children: ReactNode }) {
               ...t,
               department: targetDept,
               status: 'Awaiting Clarification',
+              referral: {
+                department: targetDept,
+                reason,
+                referredBy: `${currentUser.name} (${currentRole})`,
+                time: 'Just now',
+              },
               timeline: [
                 ...t.timeline,
                 {
@@ -335,7 +341,13 @@ export function TicketProvider({ children }: { children: ReactNode }) {
       )
     } else if (currentRole === 'HOD') {
       result = tickets.filter(
-        (t) => t.department === 'Finance & Risk' || t.status === 'Pending Approval'
+        (t) =>
+          t.department === currentUser.dept ||
+          t.department === 'Core Banking' ||
+          t.department === 'Finance & Risk' ||
+          t.status === 'Pending Approval' ||
+          t.status === 'Awaiting Clarification' ||
+          Boolean(t.referral && t.referral.department === currentUser.dept)
       )
     } else if (currentRole === 'Testing Team') {
       result = tickets.filter(

@@ -196,7 +196,7 @@ export function TechnicianWorkbench({
                               fontWeight: 600,
                             }}
                             onClick={() => onClassifyCR(t)}
-                            title="Classify / Refer as Change Request"
+                            title="Convert to Change Request"
                           >
                             <GitBranch size={12} /> CR
                           </button>

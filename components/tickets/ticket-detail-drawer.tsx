@@ -22,6 +22,8 @@ import {
   Check,
   Download,
   PlayCircle,
+  FileText,
+  Sliders,
 } from 'lucide-react'
 import { Ticket, Role, usersByRole } from '@/app/ticket-data'
 import { ClassifyChangeRequestModal } from '@/components/tickets/classify-change-request-modal'
@@ -686,30 +688,84 @@ export function TicketDetailDrawer({
 
           {/* TAB 1: OVERVIEW */}
           {activeTab === 'overview' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
+              {/* Active Referral Banner if present */}
+              {ticket.referral && (
+                <div
+                  style={{
+                    padding: '12px 16px',
+                    background: '#FAF5FF',
+                    border: '1px solid #E9D5FF',
+                    borderLeft: '4px solid #9333EA',
+                    borderRadius: '10px',
+                    fontSize: '12.5px',
+                  }}
+                >
+                  <div style={{ fontWeight: 700, color: '#6B21A8', marginBottom: '2px' }}>
+                    Referred to {ticket.referral.department} by {ticket.referral.referredBy}
+                  </div>
+                  <p style={{ margin: 0, color: '#7E22CE', lineHeight: 1.5 }}>
+                    {ticket.referral.reason}
+                  </p>
+                </div>
+              )}
+
               {/* Description */}
-              <div>
-                <h4 style={{ margin: '0 0 6px', fontSize: '12.5px', fontWeight: 700, color: 'var(--text-secondary)' }}>
-                  REQUEST DESCRIPTION
-                </h4>
-                <p style={{ margin: 0, fontSize: '13.5px', lineHeight: 1.6, color: 'var(--text-main)', background: 'var(--surface-subtle)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-subtle)' }}>
+              <div
+                style={{
+                  background: '#FFFFFF',
+                  border: '1px solid var(--border)',
+                  borderRadius: '12px',
+                  padding: '18px 20px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                  <FileText size={15} color="var(--primary)" />
+                  <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: 'var(--text-main)' }}>
+                    Issue Description &amp; Reported Impact
+                  </h4>
+                </div>
+                <div
+                  style={{
+                    margin: 0,
+                    fontSize: '13.5px',
+                    lineHeight: 1.65,
+                    color: 'var(--text-main)',
+                    background: 'var(--surface-subtle)',
+                    padding: '14px 16px',
+                    borderRadius: '8px',
+                    borderLeft: '3px solid var(--primary)',
+                  }}
+                >
                   {ticket.description}
-                </p>
+                </div>
               </div>
 
               {/* Dynamic Application Fields */}
               {ticket.dynamicFields && Object.keys(ticket.dynamicFields).length > 0 && (
-                <div>
-                  <h4 style={{ margin: '0 0 8px', fontSize: '12.5px', fontWeight: 700, color: 'var(--text-secondary)' }}>
-                    APPLICATION QUESTIONNAIRE DATA ({ticket.app})
-                  </h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
+                <div
+                  style={{
+                    background: '#FFFFFF',
+                    border: '1px solid var(--border)',
+                    borderRadius: '12px',
+                    padding: '18px 20px',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                    <Sliders size={15} color="var(--primary)" />
+                    <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: 'var(--text-main)' }}>
+                      Application Questionnaire Data ({ticket.app})
+                    </h4>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px' }}>
                     {Object.entries(ticket.dynamicFields).map(([key, value]) => (
-                      <div key={key} style={{ background: '#F8FAFC', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                        <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'capitalize' }}>
+                      <div key={key} style={{ background: 'var(--surface-subtle)', padding: '12px 14px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em' }}>
                           {key.replace(/([A-Z])/g, ' $1')}
                         </span>
-                        <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-main)', marginTop: '2px' }}>
+                        <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-main)', marginTop: '3px', wordBreak: 'break-word', fontFamily: String(value).includes('@') ? 'var(--font-mono)' : 'inherit' }}>
                           {String(value)}
                         </div>
                       </div>
@@ -1051,7 +1107,7 @@ export function TicketDetailDrawer({
                           className="btn-secondary"
                           onClick={() => setShowClassifyCRModal(true)}
                         >
-                          <GitBranch size={14} /> Classify / Refer as Change Request
+                          <GitBranch size={14} /> Convert to Change Request
                         </button>
                         <button
                           type="button"

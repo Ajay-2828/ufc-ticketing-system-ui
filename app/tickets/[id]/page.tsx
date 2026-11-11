@@ -923,7 +923,7 @@ export default function TicketDetailPage() {
                       }}
                       onClick={() => setShowClassifyCRModal(true)}
                     >
-                      <GitBranch size={14} /> Classify / Refer as Change Request
+                      <GitBranch size={14} /> Convert to Change Request
                     </button>
                   )}
 
@@ -1257,73 +1257,161 @@ export default function TicketDetailPage() {
           <div style={{ padding: '24px 28px' }}>
             {/* TAB 1: OVERVIEW & DETAILS */}
             {activeTab === 'details' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '26px' }}>
+                {/* Active Cross-Department Referral Banner if present */}
+                {ticket.referral && (
+                  <div
+                    style={{
+                      padding: '14px 18px',
+                      background: '#FAF5FF',
+                      border: '1px solid #E9D5FF',
+                      borderLeft: '4px solid #9333EA',
+                      borderRadius: '10px',
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '12px',
+                    }}
+                  >
+                    <Share2 size={18} color="#9333EA" style={{ marginTop: '2px', flexShrink: 0 }} />
+                    <div style={{ fontSize: '13px' }}>
+                      <div style={{ fontWeight: 700, color: '#6B21A8', marginBottom: '2px' }}>
+                        Cross-Department Referral &bull; Awaiting {ticket.referral.department} Assessment
+                      </div>
+                      <p style={{ margin: 0, color: '#7E22CE', lineHeight: 1.5 }}>
+                        <strong>Referred by {ticket.referral.referredBy}:</strong> {ticket.referral.reason}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 {/* Section A: Live Journey & Current State Box */}
                 <div
                   style={{
-                    padding: '16px 20px',
+                    padding: '18px 22px',
                     background: 'linear-gradient(135deg, #F8FAFC 0%, #EEF4FF 100%)',
                     border: '1px solid #DBEAFE',
-                    borderRadius: '10px',
+                    borderLeft: '4px solid var(--primary)',
+                    borderRadius: '12px',
+                    boxShadow: 'var(--shadow-sm)',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', marginBottom: '10px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <MapPin size={16} color="var(--primary)" />
-                      <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--primary)', fontWeight: 700 }}>
-                        Current Stage &amp; Active Queue
-                      </span>
+                      <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#DBEAFE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <MapPin size={15} color="var(--primary)" />
+                      </div>
+                      <div>
+                        <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--primary)', fontWeight: 800 }}>
+                          Current Stage &amp; Active Queue
+                        </span>
+                      </div>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', color: '#047857', fontWeight: 600 }}>
-                      <Bell size={12} />
-                      <span>{currentStateInfo.adminNotified}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          fontSize: '11.5px',
+                          fontWeight: 600,
+                          color: '#047857',
+                          background: '#ECFDF5',
+                          padding: '3px 10px',
+                          borderRadius: '12px',
+                          border: '1px solid #A7F3D0',
+                        }}
+                      >
+                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10B981' }} />
+                        {currentStateInfo.adminNotified}
+                      </span>
                     </div>
                   </div>
 
-                  <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-main)', marginBottom: '4px' }}>
-                    Currently with: <span style={{ color: 'var(--primary)' }}>{currentStateInfo.actor}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-main)' }}>
+                      Currently with: <span style={{ color: 'var(--primary)' }}>{currentStateInfo.actor}</span>
+                    </span>
                     <span
                       style={{
-                        marginLeft: '8px',
-                        fontSize: '11.5px',
+                        fontSize: '12px',
                         fontWeight: 600,
                         background: '#FFFFFF',
-                        padding: '2px 8px',
-                        borderRadius: '10px',
-                        border: '1px solid var(--border)',
+                        padding: '3px 10px',
+                        borderRadius: '8px',
+                        border: '1px solid #CBD5E1',
                         color: 'var(--text-secondary)',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
                       }}
                     >
                       {currentStateInfo.queue}
                     </span>
                   </div>
 
-                  <p style={{ margin: '0 0 10px', fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                  <p style={{ margin: '0 0 12px', fontSize: '13.5px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
                     {currentStateInfo.statusSummary}
                   </p>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--primary)', fontWeight: 600, paddingTop: '8px', borderTop: '1px solid rgba(219, 234, 254, 0.7)' }}>
-                    <ArrowRight size={13} />
-                    <span>Next Milestone: {currentStateInfo.nextStep}</span>
+                  <div
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      fontSize: '12.5px',
+                      color: 'var(--primary)',
+                      fontWeight: 600,
+                      background: '#FFFFFF',
+                      padding: '6px 14px',
+                      borderRadius: '8px',
+                      border: '1px solid #BFDBFE',
+                      boxShadow: '0 1px 2px rgba(37,99,235,0.06)',
+                    }}
+                  >
+                    <ArrowRight size={14} />
+                    <span>Next Milestone: <strong>{currentStateInfo.nextStep}</strong></span>
                   </div>
                 </div>
 
                 {/* Section B: Request Description */}
-                <div>
-                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
-                    Request Description
-                  </span>
+                <div
+                  style={{
+                    background: '#FFFFFF',
+                    border: '1px solid var(--border)',
+                    borderRadius: '12px',
+                    padding: '20px 24px',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <FileText size={15} color="var(--primary)" />
+                      </div>
+                      <div>
+                        <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: 'var(--text-main)' }}>
+                          Issue Narrative &amp; Reported Impact
+                        </h4>
+                        <span style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>
+                          Detailed symptom description submitted by {ticket.creator} ({ticket.department})
+                        </span>
+                      </div>
+                    </div>
+
+                    <span className="badge-tag" style={{ background: '#F8FAFC', color: 'var(--text-secondary)', fontSize: '11.5px', fontWeight: 600 }}>
+                      Verified Requester Statement
+                    </span>
+                  </div>
+
                   <div
                     style={{
-                      marginTop: '6px',
                       padding: '14px 18px',
                       background: 'var(--surface-subtle)',
                       borderRadius: '8px',
-                      border: '1px solid var(--border)',
-                      fontSize: '13.5px',
-                      lineHeight: 1.6,
+                      borderLeft: '3px solid var(--primary)',
+                      fontSize: '14px',
+                      lineHeight: 1.65,
                       color: 'var(--text-main)',
+                      fontWeight: 500,
                     }}
                   >
                     {ticket.description}
@@ -1332,36 +1420,61 @@ export default function TicketDetailPage() {
 
                 {/* Section C: Technical Questionnaire Intake Fields */}
                 {ticket.dynamicFields && Object.keys(ticket.dynamicFields).length > 0 && (
-                  <div>
-                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
-                      Technical Intake Fields ({ticket.app})
-                    </span>
+                  <div
+                    style={{
+                      background: '#FFFFFF',
+                      border: '1px solid var(--border)',
+                      borderRadius: '12px',
+                      padding: '20px 24px',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#F5F3FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Tag size={15} color="#7C3AED" />
+                        </div>
+                        <div>
+                          <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: 'var(--text-main)' }}>
+                            Technical Intake Specifications
+                          </h4>
+                          <span style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>
+                            System-specific questionnaire parameters submitted for {ticket.app}
+                          </span>
+                        </div>
+                      </div>
+
+                      <span className="badge-tag" style={{ background: '#F5F3FF', color: '#6D28D9', fontWeight: 600, border: '1px solid #DDD6FE' }}>
+                        {ticket.app} Intake Form
+                      </span>
+                    </div>
+
                     <div
                       style={{
-                        marginTop: '6px',
                         display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-                        gap: '10px',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                        gap: '14px',
                       }}
                     >
                       {Object.entries(ticket.dynamicFields).map(([k, v]) => (
                         <div
                           key={k}
                           style={{
-                            padding: '10px 14px',
+                            padding: '14px 16px',
                             background: 'var(--surface-subtle)',
                             border: '1px solid var(--border)',
-                            borderRadius: '8px',
+                            borderRadius: '10px',
                             display: 'flex',
                             flexDirection: 'column',
-                            gap: '2px',
+                            gap: '4px',
+                            transition: 'all 0.15s ease',
                           }}
                         >
-                          <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'capitalize' }}>
-                            {k.replace(/_/g, ' ')}
+                          <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                            {k.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ')}
                           </span>
-                          <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-main)' }}>
-                            {v}
+                          <span style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--text-main)', wordBreak: 'break-word', fontFamily: String(v).includes('@') || String(v).includes('.') ? 'var(--font-mono)' : 'inherit' }}>
+                            {String(v)}
                           </span>
                         </div>
                       ))}
@@ -1371,64 +1484,204 @@ export default function TicketDetailPage() {
 
                 {/* Section D: Routing Matrix, SLAs & Requester Context in a Clean Grid */}
                 <div>
-                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
-                    Routing Governance &amp; Requester Profile
-                  </span>
                   <div
                     style={{
-                      marginTop: '6px',
                       display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-                      gap: '12px',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
+                      gap: '20px',
                     }}
                   >
-                    {/* Routing Card */}
-                    <div style={{ padding: '14px 16px', background: 'var(--surface-subtle)', border: '1px solid var(--border)', borderRadius: '8px' }}>
-                      <div style={{ fontSize: '11.5px', fontWeight: 700, color: 'var(--primary)', marginBottom: '8px' }}>
-                        Classification &amp; Assignment
+                    {/* Card 1: ITIL Classification & SLA Governance */}
+                    <div
+                      style={{
+                        background: '#FFFFFF',
+                        border: '1px solid var(--border)',
+                        borderRadius: '12px',
+                        padding: '20px 24px',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '16px',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingBottom: '12px', borderBottom: '1px solid var(--border)' }}>
+                        <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <ShieldCheck size={16} color="var(--primary)" />
+                        </div>
+                        <div>
+                          <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: 'var(--text-main)' }}>
+                            Classification &amp; SLA Governance
+                          </h4>
+                          <span style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>
+                            Automated routing &amp; escalation matrix
+                          </span>
+                        </div>
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px' }}>
-                        <div>
-                          <span style={{ color: 'var(--text-muted)' }}>Hierarchy:</span>{' '}
-                          <strong>{ticket.classification} &rarr; {ticket.app}</strong>
+
+                      {/* Hierarchy Row */}
+                      <div>
+                        <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>
+                          Service Catalog Hierarchy
+                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                          <span className="badge-tag" style={{ background: '#F1F5F9', color: 'var(--text-main)', fontWeight: 600 }}>
+                            {ticket.classification}
+                          </span>
+                          <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>&rarr;</span>
+                          <span className="badge-tag" style={{ background: '#EFF6FF', color: 'var(--primary)', fontWeight: 700, border: '1px solid #BFDBFE' }}>
+                            {ticket.app}
+                          </span>
                         </div>
-                        <div>
-                          <span style={{ color: 'var(--text-muted)' }}>Auto-Designated Technicians:</span>{' '}
-                          <strong>{designatedTechnicianName}</strong>
+                      </div>
+
+                      {/* Assigned Specialist Row */}
+                      <div>
+                        <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>
+                          Designated Resolver Group
+                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#EEF2FF', color: '#4338CA', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 800 }}>
+                            {designatedTechnicianName.slice(0, 2).toUpperCase()}
+                          </div>
+                          <div>
+                            <strong style={{ fontSize: '13.5px', color: 'var(--text-main)', display: 'block' }}>
+                              {designatedTechnicianName}
+                            </strong>
+                            <span style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>
+                              {ticket.assignee === 'Unassigned' ? 'Auto-routed on HOD Approval' : 'Primary Active Resolver'}
+                            </span>
+                          </div>
                         </div>
-                        <div>
-                          <span style={{ color: 'var(--text-muted)' }}>Response SLA:</span>{' '}
-                          <strong>{ticket.severity === 'Critical' ? '30m' : ticket.severity === 'High' ? '1h' : ticket.severity === 'Medium' ? '2h' : '4h'}</strong> initial response target
+                      </div>
+
+                      {/* SLA Targets Grid */}
+                      <div>
+                        <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>
+                          SLA Contract Targets
+                        </span>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                          <div style={{ padding: '10px 12px', background: 'var(--surface-subtle)', border: '1px solid var(--border)', borderRadius: '8px' }}>
+                            <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block' }}>Response SLA</span>
+                            <strong style={{ fontSize: '13px', color: 'var(--text-main)' }}>
+                              {ticket.severity === 'Critical' ? '30m' : ticket.severity === 'High' ? '1h' : ticket.severity === 'Medium' ? '2h' : '4h'} target
+                            </strong>
+                          </div>
+                          <div style={{ padding: '10px 12px', background: 'var(--surface-subtle)', border: '1px solid var(--border)', borderRadius: '8px' }}>
+                            <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block' }}>Resolution SLA</span>
+                            <strong style={{ fontSize: '13px', color: 'var(--text-main)' }}>
+                              {ticket.sla} guarantee
+                            </strong>
+                          </div>
                         </div>
-                        <div>
-                          <span style={{ color: 'var(--text-muted)' }}>Resolution SLA:</span>{' '}
-                          <strong>{ticket.sla}</strong> resolution guarantee
-                        </div>
-                        <div>
-                          <span style={{ color: 'var(--text-muted)' }}>Clock State:</span>{' '}
-                          <strong style={{ color: ticket.slaBreached ? '#DC2626' : isClarificationPaused ? '#D97706' : '#16A34A' }}>
-                            {ticket.slaBreached ? 'Breached' : isClarificationPaused ? 'Paused (Customer Action)' : 'Active (Running)'}
-                          </strong>
-                        </div>
+                      </div>
+
+                      {/* Clock State Row */}
+                      <div style={{ paddingTop: '8px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>SLA Timer Engine:</span>
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            padding: '4px 10px',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            background: ticket.slaBreached ? '#FEF2F2' : isClarificationPaused ? '#FFFBEB' : '#ECFDF5',
+                            color: ticket.slaBreached ? '#DC2626' : isClarificationPaused ? '#D97706' : '#059669',
+                            border: `1px solid ${ticket.slaBreached ? '#FECACA' : isClarificationPaused ? '#FDE68A' : '#A7F3D0'}`,
+                          }}
+                        >
+                          <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: ticket.slaBreached ? '#DC2626' : isClarificationPaused ? '#D97706' : '#10B981' }} />
+                          {ticket.slaBreached ? 'Breached' : isClarificationPaused ? 'Clock Paused (Customer Action)' : `Active (${ticket.slaTimeRemaining} remaining)`}
+                        </span>
                       </div>
                     </div>
 
-                    {/* Requester Card */}
-                    <div style={{ padding: '14px 16px', background: 'var(--surface-subtle)', border: '1px solid var(--border)', borderRadius: '8px' }}>
-                      <div style={{ fontSize: '11.5px', fontWeight: 700, color: 'var(--primary)', marginBottom: '8px' }}>
-                        Requester Directory Profile
+                    {/* Card 2: Requester Profile & Directory Context */}
+                    <div
+                      style={{
+                        background: '#FFFFFF',
+                        border: '1px solid var(--border)',
+                        borderRadius: '12px',
+                        padding: '20px 24px',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '16px',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingBottom: '12px', borderBottom: '1px solid var(--border)' }}>
+                        <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <User size={16} color="var(--primary)" />
+                        </div>
+                        <div>
+                          <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: 'var(--text-main)' }}>
+                            Requester Directory Profile
+                          </h4>
+                          <span style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>
+                            Active Directory employee identity
+                          </span>
+                        </div>
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px' }}>
-                        <div>
-                          <span style={{ color: 'var(--text-muted)' }}>Employee:</span>{' '}
-                          <strong>{ticket.creator}</strong> ({ticket.department})
+
+                      {/* Requester Identity Hero */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', background: 'var(--surface-subtle)', border: '1px solid var(--border)', borderRadius: '10px' }}>
+                        <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: '#DBEAFE', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', fontWeight: 800 }}>
+                          {ticket.creator.split(' ').map((n) => n[0]).join('').slice(0, 2)}
                         </div>
                         <div>
-                          <span style={{ color: 'var(--text-muted)' }}>Reporting Manager (HOD):</span>{' '}
-                          <strong>{departmentHOD}</strong>
+                          <strong style={{ fontSize: '14.5px', color: 'var(--text-main)', display: 'block' }}>
+                            {ticket.creator}
+                          </strong>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px' }}>
+                            <span className="badge-tag" style={{ background: '#EFF6FF', color: 'var(--primary)', fontSize: '11px', padding: '2px 8px', fontWeight: 600 }}>
+                              {ticket.department}
+                            </span>
+                            <span style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>Verified Staff</span>
+                          </div>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#047857', fontWeight: 600, fontSize: '11px', marginTop: '2px' }}>
-                          <CheckCircle2 size={12} /> Active Directory Synced
+                      </div>
+
+                      {/* Reporting Manager (HOD) */}
+                      <div>
+                        <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>
+                          Reporting Manager &amp; Department Head (HOD)
+                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: '#F1F5F9', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700 }}>
+                            {departmentHOD.split(' ').map((n) => n[0]).join('').slice(0, 2)}
+                          </div>
+                          <div>
+                            <strong style={{ fontSize: '13px', color: 'var(--text-main)', display: 'block' }}>
+                              {departmentHOD}
+                            </strong>
+                            <span style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>
+                              Authorized Department Approver
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Directory Sync & Multi-Factor Status */}
+                      <div style={{ marginTop: 'auto', paddingTop: '6px' }}>
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            padding: '10px 14px',
+                            background: '#F0FDF4',
+                            border: '1px solid #BBF7D0',
+                            borderRadius: '8px',
+                            color: '#166534',
+                            fontSize: '12px',
+                          }}
+                        >
+                          <CheckCircle2 size={16} color="#059669" />
+                          <span>
+                            <strong>Active Directory Synced</strong> &bull; Authenticated Internal Profile
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -1439,24 +1692,37 @@ export default function TicketDetailPage() {
                 {(ticket.status === 'Resolved' || ticket.status === 'Closed') && (
                   <div
                     style={{
-                      padding: '16px 20px',
+                      padding: '20px 24px',
                       background: '#F0FDF4',
                       border: '1px solid #BBF7D0',
-                      borderRadius: '8px',
+                      borderRadius: '12px',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                      <CheckCircle2 size={16} color="#059669" />
-                      <strong style={{ fontSize: '13.5px', color: '#166534' }}>
-                        Resolution Summary &amp; Root Cause
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                      <CheckCircle2 size={18} color="#059669" />
+                      <strong style={{ fontSize: '14.5px', color: '#166534' }}>
+                        Resolution Summary &amp; Root Cause Analysis
                       </strong>
                     </div>
-                    <p style={{ margin: '0 0 8px', fontSize: '13px', color: '#15803D' }}>
+                    <p style={{ margin: '0 0 14px', fontSize: '13.5px', color: '#15803D', lineHeight: 1.6 }}>
                       {ticket.resolutionSummary || 'Technical issue investigated and resolved by designated specialist.'}
                     </p>
-                    <div style={{ display: 'flex', gap: '20px', fontSize: '12px', color: '#166534' }}>
-                      <span><strong>Root Cause:</strong> {ticket.rootCause || 'Configuration corrected'}</span>
-                      <span><strong>Turnaround:</strong> {ticket.resolutionTime || '3.5 hours'}</span>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', fontSize: '12.5px', color: '#166534', paddingTop: '12px', borderTop: '1px solid #DCFCE7' }}>
+                      <div>
+                        <span style={{ color: '#15803D' }}>Root Cause:</span>{' '}
+                        <strong style={{ color: '#166534' }}>{ticket.rootCause || 'Configuration corrected'}</strong>
+                      </div>
+                      <div>
+                        <span style={{ color: '#15803D' }}>Resolution Turnaround:</span>{' '}
+                        <strong style={{ color: '#166534' }}>{ticket.resolutionTime || '3.5 hours'}</strong>
+                      </div>
+                      {ticket.closureRemarks && (
+                        <div>
+                          <span style={{ color: '#15803D' }}>Closure Remarks:</span>{' '}
+                          <strong style={{ color: '#166534' }}>{ticket.closureRemarks}</strong>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -1782,7 +2048,7 @@ export default function TicketDetailPage() {
                         className="btn-secondary"
                         onClick={() => setShowClassifyCRModal(true)}
                       >
-                        <GitBranch size={14} /> Classify as Change Request
+                        <GitBranch size={14} /> Convert to Change Request
                       </button>
                     )}
                     <button
@@ -1813,7 +2079,7 @@ export default function TicketDetailPage() {
                           className="btn-secondary"
                           onClick={() => setShowClassifyCRModal(true)}
                         >
-                          <GitBranch size={14} /> Classify / Refer as Change Request
+                          <GitBranch size={14} /> Convert to Change Request
                         </button>
                         <button
                           type="button"
@@ -1858,7 +2124,7 @@ export default function TicketDetailPage() {
                         className="btn-secondary"
                         onClick={() => setShowClassifyCRModal(true)}
                       >
-                        <GitBranch size={14} /> Classify / Refer as Change Request
+                        <GitBranch size={14} /> Convert to Change Request
                       </button>
                     )}
                     <button

@@ -301,7 +301,7 @@ body {
   padding: 0 28px;
   position: sticky;
   top: 0;
-  z-index: 20;
+  z-index: 100;
 }
 
 .topbar-left {
@@ -359,6 +359,7 @@ body {
 /* Role Switcher */
 .role-switcher-container {
   position: relative;
+  z-index: 105;
 }
 
 .role-switcher-btn {
@@ -401,7 +402,7 @@ body {
   border-radius: 12px;
   box-shadow: var(--shadow-xl);
   padding: 8px;
-  z-index: 50;
+  z-index: 1000;
   animation: fadeIn 0.15s ease-out;
 }
 
@@ -482,7 +483,7 @@ body {
   border: 1px solid var(--border);
   border-radius: 12px;
   box-shadow: var(--shadow-xl);
-  z-index: 50;
+  z-index: 1000;
   overflow: hidden;
   animation: fadeIn 0.15s ease-out;
 }
@@ -1065,6 +1066,7 @@ body {
   align-items: center !important;
   justify-content: center !important;
   padding: 20px !important;
+  overflow-y: auto !important;
   animation: fadeIn 0.15s ease-out;
 }
 
@@ -1085,17 +1087,28 @@ body {
   animation: scaleUp 0.15s ease-out;
 }
 
+.modal-dialog-box > form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .modal-dialog-header {
   padding: 20px 24px;
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-shrink: 0;
 }
 
 .modal-dialog-body {
   padding: 24px;
   overflow-y: auto;
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -1109,6 +1122,7 @@ body {
   align-items: center;
   justify-content: flex-end;
   gap: 12px;
+  flex-shrink: 0;
 }
 
 /* Right-side Detail Drawer */
@@ -1117,7 +1131,7 @@ body {
   inset: 0;
   background: rgba(15, 23, 42, 0.45);
   backdrop-filter: blur(2px);
-  z-index: 50;
+  z-index: 2000;
   display: flex;
   justify-content: flex-end;
   animation: fadeIn 0.15s ease-out;

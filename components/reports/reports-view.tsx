@@ -516,7 +516,7 @@ export function ReportsView({ tickets }: ReportsViewProps) {
               marginBottom: '22px',
               position: 'sticky',
               top: '68px',
-              zIndex: 20,
+              zIndex: 10,
               boxShadow: 'var(--shadow-md)',
             }}
           >
