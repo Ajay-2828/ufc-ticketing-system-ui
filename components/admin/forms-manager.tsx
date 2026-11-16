@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   FileText,
   Plus,
@@ -14,6 +14,11 @@ import { applicationQuestionnaires, DynamicQuestion } from '@/app/ticket-data'
 export function FormsManager() {
   const [selectedApp, setSelectedApp] = useState<string>('Flexcube')
   const [questionnaires, setQuestionnaires] = useState<Record<string, DynamicQuestion[]>>(applicationQuestionnaires)
+
+  // Admin edits reach the create-ticket form (it reads the shared questionnaire list)
+  useEffect(() => {
+    Object.assign(applicationQuestionnaires, questionnaires)
+  }, [questionnaires])
   const [toastMessage, setToastMessage] = useState<string | null>(null)
 
   const currentQuestions = questionnaires[selectedApp] || []

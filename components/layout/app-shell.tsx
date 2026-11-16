@@ -29,10 +29,11 @@ import {
   Sliders,
   Users,
   Plus,
+  MessageSquare,
   LucideIcon,
 } from 'lucide-react'
 import { useTicketContext } from '@/context/ticket-context'
-import { roles } from '@/app/ticket-data'
+import { roles, departmentsData } from '@/app/ticket-data'
 
 import { CloseTicketModal } from '@/components/tickets/close-ticket-modal'
 import { ReopenTicketModal } from '@/components/tickets/reopen-ticket-modal'
@@ -109,7 +110,11 @@ export function AppShell({ children }: AppShellProps) {
             label: 'Approvals',
             href: '/approvals',
             icon: ShieldCheck,
-            badge: tickets.filter((t) => t.status === 'Pending Approval').length,
+            badge: tickets.filter(
+              (t) =>
+                t.status === 'Pending Approval' &&
+                departmentsData.some((d) => d.name === t.department && d.hodName === currentUser.name)
+            ).length,
           },
           { label: 'Department Tickets', href: '/department-tickets', icon: FolderKanban },
           { label: 'Reports', href: '/reports', icon: BarChart3 },
@@ -119,14 +124,12 @@ export function AppShell({ children }: AppShellProps) {
           { label: 'Home', href: '/', icon: LayoutDashboard },
           { label: 'Create Ticket', href: '/tickets/new', icon: FilePlus2 },
           {
-            label: 'Approvals',
-            href: '/approvals',
+            label: 'Change Approvals',
+            href: '/change-requests',
             icon: ShieldCheck,
-            badge: tickets.filter(
-              (t) => t.type === 'Change Request' && t.status === 'Admin Review'
-            ).length,
+            badge: tickets.filter((t) => t.status === 'Management Approval').length,
           },
-          { label: 'All Tickets', href: '/tickets', icon: TicketIcon },
+          { label: 'Change Requests', href: '/tickets', icon: TicketIcon },
           { label: 'Reports', href: '/reports', icon: BarChart3 },
         ]
       case 'Testing Team':
@@ -146,6 +149,22 @@ export function AppShell({ children }: AppShellProps) {
           { label: 'Home', href: '/', icon: LayoutDashboard },
           { label: 'Vendor Portal', href: '/vendor-portal', icon: Building2 },
         ]
+      case 'Other Departments':
+        return [
+          { label: 'Home', href: '/', icon: LayoutDashboard },
+          {
+            label: 'Clarifications',
+            href: '/clarifications',
+            icon: MessageSquare,
+            badge: tickets.filter(
+              (t) =>
+                t.status === 'Awaiting Clarification' &&
+                t.referral &&
+                !t.referral.response &&
+                t.referral.department === currentUser.dept
+            ).length,
+          },
+        ]
       case 'Admin Team':
       default:
         return [
@@ -156,17 +175,14 @@ export function AppShell({ children }: AppShellProps) {
             href: '/exceptions',
             icon: AlertCircle,
             badge: tickets.filter(
-              (t) =>
-                t.status === 'Reopened' ||
-                t.type === 'Change Request' ||
-                t.status === 'Admin Review'
+              (t) => t.status === 'Reopened' || t.status === 'Admin Review'
             ).length,
           },
           { label: 'All Tickets', href: '/tickets', icon: FolderKanban },
           { label: 'Reports', href: '/reports', icon: BarChart3 },
         ]
     }
-  }, [currentRole, tickets])
+  }, [currentRole, tickets, currentUser.dept])
 
   // Standard Administration Pages (ITSM Industry Standard)
   const adminPages: NavItem[] = [

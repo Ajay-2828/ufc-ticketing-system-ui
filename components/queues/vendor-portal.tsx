@@ -12,6 +12,7 @@ import {
   Send,
 } from 'lucide-react'
 import { Ticket } from '@/app/ticket-data'
+import { useTicketContext } from '@/context/ticket-context'
 
 interface VendorPortalProps {
   tickets: Ticket[]
@@ -24,17 +25,9 @@ export function VendorPortal({
   onSelectTicket,
   onResolveTicket,
 }: VendorPortalProps) {
-  // Vendor Isolation: Only tickets where vendor is TechServe or SecureNet or assigned
-  const vendorTickets = tickets.filter(
-    (t) =>
-      Boolean(t.vendor) ||
-      Boolean(t.coAssignee && (t.coAssignee.includes('TechServe') || t.coAssignee.includes('SecureNet') || t.coAssignee.includes('Vendor'))) ||
-      t.assignee.includes('TechServe') ||
-      t.assignee.includes('SecureNet') ||
-      t.assignee.includes('Vendor') ||
-      t.id === 'INC-2024-0832' ||
-      t.id === 'INC-2024-0841'
-  )
+  // Vendor isolation: the context already limits `tickets` to this vendor's own tickets.
+  const { addVendorUpdate } = useTicketContext()
+  const vendorTickets = tickets
 
   const [activeTicketId, setActiveTicketId] = useState<string>(vendorTickets[0]?.id || '')
   const [progressUpdate, setProgressUpdate] = useState('')
@@ -45,7 +38,8 @@ export function VendorPortal({
 
   const handlePostUpdate = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!progressUpdate.trim()) return
+    if (!progressUpdate.trim() || !activeTicket) return
+    addVendorUpdate(activeTicket.id, progressUpdate.trim())
     setUpdatePosted(true)
     setTimeout(() => {
       setUpdatePosted(false)

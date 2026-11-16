@@ -49,10 +49,18 @@ export function DashboardView({
   const [tableFilter, setTableFilter] = useState<'All' | 'CriticalHigh' | 'Pending' | 'ChangeRequest'>('All')
 
   // Section 14 consistent enterprise KPI figures across screens
-  const totalOpen = 128
-  const pendingApprovalsCount = 24
-  const resolvedUnclosedTotal = 18
-  const closedTotal = 38
+  const totalOpen = tickets.filter(
+    (t) => !['Closed', 'Rejected', 'Resolved', 'Draft'].includes(t.status)
+  ).length
+  const pendingApprovalsCount = tickets.filter(
+    (t) => t.status === 'Pending Approval' || t.status === 'Management Approval'
+  ).length
+  const resolvedUnclosedTotal = tickets.filter((t) => t.status === 'Resolved').length
+  const closedTotal = tickets.filter((t) => t.status === 'Closed').length
+  const breachedTotal = tickets.filter((t) => t.slaBreached).length
+  const slaMetPct = tickets.length
+    ? (((tickets.length - breachedTotal) / tickets.length) * 100).toFixed(1)
+    : '100'
 
   // 7-Day Ticket Flow Analytics Data (Monday to Sunday)
   const ticketsWeeklyInflow = [
@@ -67,12 +75,10 @@ export function DashboardView({
 
   // Section 16: "Home per role starts with a Needs your action strip"
   const exceptionsTotal = tickets.filter(
-    (t) => t.status === 'Reopened' || t.type === 'Change Request' || t.status === 'Admin Review'
+    (t) => t.status === 'Reopened' || t.status === 'Admin Review'
   ).length
   const reopenedTotal = tickets.filter((t) => t.status === 'Reopened').length
-  const crAwaitingReview = tickets.filter(
-    (t) => t.type === 'Change Request' || t.status === 'Admin Review'
-  ).length
+  const crAwaitingReview = tickets.filter((t) => t.status === 'Admin Review').length
 
   // Filtered recent tickets for table
   const filteredRecentTickets = useMemo(() => {
@@ -862,7 +868,7 @@ export function DashboardView({
                   }}
                 >
                   <strong style={{ fontSize: '15px', fontWeight: 900, color: '#047857', lineHeight: 1 }}>
-                    98.4%
+                    {slaMetPct}%
                   </strong>
                   <span style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, marginTop: '2px' }}>
                     SLA MET
@@ -882,7 +888,7 @@ export function DashboardView({
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
                   <span style={{ color: 'var(--text-muted)' }}>Active Breaches:</span>
-                  <span style={{ color: '#DC2626', fontWeight: 700 }}>1 / 128 tickets</span>
+                  <span style={{ color: '#DC2626', fontWeight: 700 }}>{breachedTotal} / {tickets.length} tickets</span>
                 </div>
               </div>
             </div>

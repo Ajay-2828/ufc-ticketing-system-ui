@@ -1,61 +1,36 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChangeManagement } from '@/components/queues/change-management'
+import { ReasonModal } from '@/components/tickets/reason-modal'
 import { useTicketContext } from '@/context/ticket-context'
 import { Ticket } from '@/app/ticket-data'
 
 export default function ChangeRequestsPage() {
   const router = useRouter()
-  const { visibleTickets, handleUpdateTicket, triggerToast } =
-    useTicketContext()
+  const { visibleTickets, managementDecide, currentRole } = useTicketContext()
+  const [toReject, setToReject] = useState<Ticket | null>(null)
 
   return (
-    <ChangeManagement
-      tickets={visibleTickets}
-      onSelectTicket={(t: Ticket) => router.push(`/tickets/${t.id}`)}
-      onApproveCR={(t) => {
-        const updated = {
-          ...t,
-          status: 'In Progress' as const,
-          timeline: [
-            ...t.timeline,
-            {
-              id: `t-${Date.now()}`,
-              time: 'Just now',
-              user: 'Change Advisory Board',
-              role: 'Management' as const,
-              action: 'Change Request Approved',
-              note: 'CAB reviewed and authorized release schedule.',
-              tone: 'green' as const,
-            },
-          ],
-        }
-        handleUpdateTicket(updated)
-        triggerToast(`Change Request ${t.id} approved for implementation!`)
-      }}
-      onRejectCR={(t) => {
-        const updated = {
-          ...t,
-          status: 'Closed' as const,
-          closureRemarks: 'Change Request rejected by CAB.',
-          timeline: [
-            ...t.timeline,
-            {
-              id: `t-${Date.now()}`,
-              time: 'Just now',
-              user: 'Change Advisory Board',
-              role: 'Management' as const,
-              action: 'Change Request Rejected',
-              note: 'Rejected due to architectural or risk constraints.',
-              tone: 'red' as const,
-            },
-          ],
-        }
-        handleUpdateTicket(updated)
-        triggerToast(`Change Request ${t.id} rejected and archived.`)
-      }}
-    />
+    <>
+      <ChangeManagement
+        tickets={visibleTickets}
+        canDecide={currentRole === 'Management'}
+        onSelectTicket={(t: Ticket) => router.push(`/tickets/${t.id}`)}
+        onApproveCR={(t) => managementDecide(t, true, 'Approved for implementation.')}
+        onRejectCR={(t) => setToReject(t)}
+      />
+      {toReject && (
+        <ReasonModal
+          title={`Reject change ${toReject.id}`}
+          label="Reason for rejecting"
+          placeholder="The requester, the HOD and Admin see this reason."
+          confirmLabel="Confirm rejection"
+          onClose={() => setToReject(null)}
+          onConfirm={(reason) => managementDecide(toReject, false, reason)}
+        />
+      )}
+    </>
   )
 }

@@ -115,7 +115,13 @@ export function TicketList({
       case 'Closed':
         return 'badge-closed'
       case 'Reopened':
+      case 'Rejected':
         return 'badge-reopened'
+      case 'Admin Review':
+      case 'Management Approval':
+        return 'badge-pending'
+      case 'Draft':
+        return 'badge-closed'
       default:
         return 'badge-in-progress'
     }
@@ -258,6 +264,9 @@ export function TicketList({
               <option value="Resolved">Resolved</option>
               <option value="Closed">Closed</option>
               <option value="Reopened">Reopened</option>
+              <option value="Draft">Draft</option>
+              <option value="Management Approval">Management Approval</option>
+              <option value="Rejected">Rejected</option>
             </select>
 
             <select

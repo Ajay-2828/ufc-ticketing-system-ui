@@ -13,6 +13,7 @@ export default function WorkQueuePage() {
     visibleTickets,
     setTicketToResolve,
     handleUpdateTicket,
+    markAsChangeRequest,
     triggerToast,
     currentUser,
     currentRole,
@@ -21,42 +22,13 @@ export default function WorkQueuePage() {
   const [ticketToClassifyCR, setTicketToClassifyCR] = useState<Ticket | null>(null)
 
   const handleConfirmClassifyCR = (
-    ticketId: string,
+    _ticketId: string,
     justification: string,
     requiresHodApproval: boolean
   ) => {
     if (!ticketToClassifyCR) return
-
-    const updated: Ticket = {
-      ...ticketToClassifyCR,
-      type: 'Change Request',
-      status: 'Admin Review', // Always Admin Review 1st per SOW 3.6
-      timeline: [
-        ...ticketToClassifyCR.timeline,
-        {
-          id: `t-${Date.now()}`,
-          time: 'Just now',
-          user: currentUser.name,
-          role: currentRole,
-          action: 'Classified as Change Request (Routed to Admin Team for Review)',
-          note: `Classified as Change Request. Routed to Administration Team for initial review and assessment. Justification: ${justification}. Department Head Approval: ${requiresHodApproval ? 'Required' : 'Waived'}.`,
-          tone: 'purple',
-        },
-        {
-          id: `t-${Date.now() + 1}`,
-          time: 'Just now',
-          user: 'System Notification Service',
-          role: 'System',
-          action: 'Admin Review Intake Dispatched',
-          note: 'Admin Queue received Change Request awaiting technical review, risk assessment, and change governance.',
-          tone: 'blue',
-        },
-      ],
-    }
-
-    handleUpdateTicket(updated)
+    markAsChangeRequest(ticketToClassifyCR, justification, requiresHodApproval)
     setTicketToClassifyCR(null)
-    triggerToast('Ticket classified as Change Request and routed to Admin Team for 1st Review!')
   }
 
   return (
@@ -90,6 +62,7 @@ export default function WorkQueuePage() {
           const updated: Ticket = {
             ...t,
             status: 'In Testing',
+            crStage: 'Testing' as const,
             timeline: [
               ...t.timeline,
               {

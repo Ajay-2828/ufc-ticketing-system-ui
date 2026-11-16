@@ -46,6 +46,8 @@ import { ClassifyChangeRequestModal } from '@/components/tickets/classify-change
 import { ForwardToTestingModal } from '@/components/tickets/forward-to-testing-modal'
 import { RejectTicketModal } from '@/components/tickets/reject-ticket-modal'
 import { EscalateToVendorModal } from '@/components/tickets/escalate-to-vendor-modal'
+import { ReasonModal } from '@/components/tickets/reason-modal'
+import { hodRemaining } from '@/lib/workflow'
 
 export default function TicketDetailPage() {
   const params = useParams()
@@ -57,6 +59,14 @@ export default function TicketDetailPage() {
     currentRole,
     currentUser,
     handleUpdateTicket,
+    now,
+    hodApprove,
+    hodNotApprove,
+    markAsChangeRequest,
+    adminApproveCR,
+    adminRejectCR,
+    testingResult,
+    submitDraft,
     setTicketToClose,
     setTicketToReopen,
     setTicketToAssign,
@@ -74,6 +84,8 @@ export default function TicketDetailPage() {
   const [showTestingModal, setShowTestingModal] = useState(false)
   const [showRejectModal, setShowRejectModal] = useState(false)
   const [showVendorModal, setShowVendorModal] = useState(false)
+  const [showCRRejectModal, setShowCRRejectModal] = useState(false)
+  const [showTestFailModal, setShowTestFailModal] = useState(false)
 
   const ticket = useMemo(() => {
     return tickets.find((t) => t.id === ticketId)
@@ -102,7 +114,7 @@ export default function TicketDetailPage() {
   }
 
   // Detect whether ticket is on Standard Flow vs Change Request Flow
-  const isCR = ticket.type === 'Change Request' || ticket.status === 'Admin Review'
+  const isCR = ticket.type === 'Change Request'
   
   // Show QA Testing Tab ONLY when relevant (Change Request or actively in testing)
   const isTestingRelevant = isCR || ticket.status === 'In Testing' || Boolean(ticket.testResults)
@@ -152,11 +164,16 @@ export default function TicketDetailPage() {
 
   const getStepIndex = (status: Ticket['status'], isChangeRequest: boolean) => {
     if (isChangeRequest) {
+      // Admin review, HOD approval (if on), Management, implementation, testing, closure
       switch (status) {
+        case 'Draft':
+          return 0
         case 'Admin Review':
-          return 1
+          return ticket.crStage === 'Implementation' ? 4 : 1
         case 'Pending Approval':
           return 2
+        case 'Management Approval':
+          return 3
         case 'Assigned':
         case 'In Progress':
         case 'Awaiting Clarification':
@@ -164,7 +181,6 @@ export default function TicketDetailPage() {
         case 'In Testing':
           return 5
         case 'Resolved':
-          return 6
         case 'Closed':
           return 6
         default:
@@ -184,7 +200,8 @@ export default function TicketDetailPage() {
         case 'Closed':
           return 5
         case 'Reopened':
-          return 2
+        case 'Admin Review':
+          return 1
         default:
           return 0
       }
@@ -209,7 +226,13 @@ export default function TicketDetailPage() {
       case 'Closed':
         return 'badge-closed'
       case 'Reopened':
+      case 'Rejected':
         return 'badge-reopened'
+      case 'Admin Review':
+      case 'Management Approval':
+        return 'badge-pending'
+      case 'Draft':
+        return 'badge-closed'
       default:
         return 'badge-in-progress'
     }
@@ -217,6 +240,53 @@ export default function TicketDetailPage() {
 
   // Where the ticket is currently at description
   const currentStateInfo = useMemo(() => {
+    if (ticket.status === 'Draft') {
+      return {
+        actor: `${ticket.creator} (Requester)`,
+        queue: 'Drafts',
+        statusSummary: 'Saved by the requester. Not yet submitted.',
+        adminNotified: 'Nobody notified yet',
+        nextStep: 'The requester submits it for approval.',
+      }
+    }
+    if (ticket.status === 'Rejected') {
+      return {
+        actor: 'Closed as rejected',
+        queue: 'Historical Registry',
+        statusSummary: ticket.closureRemarks || 'Rejected.',
+        adminNotified: 'Requester and Admin notified',
+        nextStep: 'No further steps.',
+      }
+    }
+    if (ticket.status === 'Management Approval') {
+      return {
+        actor: 'Management',
+        queue: 'Management decisions',
+        statusSummary: 'Admin and the Department Head have approved the change. Waiting for the Management decision.',
+        adminNotified: 'Admin informed',
+        nextStep: 'Approved: Admin assigns the implementation. Rejected: the change is closed as rejected.',
+      }
+    }
+    if (ticket.status === 'Admin Review' && !isCR) {
+      return {
+        actor: 'Admin team',
+        queue: 'Admin Queue',
+        statusSummary: ticket.hodRejection
+          ? `The Department Head did not approve (${ticket.hodRejection.category}). Admin decides what happens next.`
+          : 'No technician was available. Admin assigns the ticket.',
+        adminNotified: 'Admin alert received',
+        nextStep: 'Admin assigns, asks for clarification, forwards to a department or vendor, or rejects.',
+      }
+    }
+    if (ticket.status === 'Admin Review' && isCR && ticket.crStage === 'Implementation') {
+      return {
+        actor: 'Admin team',
+        queue: 'Admin Queue',
+        statusSummary: 'Management approved the change. Admin assigns who implements it.',
+        adminNotified: 'Admin alert received',
+        nextStep: 'Admin assigns a technician, developer, infrastructure engineer or vendor.',
+      }
+    }
     if (isCR) {
       switch (ticket.status) {
         case 'Admin Review':
@@ -225,11 +295,11 @@ export default function TicketDetailPage() {
             queue: 'Admin Queue (Exceptions)',
             statusSummary: 'Technician flagged this as a Change Request. Awaiting Admin Team review for risk assessment and change window approval.',
             adminNotified: 'Admin Alert Received & Logged',
-            nextStep: 'Admin approves ➔ Routes to Department Head (Grace Nwosu) for Change Authorization.',
+            nextStep: `Admin approves ➔ Routes to the Department Head (${departmentHOD}) if HOD approval is on, then Management.`,
           }
         case 'Pending Approval':
           return {
-            actor: 'Grace Nwosu (Head of Core Banking)',
+            actor: `${departmentHOD} (Head of ${ticket.department})`,
             queue: 'Department Approvals Queue',
             statusSummary: 'Admin Team authorized change scope. Currently awaiting formal Change Approval from Department Head.',
             adminNotified: 'Admin Informed of Progression',
@@ -280,7 +350,7 @@ export default function TicketDetailPage() {
       switch (ticket.status) {
         case 'Pending Approval':
           return {
-            actor: 'Grace Nwosu (Head of Core Banking)',
+            actor: `${departmentHOD} (Head of ${ticket.department})`,
             queue: 'Department Approvals Queue',
             statusSummary: 'Awaiting initial approval from Department Head. Admin Team has received an intake notification.',
             adminNotified: 'Admin Intake Notification Dispatched',
@@ -344,74 +414,20 @@ export default function TicketDetailPage() {
           }
       }
     }
-  }, [ticket, isCR, designatedTechnicianName])
+  }, [ticket, isCR, designatedTechnicianName, departmentHOD])
 
   // Lifecycle Action Handlers
   const handleHODApprove = () => {
-    const updated: Ticket = {
-      ...ticket,
-      status: 'Assigned',
-      assignee: ticket.assignee === 'Unassigned' ? designatedTechnicianName : ticket.assignee,
-      timeline: [
-        ...ticket.timeline,
-        {
-          id: `t-${Date.now()}`,
-          time: 'Just now',
-          user: currentUser.name,
-          role: 'HOD',
-          action: 'Department Head Approval Granted',
-          note: `Approved by Department Head. Admin Team notified. Automatically assigned to designated technician: ${designatedTechnicianName}.`,
-          tone: 'green',
-        },
-        {
-          id: `t-${Date.now() + 1}`,
-          time: 'Just now',
-          user: 'System Notification Service',
-          role: 'System',
-          action: 'Admin Notification Dispatched',
-          note: 'Admin Team received confirmation of HOD approval and automated technician dispatch.',
-          tone: 'blue',
-        },
-      ],
-    }
-    handleUpdateTicket(updated)
-    triggerToast('Department Head approval granted! Admin notified & technician auto-assigned.')
+    hodApprove(ticket)
   }
 
   const handleHODReject = () => {
     setShowRejectModal(true)
   }
 
-  const handleConfirmRejectModal = (targetTicketId: string, reason: string, category: string) => {
-    const updated: Ticket = {
-      ...ticket,
-      status: 'Closed',
-      closureRemarks: `Rejection (${currentRole}): ${reason} [${category}]`,
-      timeline: [
-        ...ticket.timeline,
-        {
-          id: `t-${Date.now()}`,
-          time: 'Just now',
-          user: currentUser.name,
-          role: currentRole,
-          action: `Ticket Rejected by ${currentRole}`,
-          note: `Category: ${category}. Justification: ${reason}`,
-          tone: 'red',
-        },
-        {
-          id: `t-${Date.now() + 1}`,
-          time: 'Just now',
-          user: 'System Notification Service',
-          role: 'System',
-          action: 'Rejection Notification Dispatched',
-          note: `Automated alert sent to ${ticket.creator} and Administration Team with formal rejection justification.`,
-          tone: 'amber',
-        },
-      ],
-    }
-    handleUpdateTicket(updated)
+  const handleConfirmRejectModal = (_targetTicketId: string, reason: string, category: string) => {
+    hodNotApprove(ticket, reason, category)
     setShowRejectModal(false)
-    triggerToast('Ticket rejected and closed. Rejection notification dispatched!')
   }
 
   const handleTechnicianStart = () => {
@@ -436,38 +452,11 @@ export default function TicketDetailPage() {
   }
 
   const handleConfirmClassifyCR = (
-    targetTicketId: string,
+    _targetTicketId: string,
     justification: string,
     requiresHodApproval: boolean
   ) => {
-    const updated: Ticket = {
-      ...ticket,
-      type: 'Change Request',
-      status: 'Admin Review', // Always Admin Review 1st per SOW 3.6
-      timeline: [
-        ...ticket.timeline,
-        {
-          id: `t-${Date.now()}`,
-          time: 'Just now',
-          user: currentUser.name,
-          role: currentRole,
-          action: 'Classified as Change Request (Routed to Admin Team for Review)',
-          note: `Classified as Change Request. Routed to Administration Team for initial review and assessment. Justification: ${justification}. Department Head Approval: ${requiresHodApproval ? 'Required' : 'Waived'}.`,
-          tone: 'purple',
-        },
-        {
-          id: `t-${Date.now() + 1}`,
-          time: 'Just now',
-          user: 'System Notification Service',
-          role: 'System',
-          action: 'Admin Review Intake Dispatched',
-          note: 'Admin Queue received Change Request awaiting technical review, risk assessment, and change governance.',
-          tone: 'blue',
-        },
-      ],
-    }
-    handleUpdateTicket(updated)
-    triggerToast('Ticket classified as Change Request and routed to Admin Team for 1st Review!')
+    markAsChangeRequest(ticket, justification, requiresHodApproval)
   }
 
   const handleConfirmForwardToTesting = (
@@ -479,6 +468,7 @@ export default function TicketDetailPage() {
     const updated: Ticket = {
       ...ticket,
       status: 'In Testing',
+      crStage: 'Testing' as const,
       tester: tester,
       timeline: [
         ...ticket.timeline,
@@ -556,103 +546,19 @@ export default function TicketDetailPage() {
   }
 
   const handleAdminApproveCR = () => {
-    const updated: Ticket = {
-      ...ticket,
-      status: 'Pending Approval',
-      timeline: [
-        ...ticket.timeline,
-        {
-          id: `t-${Date.now()}`,
-          time: 'Just now',
-          user: currentUser.name,
-          role: 'Admin Team',
-          action: 'Change Request Authorized by Admin Team',
-          note: 'Admin Team reviewed change risk, system scope, and impact. Dispatched to Department Head (Grace Nwosu) for Change Approval, followed by Management.',
-          tone: 'purple',
-        },
-      ],
-    }
-    handleUpdateTicket(updated)
-    triggerToast('Change Request approved by Admin! Routed to HOD for Change Approval.')
+    adminApproveCR(ticket)
   }
 
   const handleAdminRejectCR = () => {
-    const reason = prompt('Mandatory: Please provide reason for rejecting Change Request:')
-    if (!reason || !reason.trim()) return
-
-    const updated: Ticket = {
-      ...ticket,
-      type: 'Incident',
-      status: 'In Progress',
-      timeline: [
-        ...ticket.timeline,
-        {
-          id: `t-${Date.now()}`,
-          time: 'Just now',
-          user: currentUser.name,
-          role: 'Admin Team',
-          action: 'Change Request Rejected by Admin Team',
-          note: `Rejection justification: ${reason}. Reverted to standard Incident and returned to technician.`,
-          tone: 'amber',
-        },
-        {
-          id: `t-${Date.now() + 1}`,
-          time: 'Just now',
-          user: 'System Notification Service',
-          role: 'System',
-          action: 'Rejection Notification Dispatched',
-          note: `Appropriate notifications sent to requester (${ticket.creator}), HOD, and technician: ${reason}`,
-          tone: 'red',
-        },
-      ],
-    }
-    handleUpdateTicket(updated)
-    triggerToast('Change Request rejected and returned to technician. Notifications dispatched.')
+    setShowCRRejectModal(true)
   }
 
   const handleTestingPass = () => {
-    const updated: Ticket = {
-      ...ticket,
-      status: 'Resolved',
-      resolutionSummary: 'QA verification passed all functional and regression test criteria.',
-      timeline: [
-        ...ticket.timeline,
-        {
-          id: `t-${Date.now()}`,
-          time: 'Just now',
-          user: currentUser.name,
-          role: 'Testing Team',
-          action: 'QA Testing Passed',
-          note: 'Verified in UAT staging. Ready for customer sign-off.',
-          tone: 'green',
-        },
-      ],
-    }
-    handleUpdateTicket(updated)
-    triggerToast('QA Testing verification passed!')
+    testingResult(ticket, true, 'Verified in the test environment.')
   }
 
   const handleTestingFail = () => {
-    const reason = prompt('Please enter the defect description found during test:')
-    if (!reason) return
-    const updated: Ticket = {
-      ...ticket,
-      status: 'In Progress',
-      timeline: [
-        ...ticket.timeline,
-        {
-          id: `t-${Date.now()}`,
-          time: 'Just now',
-          user: currentUser.name,
-          role: 'Testing Team',
-          action: 'QA Testing Failed',
-          note: `Defect logged: ${reason}. Escalated back to engineer.`,
-          tone: 'red',
-        },
-      ],
-    }
-    handleUpdateTicket(updated)
-    triggerToast('QA Testing failed. Ticket returned to technician.')
+    setShowTestFailModal(true)
   }
 
   const handlePostClarification = (e: React.FormEvent) => {
@@ -986,13 +892,23 @@ export default function TicketDetailPage() {
               {/* HOD Primary Actions */}
               {currentRole === 'HOD' && ticket.status === 'Pending Approval' && (
                 <>
+                  {!isCR && (
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      style={{ height: '32px', fontSize: '12px', color: '#7C3AED', borderColor: '#DDD6FE', background: '#F5F3FF' }}
+                      onClick={() => setShowClassifyCRModal(true)}
+                    >
+                      <GitBranch size={14} /> Mark as CR
+                    </button>
+                  )}
                   <button
                     type="button"
                     className="btn-secondary"
                     style={{ height: '32px', fontSize: '12px', color: '#DC2626', borderColor: '#FCA5A5' }}
                     onClick={handleHODReject}
                   >
-                    Reject
+                    {isCR ? 'Reject' : 'Do Not Approve'}
                   </button>
                   <button
                     type="button"
@@ -1006,7 +922,7 @@ export default function TicketDetailPage() {
               )}
 
               {/* Admin Primary Actions */}
-              {currentRole === 'Admin Team' && ticket.status === 'Admin Review' && (
+              {currentRole === 'Admin Team' && ticket.status === 'Admin Review' && isCR && ticket.crStage !== 'Implementation' && (
                 <>
                   <button
                     type="button"
@@ -1029,6 +945,32 @@ export default function TicketDetailPage() {
             </div>
           </div>
         </div>
+
+        {/* Draft: the requester submits it for approval */}
+        {ticket.status === 'Draft' && (
+          <div className="modern-card" style={{ padding: '14px 20px', borderRadius: '10px', background: '#F8FAFC', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '13px' }}>
+              <strong>Draft.</strong> Not submitted yet. Nobody has been notified.
+            </span>
+            {ticket.creator === currentUser.name && (
+              <button type="button" className="btn-primary" onClick={() => submitDraft(ticket)}>
+                Submit for approval
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* HOD did not approve: now with the Admin team */}
+        {ticket.status === 'Admin Review' && ticket.hodRejection && (
+          <div className="modern-card" style={{ padding: '14px 20px', borderRadius: '10px', background: '#FEF2F2', border: '1px solid #FECACA' }}>
+            <strong style={{ fontSize: '13.5px', color: '#991B1B' }}>
+              Not approved by the Department Head ({ticket.hodRejection.by})
+            </strong>
+            <p style={{ margin: '4px 0 0', fontSize: '12.5px', color: '#7F1D1D' }}>
+              {ticket.hodRejection.category}: {ticket.hodRejection.reason}. The Admin team decides: assign, ask for clarification, forward to a department or vendor, or reject.
+            </p>
+          </div>
+        )}
 
         {/* 1.5 Pending HOD Approval Banner */}
         {ticket.status === 'Pending Approval' && (
@@ -1073,7 +1015,7 @@ export default function TicketDetailPage() {
                 </div>
                 <p style={{ margin: '3px 0 0', fontSize: '12.5px', color: '#B45309' }}>
                   This ticket has been sent to <strong>{departmentHOD}</strong> (Head of {ticket.department}) for authorization before work begins.
-                  {ticket.hodTimeRemaining ? ` Approval SLA timer: ${ticket.hodTimeRemaining} remaining.` : ''}
+                  {hodRemaining(ticket, now) ? ` Approval time limit: ${hodRemaining(ticket, now)}.` : ''}
                 </p>
               </div>
             </div>
@@ -2019,20 +1961,29 @@ export default function TicketDetailPage() {
                 >
                   <Share2 size={14} /> Refer to Department
                 </button>
+                {!isCR && (
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => setShowClassifyCRModal(true)}
+                  >
+                    <GitBranch size={14} /> Mark as Change Request
+                  </button>
+                )}
                 <button
                   type="button"
                   className="btn-secondary"
                   style={{ color: '#DC2626', borderColor: '#FCA5A5' }}
                   onClick={handleHODReject}
                 >
-                  Reject Request
+                  {isCR ? 'Reject Change' : 'Do Not Approve'}
                 </button>
                 <button
                   type="button"
                   className="btn-primary"
                   onClick={handleHODApprove}
                 >
-                  <CheckCircle2 size={14} /> Approve Request
+                  <CheckCircle2 size={14} /> {isCR ? 'Approve Change' : 'Approve Request'}
                 </button>
               </>
             )}
@@ -2098,7 +2049,7 @@ export default function TicketDetailPage() {
             {/* Admin Team Actions */}
             {currentRole === 'Admin Team' && (
               <>
-                {ticket.status === 'Admin Review' ? (
+                {ticket.status === 'Admin Review' && isCR && ticket.crStage !== 'Implementation' ? (
                   <>
                     <button
                       type="button"
@@ -2116,6 +2067,14 @@ export default function TicketDetailPage() {
                       <CheckCircle2 size={14} /> Approve Change Request
                     </button>
                   </>
+                ) : ticket.status === 'Admin Review' && isCR ? (
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={() => setTicketToAssign(ticket)}
+                  >
+                    <UserCheck size={14} /> Assign Implementation
+                  </button>
                 ) : (
                   <>
                     {ticket.type !== 'Change Request' && (
@@ -2134,12 +2093,22 @@ export default function TicketDetailPage() {
                     >
                       <Share2 size={14} /> Refer to Department
                     </button>
+                    {ticket.status === 'Admin Review' && (
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        style={{ color: '#DC2626', borderColor: '#FCA5A5' }}
+                        onClick={handleAdminRejectCR}
+                      >
+                        Reject Ticket
+                      </button>
+                    )}
                     <button
                       type="button"
                       className="btn-primary"
                       onClick={() => setTicketToAssign(ticket)}
                     >
-                      <UserCheck size={14} /> Reassign Technician
+                      <UserCheck size={14} /> {ticket.status === 'Admin Review' ? 'Assign Technician' : 'Reassign Technician'}
                     </button>
                   </>
                 )}
@@ -2217,6 +2186,31 @@ export default function TicketDetailPage() {
           approverName={currentUser.name}
           onClose={() => setShowRejectModal(false)}
           onConfirmReject={handleConfirmRejectModal}
+          forwardToAdmin={!isCR}
+        />
+      )}
+
+      {/* Admin reject (Change Request or ticket) */}
+      {showCRRejectModal && (
+        <ReasonModal
+          title={isCR ? `Reject change ${ticket.id}` : `Reject ticket ${ticket.id}`}
+          label="Reason for rejecting"
+          placeholder="The requester and the HOD see this reason."
+          confirmLabel="Confirm rejection"
+          onClose={() => setShowCRRejectModal(false)}
+          onConfirm={(reason) => adminRejectCR(ticket, reason)}
+        />
+      )}
+
+      {/* Test failed */}
+      {showTestFailModal && (
+        <ReasonModal
+          title={`Fail test for ${ticket.id}`}
+          label="What failed in the test"
+          placeholder="Describe the defect. The ticket goes back to the technician."
+          confirmLabel="Fail the test"
+          onClose={() => setShowTestFailModal(false)}
+          onConfirm={(notes) => testingResult(ticket, false, notes)}
         />
       )}
 

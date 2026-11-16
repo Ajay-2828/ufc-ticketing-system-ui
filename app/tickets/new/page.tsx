@@ -35,20 +35,32 @@ export default function CreateTicketPage() {
     currentUser,
     unclosedResolvedCount,
     classificationTreeData,
-    handleCreateTicket,
+    submitNewTicket,
+    isBlockedByThreshold,
+    closureThreshold,
   } = useTicketContext()
-
-  const isBlockedByThreshold =
-    currentRole === 'End User' &&
-    unclosedResolvedCount >= policySettings.unresolvedClosureThreshold
 
   // Active Directory lookup for user's HOD
   const userDeptConfig = departmentsData.find(
     (d) => d.name === (currentUser.dept || 'Finance & Risk')
   )
 
-  // All departments can report issues across software and hardware
-  const availableCategories = classificationTreeData
+  // Application-wise access: a department only sees and raises tickets for the
+  // applications assigned to it. The Admin team sees everything.
+  const [department, setDepartment] = useState(currentUser.dept || 'Finance & Risk')
+  const deptApps = useMemo(() => {
+    if (currentRole === 'Admin Team') return undefined
+    return departmentsData.find((d) => d.name === department)?.assignedApplications
+  }, [currentRole, department])
+  const availableCategories = useMemo(() => {
+    if (!deptApps) return classificationTreeData
+    return classificationTreeData
+      .map((main) => ({
+        ...main,
+        subClassifications: main.subClassifications.filter((s) => deptApps.includes(s.name)),
+      }))
+      .filter((main) => main.subClassifications.length > 0)
+  }, [classificationTreeData, deptApps])
 
   const initialMain =
     availableCategories[0]?.name ||
@@ -78,11 +90,11 @@ export default function CreateTicketPage() {
     availableIssueTypes.find((i) => i.name === selectedIssueType) ||
     availableIssueTypes[0]
 
-  const designatedTechnicians = activeSubClassObj?.technicians || ['Daniel Mensah']
+  const designatedTechnicians = activeSubClassObj?.technicians || []
 
   const [subject, setSubject] = useState('')
   const [description, setDescription] = useState('')
-  const [department, setDepartment] = useState(currentUser.dept || 'Finance & Risk')
+  const [ticketType, setTicketType] = useState<'Incident' | 'Service Request' | 'Issue'>('Incident')
   const [priorityOverride, setPriorityOverride] = useState<'P1' | 'P2' | 'P3' | 'P4'>('P2')
   const [dynamicAnswers, setDynamicAnswers] = useState<Record<string, string>>({})
   const [attachedFiles, setAttachedFiles] = useState<string[]>([])
@@ -111,10 +123,7 @@ export default function CreateTicketPage() {
     1
 
   // Get dynamic questionnaire questions
-  const questions =
-    applicationQuestionnaires[selectedSubClass] ||
-    applicationQuestionnaires['Flexcube'] ||
-    []
+  const questions = applicationQuestionnaires[selectedSubClass] || []
 
   const handleClassificationChange = (clsName: string) => {
     setSelectedClassification(clsName)
@@ -147,101 +156,32 @@ export default function CreateTicketPage() {
 
   const handleSubmit = (e: React.FormEvent, isDraft = false) => {
     e.preventDefault()
-    if (!subject.trim()) return
+    if (!subject.trim() || !activeSubClassObj) return
+    // Required questions must be answered before a real submit
+    if (!isDraft && questions.some((q) => q.required && !(dynamicAnswers[q.id] || '').trim())) {
+      return
+    }
 
     setIsSubmitting(true)
-
     const isCR = activeIssueTypeObj?.isChangeRequest || false
-    const crRequiresHod = activeIssueTypeObj?.crRequiresHodApproval !== false
-
-    const primaryTechnician = designatedTechnicians[0] || 'Daniel Mensah'
-    const coTechnician = designatedTechnicians[1] || undefined
-
-    const ticketId = isCR
-      ? `CR-2026-${Math.floor(100 + Math.random() * 900)}`
-      : `INC-2026-${Math.floor(1000 + Math.random() * 9000)}`
-
-    const isStaffCreator = currentRole === 'HOD' || currentRole === 'Admin Team' || currentRole === 'Technician'
-
-    const initialStatus = isDraft
-      ? 'Awaiting Clarification'
-      : isCR
-      ? 'Admin Review'
-      : isStaffCreator
-      ? 'Assigned'
-      : 'Pending Approval'
-
-    const newTicket: Partial<Ticket> = {
-      id: ticketId,
+    const ticket = submitNewTicket({
       subject,
       description,
-      type: isCR ? 'Change Request' : 'Incident',
-      app: selectedSubClass,
+      type: ticketType,
       classification: selectedClassification,
       subClassification: selectedSubClass,
       issueType: selectedIssueType,
       severity: autoSeverity,
       priority: finalPriority,
-      status: initialStatus,
       department,
-      creator: currentUser.name,
-      creatorRole: currentRole,
-      creatorAvatar: currentUser.initials,
-      assignee: primaryTechnician,
-      coAssignee: coTechnician,
-      sla: `${targetResolutionHours}h remaining`,
-      slaTimeRemaining: `0${Math.floor(targetResolutionHours)}:00:00`,
-      slaBreached: false,
-      hodTimeRemaining: `0${activeIssueTypeObj?.hodApprovalLimitHours || 2}:00:00`,
-      created: 'Just now',
       dynamicFields: dynamicAnswers,
-      timeline: [
-        {
-          id: `t-${Date.now()}`,
-          time: 'Just now',
-          user: currentUser.name,
-          role: currentRole,
-          action: isDraft
-            ? 'Ticket Saved as Draft'
-            : isCR
-            ? 'Change Request Submitted (Forwarded to Admin Team for 1st Review)'
-            : 'Ticket Submitted',
-          note: isCR
-            ? `Change Request raised under ${selectedClassification} / ${selectedSubClass}. Forwarded to Administration Team for initial review (Department Head Approval: ${crRequiresHod ? 'Required' : 'Waived'}).`
-            : `Classification: ${selectedClassification} / ${selectedSubClass}. Auto-assigned to designated technician: ${primaryTechnician}${
-                coTechnician ? ` & ${coTechnician}` : ''
-              }. Auto-calculated Severity: ${autoSeverity}.`,
-          tone: isCR ? 'purple' : 'blue',
-        },
-        ...(!isDraft
-          ? isCR
-            ? [
-                {
-                  id: `t2-${Date.now()}`,
-                  time: 'Just now',
-                  user: 'System Notification',
-                  action: 'Admin Review Queue Active',
-                  note: 'Ticket forwarded to Administration Team for initial review and change assessment.',
-                  tone: 'purple' as const,
-                },
-              ]
-            : [
-                {
-                  id: `t2-${Date.now()}`,
-                  time: 'Just now',
-                  user: 'System Notification',
-                  action: 'Awaiting Department Head (HOD) Approval',
-                  note: `Approval timer active: ${activeIssueTypeObj?.hodApprovalLimitHours || 2}h limit. Assigned HOD: ${userDeptConfig?.hodName || 'Grace Nwosu'} (from AD).`,
-                  tone: 'amber' as const,
-                },
-              ]
-          : []),
-      ],
-      clarifications: [],
-    }
-
-    handleCreateTicket(newTicket)
-    router.push(`/tickets/${ticketId}`)
+      isCR,
+      crRequiresHod: activeIssueTypeObj?.crRequiresHodApproval !== false,
+      hodLimitHours: activeIssueTypeObj?.hodApprovalLimitHours || 2,
+      slaHours: targetResolutionHours,
+      isDraft,
+    })
+    router.push(`/tickets/${ticket.id}`)
   }
 
   return (
@@ -299,7 +239,7 @@ export default function CreateTicketPage() {
               Ticket Submission Blocked: Unclosed Ticket Threshold Reached
             </strong>
             <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#B91C1C', lineHeight: 1.5 }}>
-              You currently have <strong>{unclosedResolvedCount}</strong> resolved tickets awaiting your verification. Under UFC ITSM policy (threshold of {policySettings.unresolvedClosureThreshold}), please verify and close your resolved tickets before opening a new request.
+              You currently have <strong>{unclosedResolvedCount}</strong> resolved tickets awaiting your verification. Under UFC ITSM policy (threshold of {closureThreshold}), please verify and close your resolved tickets before opening a new request.
             </p>
           </div>
         </div>
@@ -399,6 +339,27 @@ export default function CreateTicketPage() {
                     ))}
                   </select>
                 </div>
+              </div>
+
+              {/* Ticket type. A Change Request is decided by the issue type. */}
+              <div style={{ marginTop: '14px', maxWidth: '320px' }}>
+                <label className="form-field-label">Ticket Type *</label>
+                {activeIssueTypeObj?.isChangeRequest ? (
+                  <div className="form-input-control" style={{ background: '#FAF5FF', color: '#6B21A8', fontWeight: 600 }}>
+                    Change Request (set by the issue type)
+                  </div>
+                ) : (
+                  <select
+                    className="form-input-control"
+                    disabled={isBlockedByThreshold}
+                    value={ticketType}
+                    onChange={(e) => setTicketType(e.target.value as 'Incident' | 'Service Request' | 'Issue')}
+                  >
+                    <option value="Incident">Incident</option>
+                    <option value="Service Request">Service Request</option>
+                    <option value="Issue">Issue</option>
+                  </select>
+                )}
               </div>
 
               {/* Read-Only Auto-Severity Badge (Section 5) */}
@@ -769,10 +730,10 @@ export default function CreateTicketPage() {
                   }}
                 >
                   <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>
-                    AUTO-DESIGNATED TECHNICIANS
+                    TECHNICIANS OF THIS SUB-CLASS (ASSIGNED ON APPROVAL, ROUND ROBIN)
                   </span>
                   <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-main)', marginTop: '2px' }}>
-                    {designatedTechnicians.join(' & ')}
+                    {designatedTechnicians.length ? designatedTechnicians.join(' & ') : 'None set: the Admin team assigns it'}
                   </div>
                 </div>
 
@@ -804,9 +765,11 @@ export default function CreateTicketPage() {
                     APPROVAL GOVERNANCE
                   </span>
                   <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-main)', marginTop: '2px' }}>
-                    {currentRole === 'End User'
-                      ? `${userDeptConfig?.hodName || 'Grace Nsubuga'} (HOD) • ${activeIssueTypeObj?.hodApprovalLimitHours || 2}h limit`
-                      : `Bypassed • Authorized by ${currentRole}`}
+                    {activeIssueTypeObj?.isChangeRequest
+                      ? 'Admin approval first, then HOD if switched on, then Management'
+                      : currentRole === 'HOD'
+                      ? 'Raised by the HOD, no separate approval'
+                      : `${userDeptConfig?.hodName || 'Department Head'} (HOD) • ${activeIssueTypeObj?.hodApprovalLimitHours || 2}h limit`}
                   </div>
                 </div>
 

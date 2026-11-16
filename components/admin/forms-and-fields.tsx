@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   FileCheck,
   Plus,
@@ -36,6 +36,11 @@ export function FormsAndFields() {
   const [questionnaires, setQuestionnaires] = useState<Record<string, DynamicQuestion[]>>(
     applicationQuestionnaires
   )
+
+  // Admin edits reach the create-ticket form (it reads the shared questionnaire list)
+  useEffect(() => {
+    Object.assign(applicationQuestionnaires, questionnaires)
+  }, [questionnaires])
 
   // Custom fields state (Section 15, Tab 2)
   const [customFields, setCustomFields] = useState<CustomFieldDef[]>([

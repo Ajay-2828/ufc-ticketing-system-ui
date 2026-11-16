@@ -10,6 +10,8 @@ interface RejectTicketModalProps {
   approverName?: string
   onClose: () => void
   onConfirmReject: (ticketId: string, reason: string, category: string) => void
+  /** True when the ticket goes to the Admin team instead of ending (normal tickets). */
+  forwardToAdmin?: boolean
 }
 
 export function RejectTicketModal({
@@ -18,6 +20,7 @@ export function RejectTicketModal({
   approverName = 'Approver',
   onClose,
   onConfirmReject,
+  forwardToAdmin = false,
 }: RejectTicketModalProps) {
   const [reason, setReason] = useState('')
   const [category, setCategory] = useState('Insufficient Business Justification')
@@ -52,7 +55,7 @@ export function RejectTicketModal({
               <ShieldAlert size={14} /> Authorization Decision
             </div>
             <h2 style={{ margin: '2px 0 0', fontSize: '18px', fontWeight: 800 }}>
-              Reject Ticket {ticket.id}
+              {forwardToAdmin ? 'Do not approve' : 'Reject'} {ticket.id}
             </h2>
           </div>
           <button
@@ -161,7 +164,11 @@ export function RejectTicketModal({
             >
               <Bell size={15} color="var(--primary)" style={{ flexShrink: 0 }} />
               <span>
-                Automated email alerts with your reason will be sent to <b>{ticket.creator}</b> and the <b>Administration Team</b>.
+                {forwardToAdmin ? (
+                  <>The ticket goes to the <b>Admin team</b>, who can assign it, ask for clarification, forward it or reject it. <b>{ticket.creator}</b> is notified with your reason.</>
+                ) : (
+                  <>Automated email alerts with your reason will be sent to <b>{ticket.creator}</b> and the <b>Administration Team</b>.</>
+                )}
               </span>
             </div>
           </div>
@@ -185,7 +192,7 @@ export function RejectTicketModal({
                 opacity: !reason.trim() ? 0.6 : 1,
               }}
             >
-              <ShieldAlert size={14} /> Confirm Rejection
+              <ShieldAlert size={14} /> {forwardToAdmin ? 'Send to Admin' : 'Confirm Rejection'}
             </button>
           </div>
         </form>

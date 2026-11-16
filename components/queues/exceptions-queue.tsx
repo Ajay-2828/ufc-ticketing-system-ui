@@ -38,7 +38,7 @@ export function ExceptionsQueue({
   // Normal tickets NEVER appear here.
   const exceptionTickets = tickets.filter((t) => {
     const isReopened = t.status === 'Reopened'
-    const isChangeRequest = t.type === 'Change Request' || t.status === 'Admin Review'
+    const isChangeRequest = t.status === 'Admin Review'
     const isBreached = Boolean(t.slaBreached)
 
     if (!isReopened && !isChangeRequest && !isBreached) return false
@@ -50,7 +50,7 @@ export function ExceptionsQueue({
   })
 
   const reopenedCount = tickets.filter((t) => t.status === 'Reopened').length
-  const crCount = tickets.filter((t) => t.type === 'Change Request' || t.status === 'Admin Review').length
+  const crCount = tickets.filter((t) => t.status === 'Admin Review').length
   const breachedCount = tickets.filter((t) => Boolean(t.slaBreached)).length
   const totalExceptions = reopenedCount + crCount + breachedCount
 
@@ -127,7 +127,7 @@ export function ExceptionsQueue({
             transition: 'all 0.15s ease',
           }}
         >
-          Change Requests ({crCount})
+          Admin review ({crCount})
         </button>
 
         <button
@@ -241,7 +241,13 @@ export function ExceptionsQueue({
                               className="badge-tag badge-tag-sm"
                               style={{ background: '#F5F3FF', color: '#6D28D9', fontWeight: 700 }}
                             >
-                              Change Request
+                              {ticket.hodRejection
+                                ? 'HOD did not approve'
+                                : ticket.type === 'Change Request'
+                                ? ticket.crStage === 'Implementation'
+                                  ? 'Assign implementation'
+                                  : 'Change approval'
+                                : 'Needs assignment'}
                             </span>
                           )}
                         </td>

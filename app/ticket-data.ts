@@ -6,20 +6,24 @@ export const roles = [
   'Management',
   'Testing Team',
   'External Vendor',
+  'Other Departments',
 ] as const
 
 export type Role = (typeof roles)[number]
 
 export type TicketStatus =
+  | 'Draft'
   | 'Pending Approval'
   | 'Admin Review'
   | 'Assigned'
   | 'In Progress'
   | 'Awaiting Clarification'
+  | 'Management Approval'
   | 'In Testing'
   | 'Resolved'
   | 'Closed'
   | 'Reopened'
+  | 'Rejected'
 
 export type TicketSeverity = 'Critical' | 'High' | 'Medium' | 'Low'
 export type TicketType = 'Incident' | 'Service Request' | 'Issue' | 'Change Request'
@@ -114,11 +118,33 @@ export interface Ticket {
   dynamicFields: Record<string, string>
   timeline: TicketTimelineItem[]
   clarifications: ClarificationItem[]
+  /** Change Request stage: Admin review, HOD approval (if switched on), Management, implementation, testing */
+  crStage?: 'Admin' | 'HOD' | 'Management' | 'Implementation' | 'Testing'
+  /** Whether this Change Request needs HOD approval (configurable per issue type) */
+  crRequiresHod?: boolean
+  /** Set when the HOD did not approve a ticket and it was forwarded to Admin */
+  hodRejection?: {
+    by: string
+    reason: string
+    category: string
+    time: string
+  }
+  createdAt?: number
+  /** Epoch ms when the HOD approval time limit runs out */
+  hodDeadline?: number
+  hodExpiredNotified?: boolean
+  resolvedAt?: number
+  unclosedReminderSent?: boolean
   referral?: {
     department: string
     reason: string
     referredBy: string
     time: string
+    /** Status to return to once the department answers */
+    previousStatus?: TicketStatus
+    response?: string
+    responder?: string
+    responseTime?: string
   }
   testResults?: {
     tester: string
@@ -145,8 +171,8 @@ export const usersByRole: Record<Role, { name: string; title: string; dept: stri
     avatarColor: 'indigo',
   },
   'HOD': {
-    name: 'Grace Nwosu',
-    title: 'Head of Core Banking',
+    name: 'Grace Nsubuga',
+    title: 'Head of Department (Core and Digital Banking)',
     dept: 'Core Banking',
     initials: 'GN',
     avatarColor: 'emerald',
@@ -175,9 +201,16 @@ export const usersByRole: Record<Role, { name: string; title: string; dept: stri
   'External Vendor': {
     name: 'TechServe Support Lead',
     title: 'Authorized Vendor Representative',
-    dept: 'TechServe Solutions Ltd',
+    dept: 'TechServe Ltd',
     initials: 'TS',
     avatarColor: 'teal',
+  },
+  'Other Departments': {
+    name: 'Hassan Qureshi',
+    title: 'Operations Manager (clarifications only)',
+    dept: 'Operations',
+    initials: 'HQ',
+    avatarColor: 'blue',
   },
 }
 
@@ -878,6 +911,8 @@ export const policySettings = {
   unresolvedClosureThreshold: 3,
   hodReminderDays: 3,
   hodDefaultTimeoutHours: 24,
+  /** Technicians currently on leave. Auto-assignment skips them. */
+  techniciansOnLeave: [] as string[],
   databaseEncryption: true,
   adSyncIntervalMinutes: 15,
   activeDirectoryStatus: {
@@ -1015,15 +1050,18 @@ export const ticketTypesList = [
 ]
 
 export const ticketStatusesList = [
-  { id: 'Open', name: 'Open', category: 'Open', color: '#2563EB', desc: 'Ticket registered, ready for processing or assignment', terminal: false, allowReopen: false },
-  { id: 'Pending Approval', name: 'Pending Approval', category: 'Waiting', color: '#D97706', desc: 'Awaiting Department Head (HOD) review and endorsement', terminal: false, allowReopen: false },
-  { id: 'Clarification Requested', name: 'Clarification Requested', category: 'Waiting', color: '#F59E0B', desc: 'Technician or Admin awaiting creator / department / vendor response', terminal: false, allowReopen: false },
-  { id: 'Assigned', name: 'Assigned', category: 'Open', color: '#3B82F6', desc: 'Auto-routed to designated technical specialists per classification', terminal: false, allowReopen: false },
-  { id: 'In Progress', name: 'In Progress', category: 'In Progress', color: '#0284C7', desc: 'Active troubleshooting with ETA and turnaround time established', terminal: false, allowReopen: false },
-  { id: 'Change Request', name: 'Change Request', category: 'In Progress', color: '#7C3AED', desc: 'Referred or flagged for formal architectural / management review', terminal: false, allowReopen: false },
-  { id: 'Resolved', name: 'Resolved', category: 'Waiting', color: '#059669', desc: 'Technical work complete, awaiting end-user verification and closure', terminal: false, allowReopen: true },
-  { id: 'Closed', name: 'Closed', category: 'Closed', color: '#475569', desc: 'Verified by end user or auto-closed after SLA policy timeout', terminal: true, allowReopen: true },
-  { id: 'Reopened', name: 'Reopened', category: 'Open', color: '#DC2626', desc: 'User rejected resolution; escalated straight to Admin Exception Queue', terminal: false, allowReopen: false },
+  { id: 'Draft', name: 'Draft', category: 'Open', color: '#64748B', desc: 'Saved by the requester, not yet submitted for approval', terminal: false, allowReopen: false },
+  { id: 'Pending Approval', name: 'Pending Approval', category: 'Waiting', color: '#D97706', desc: 'Awaiting Department Head (HOD) decision, within the SLA time limit of the issue type', terminal: false, allowReopen: false },
+  { id: 'Admin Review', name: 'Admin Review', category: 'Waiting', color: '#7C3AED', desc: 'With the Admin team: HOD did not approve, Change Request review, or implementation assignment', terminal: false, allowReopen: false },
+  { id: 'Assigned', name: 'Assigned', category: 'Open', color: '#3B82F6', desc: 'Auto-assigned to the technician of the sub-classification', terminal: false, allowReopen: false },
+  { id: 'In Progress', name: 'In Progress', category: 'In Progress', color: '#0284C7', desc: 'Active work with ETA and due date', terminal: false, allowReopen: false },
+  { id: 'Awaiting Clarification', name: 'Awaiting Clarification', category: 'Waiting', color: '#F59E0B', desc: 'Waiting for the requester, a department or a vendor to answer', terminal: false, allowReopen: false },
+  { id: 'Management Approval', name: 'Management Approval', category: 'Waiting', color: '#9333EA', desc: 'Change Request waiting for Management decision', terminal: false, allowReopen: false },
+  { id: 'In Testing', name: 'In Testing', category: 'In Progress', color: '#BE185D', desc: 'Change Request implemented, tester is verifying', terminal: false, allowReopen: false },
+  { id: 'Resolved', name: 'Resolved', category: 'Waiting', color: '#059669', desc: 'Work complete. Stays Resolved until the end user closes it', terminal: false, allowReopen: true },
+  { id: 'Closed', name: 'Closed', category: 'Closed', color: '#475569', desc: 'Closed by the end user after verification', terminal: true, allowReopen: false },
+  { id: 'Rejected', name: 'Rejected', category: 'Closed', color: '#B91C1C', desc: 'Change Request rejected at Admin, HOD or Management stage', terminal: true, allowReopen: false },
+  { id: 'Reopened', name: 'Reopened', category: 'Open', color: '#DC2626', desc: 'End user reopened a Resolved ticket. Goes directly to the Admin team', terminal: false, allowReopen: false },
 ]
 
 export const auditLogEntries = [

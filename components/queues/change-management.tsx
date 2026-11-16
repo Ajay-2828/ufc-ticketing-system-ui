@@ -17,6 +17,8 @@ interface ChangeManagementProps {
   onSelectTicket: (t: Ticket) => void
   onApproveCR: (t: Ticket) => void
   onRejectCR: (t: Ticket) => void
+  /** Only Management can approve or reject at the Management stage */
+  canDecide?: boolean
 }
 
 export function ChangeManagement({
@@ -24,16 +26,20 @@ export function ChangeManagement({
   onSelectTicket,
   onApproveCR,
   onRejectCR,
+  canDecide = false,
 }: ChangeManagementProps) {
-  const changeRequests = tickets.filter((t) => t.type === 'Change Request')
+  const all = tickets.filter((t) => t.type === 'Change Request')
+  // Management decides only when the ticket is at the Management stage
+  const changeRequests = all.filter((t) => t.status === 'Management Approval')
+  const inStage = (s: (t: Ticket) => boolean) => all.filter(s).length
 
   const stages = [
-    { title: '1. Admin Review', count: 1, active: false },
-    { title: '2. HOD Approval', count: 1, active: false },
-    { title: '3. Management Approval', count: 2, active: true },
-    { title: '4. Implementation', count: 1, active: false },
-    { title: '5. QA Testing', count: 1, active: false },
-    { title: '6. Verification & Closure', count: 0, active: false },
+    { title: '1. Admin Review', count: inStage((t) => t.status === 'Admin Review' && t.crStage !== 'Implementation'), active: false },
+    { title: '2. HOD Approval', count: inStage((t) => t.status === 'Pending Approval'), active: false },
+    { title: '3. Management Approval', count: inStage((t) => t.status === 'Management Approval'), active: true },
+    { title: '4. Implementation', count: inStage((t) => (t.status === 'Admin Review' && t.crStage === 'Implementation') || t.status === 'Assigned' || t.status === 'In Progress'), active: false },
+    { title: '5. QA Testing', count: inStage((t) => t.status === 'In Testing'), active: false },
+    { title: '6. Verification & Closure', count: inStage((t) => t.status === 'Resolved' || t.status === 'Closed'), active: false },
   ]
 
   return (
@@ -74,6 +80,7 @@ export function ChangeManagement({
               <strong style={{ fontSize: '12.5px', color: 'var(--text-main)', display: 'block', lineHeight: 1.3 }}>
                 {st.title.replace(/^\d+\.\s*/, '')}
               </strong>
+              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{st.count} change{st.count === 1 ? '' : 's'}</span>
             </div>
           ))}
         </div>
@@ -137,7 +144,8 @@ export function ChangeManagement({
                 )}
               </div>
 
-              {/* Management Decision Actions */}
+              {/* Management Decision Actions: only Management, only at the Management stage */}
+              {canDecide ? (
               <div style={{ display: 'flex', gap: '10px' }} onClick={(e) => e.stopPropagation()}>
                 <button
                   type="button"
@@ -153,9 +161,12 @@ export function ChangeManagement({
                   style={{ height: '36px', fontSize: '13px' }}
                   onClick={() => onApproveCR(t)}
                 >
-                  <CheckCircle2 size={15} /> Authorize Implementation
+                  <CheckCircle2 size={15} /> Approve Change
                 </button>
               </div>
+              ) : (
+                <span className="badge-tag badge-tag-sm" style={{ background: '#F5F3FF', color: '#6D28D9' }}>Waiting for Management</span>
+              )}
 
               <ChevronRight size={18} color="var(--text-muted)" />
             </div>
