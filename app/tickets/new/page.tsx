@@ -19,13 +19,13 @@ import {
   Plus,
 } from 'lucide-react'
 import { useTicketContext } from '@/context/ticket-context'
+import { fmtHours, resolveSla, snapshotOf } from '@/lib/masters'
 import {
   Ticket,
   TicketSeverity,
   applicationQuestionnaires,
   departmentsData,
   policySettings,
-  standardSeveritySLAs,
 } from '@/app/ticket-data'
 
 export default function CreateTicketPage() {
@@ -36,6 +36,11 @@ export default function CreateTicketPage() {
     unclosedResolvedCount,
     classificationTreeData,
     submitNewTicket,
+    severities,
+    priorities,
+    slaPolicies,
+    calendars,
+    mastersSettings,
     isBlockedByThreshold,
     closureThreshold,
   } = useTicketContext()
@@ -95,32 +100,25 @@ export default function CreateTicketPage() {
   const [subject, setSubject] = useState('')
   const [description, setDescription] = useState('')
   const [ticketType, setTicketType] = useState<'Incident' | 'Service Request' | 'Issue'>('Incident')
-  const [priorityOverride, setPriorityOverride] = useState<'P1' | 'P2' | 'P3' | 'P4'>('P2')
+  // Empty means: use the starting priority of the severity (Priority master)
+  const [priorityOverride, setPriorityOverride] = useState<string>('')
   const [dynamicAnswers, setDynamicAnswers] = useState<Record<string, string>>({})
   const [attachedFiles, setAttachedFiles] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const autoSeverity = activeIssueTypeObj?.autoSeverity || 'Medium'
-  const calculatedPriority =
-    autoSeverity === 'Critical'
-      ? 'P1'
-      : autoSeverity === 'High'
-      ? 'P2'
-      : autoSeverity === 'Medium'
-      ? 'P3'
-      : 'P4'
-  const finalPriority =
-    currentRole !== 'End User' ? priorityOverride : calculatedPriority
-
-  // Fallback to System-Wide Severity SLA Matrix if issue doesn't define custom SLA
-  const targetResolutionHours =
-    activeIssueTypeObj?.slaResolutionHours ??
-    standardSeveritySLAs[autoSeverity]?.resolutionHours ??
-    4
-  const targetResponseHours =
-    activeIssueTypeObj?.slaResponseHours ??
-    standardSeveritySLAs[autoSeverity]?.responseHours ??
-    1
+  // Severity, priority and SLA all come from the masters
+  const canChangePriority = currentRole !== 'End User' || mastersSettings.endUserCanChangePriority
+  const resolved = resolveSla(
+    { severities, priorities, slaPolicies, calendars },
+    activeIssueTypeObj,
+    canChangePriority && priorityOverride ? priorityOverride : undefined
+  )
+  const autoSeverity = resolved.severityId
+  const severityMaster = severities.find((s) => s.id === autoSeverity)
+  const finalPriority = resolved.priorityId
+  const targetResolutionHours = resolved.resolutionHours
+  const targetResponseHours = resolved.responseHours
+  const slaSnapshot = snapshotOf(resolved)
 
   // Get dynamic questionnaire questions
   const questions = applicationQuestionnaires[selectedSubClass] || []
@@ -177,8 +175,9 @@ export default function CreateTicketPage() {
       dynamicFields: dynamicAnswers,
       isCR,
       crRequiresHod: activeIssueTypeObj?.crRequiresHodApproval !== false,
-      hodLimitHours: activeIssueTypeObj?.hodApprovalLimitHours || 2,
+      hodLimitHours: resolved.hodLimitHours,
       slaHours: targetResolutionHours,
+      slaSnapshot,
       isDraft,
     })
     router.push(`/tickets/${ticket.id}`)
@@ -380,15 +379,17 @@ export default function CreateTicketPage() {
                     Auto-Calculated Severity:
                   </span>
                   <span
-                    className={`badge-tag badge-severity-${(
-                      activeIssueTypeObj?.autoSeverity || 'Medium'
-                    ).toLowerCase()}`}
+                    className="badge-tag"
+                    style={{ background: `${severityMaster?.color || '#64748B'}22`, color: severityMaster?.color || '#475569', fontWeight: 700 }}
                   >
-                    {activeIssueTypeObj?.autoSeverity || 'Medium'}
+                    {severityMaster?.name || autoSeverity}
+                  </span>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                    starts as {priorities.find((p) => p.id === finalPriority)?.name || finalPriority}
                   </span>
                 </div>
                 <span style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>
-                  (Impact-based calculation from Issue Type configuration. Read-only for users.)
+                  (Set by the issue type in the Severity master. Read-only for users.)
                 </span>
               </div>
             </div>
@@ -617,8 +618,8 @@ export default function CreateTicketPage() {
                 </div>
               )}
 
-              {/* Role-Gated Priority Override (IT staff only) */}
-              {currentRole !== 'End User' && (
+              {/* Priority: starts from the severity, can be changed where the master allows */}
+              {canChangePriority && (
                 <div
                   style={{
                     padding: '14px',
@@ -628,22 +629,27 @@ export default function CreateTicketPage() {
                   }}
                 >
                   <label className="form-field-label" style={{ color: '#92400E' }}>
-                    Operational Priority Override (IT Staff Privilege)
+                    Priority (from the Priority master)
                   </label>
                   <select
                     className="form-input-control"
                     value={priorityOverride}
-                    onChange={(e) =>
-                      setPriorityOverride(e.target.value as 'P1' | 'P2' | 'P3' | 'P4')
-                    }
+                    onChange={(e) => setPriorityOverride(e.target.value)}
                   >
-                    <option value="P1">P1 - Urgent (Queue Jump)</option>
-                    <option value="P2">P2 - High Priority</option>
-                    <option value="P3">P3 - Normal</option>
-                    <option value="P4">P4 - Low</option>
+                    <option value="">
+                      Starting priority of the severity ({priorities.find((p) => p.id === severityMaster?.defaultPriorityId)?.name || 'none'})
+                    </option>
+                    {[...priorities]
+                      .filter((p) => p.active)
+                      .sort((a, b) => a.rank - b.rank)
+                      .map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
                   </select>
                   <span style={{ fontSize: '11px', color: '#B45309', marginTop: '4px', display: 'block' }}>
-                    End users see auto-calculated severity. Technicians and Admin may tune operational priority.
+                    The priority can change the response and resolution times if the SLA policy has times for it.
                   </span>
                 </div>
               )}
@@ -749,7 +755,13 @@ export default function CreateTicketPage() {
                     SLA TARGETS
                   </span>
                   <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-main)', marginTop: '2px' }}>
-                    Response: {targetResponseHours < 1 ? `${Math.round(targetResponseHours * 60)}m` : `${targetResponseHours}h`} &bull; Resolution: {targetResolutionHours}h
+                    Response: {fmtHours(targetResponseHours)} &bull; Resolution: {fmtHours(targetResolutionHours)}
+                  </div>
+                  <div style={{ fontSize: '11.5px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                    {resolved.policy?.name || 'No SLA policy'} &bull; {resolved.calendar.name}
+                  </div>
+                  <div style={{ fontSize: '11.5px', color: 'var(--text-secondary)' }}>
+                    Due if raised now: {new Date(slaSnapshot.resolutionDue).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                   </div>
                 </div>
 
@@ -769,7 +781,7 @@ export default function CreateTicketPage() {
                       ? 'Admin approval first, then HOD if switched on, then Management'
                       : currentRole === 'HOD'
                       ? 'Raised by the HOD, no separate approval'
-                      : `${userDeptConfig?.hodName || 'Department Head'} (HOD) • ${activeIssueTypeObj?.hodApprovalLimitHours || 2}h limit`}
+                      : `${userDeptConfig?.hodName || 'Department Head'} (HOD) • ${fmtHours(resolved.hodLimitHours)} limit`}
                   </div>
                 </div>
 

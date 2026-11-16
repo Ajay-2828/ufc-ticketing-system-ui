@@ -25,9 +25,11 @@ export type TicketStatus =
   | 'Reopened'
   | 'Rejected'
 
-export type TicketSeverity = 'Critical' | 'High' | 'Medium' | 'Low'
+/** Severity id from the Severity master (Critical, High, Medium, Low by default) */
+export type TicketSeverity = string
 export type TicketType = 'Incident' | 'Service Request' | 'Issue' | 'Change Request'
-export type TicketPriority = 'P1' | 'P2' | 'P3' | 'P4'
+/** Priority id from the Priority master (P1 to P4 by default) */
+export type TicketPriority = string
 
 export interface DynamicQuestion {
   id: string
@@ -44,6 +46,8 @@ export interface IssueTypeConfig {
   slaResponseHours: number
   slaResolutionHours: number
   hodApprovalLimitHours: number
+  /** SLA policy from the SLA master. The hour fields above are kept in step with it. */
+  slaPolicyId?: string
   isChangeRequest?: boolean
   crRequiresHodApproval?: boolean // Configures whether HOD approval is required for this Change Request (defaults to true)
 }
@@ -130,6 +134,8 @@ export interface Ticket {
     time: string
   }
   createdAt?: number
+  /** Severity, priority and SLA as they were when the ticket was raised */
+  slaSnapshot?: SlaSnapshot
   /** Epoch ms when the HOD approval time limit runs out */
   hodDeadline?: number
   hodExpiredNotified?: boolean
@@ -1074,3 +1080,155 @@ export const auditLogEntries = [
   { id: 'AUD-9906', timestamp: '2026-11-04 09:12:30', actor: 'Khalfan Al-Busaidi (Management)', event: 'Approved Change Request', target: 'CR-2026-0042', ip: '10.240.1.5' },
 ]
 
+
+
+/* =====================================================================
+   Masters: severity, priority, SLA policies and business calendars.
+   Nothing about severity, priority or SLA is fixed in code any more.
+   ===================================================================== */
+
+export interface SeverityMaster {
+  /** Stable key stored on tickets and issue types. Never changes. */
+  id: string
+  name: string
+  /** 1 is the most serious */
+  rank: number
+  color: string
+  active: boolean
+  description: string
+  /** Priority a new ticket of this severity starts with */
+  defaultPriorityId: string
+}
+
+export interface PriorityMaster {
+  id: string
+  name: string
+  rank: number
+  color: string
+  active: boolean
+  description: string
+}
+
+export interface BusinessCalendar {
+  id: string
+  name: string
+  /** True: the clock runs all day, every day */
+  is24x7: boolean
+  /** 0 = Sunday ... 6 = Saturday */
+  workDays: number[]
+  start: string
+  end: string
+  holidays: { date: string; name: string }[]
+}
+
+export interface SlaPriorityOverride {
+  responseHours?: number
+  resolutionHours?: number
+}
+
+export interface SlaPolicy {
+  id: string
+  name: string
+  responseHours: number
+  resolutionHours: number
+  /** How long the HOD has to approve or reject */
+  hodLimitHours: number
+  /** Stop the clock while waiting for a clarification */
+  pauseOnClarification: boolean
+  calendarId: string
+  /** Warn when this share of the resolution time is used */
+  warnPercent: number
+  /** Escalate when the resolution time is passed by this many hours */
+  escalateAfterHours: number
+  escalateTo: string
+  /** Optional shorter or longer times for a given priority id */
+  overrides: Record<string, SlaPriorityOverride>
+  active: boolean
+}
+
+export interface MastersSettings {
+  /** If false, only staff roles can change the priority a ticket starts with */
+  endUserCanChangePriority: boolean
+}
+
+export interface SlaSnapshot {
+  policyId: string
+  policyName: string
+  calendarId: string
+  responseHours: number
+  resolutionHours: number
+  hodLimitHours: number
+  /** Epoch ms, counted on the calendar */
+  resolutionDue: number
+}
+
+export const initialPriorities: PriorityMaster[] = [
+  { id: 'P1', name: 'P1 Urgent', rank: 1, color: '#DC2626', active: true, description: 'Service down or customers affected. Work starts at once.' },
+  { id: 'P2', name: 'P2 High', rank: 2, color: '#EA580C', active: true, description: 'Major function impaired. Same-day attention.' },
+  { id: 'P3', name: 'P3 Normal', rank: 3, color: '#CA8A04', active: true, description: 'Limited impact with a workaround.' },
+  { id: 'P4', name: 'P4 Low', rank: 4, color: '#2563EB', active: true, description: 'Minor issue or a routine request.' },
+]
+
+export const initialSeverities: SeverityMaster[] = [
+  { id: 'Critical', name: 'Critical', rank: 1, color: '#DC2626', active: true, description: 'Core banking or channel outage, security incident.', defaultPriorityId: 'P1' },
+  { id: 'High', name: 'High', rank: 2, color: '#EA580C', active: true, description: 'A major function is impaired for many users.', defaultPriorityId: 'P2' },
+  { id: 'Medium', name: 'Medium', rank: 3, color: '#CA8A04', active: true, description: 'Limited impact, a workaround exists.', defaultPriorityId: 'P3' },
+  { id: 'Low', name: 'Low', rank: 4, color: '#2563EB', active: true, description: 'Minor issue or routine request.', defaultPriorityId: 'P4' },
+]
+
+/** Example calendars. Working days and hours are placeholders until UFC confirms them. */
+export const initialCalendars: BusinessCalendar[] = [
+  { id: 'cal-24x7', name: '24 x 7 (always)', is24x7: true, workDays: [0, 1, 2, 3, 4, 5, 6], start: '00:00', end: '23:59', holidays: [] },
+  {
+    id: 'cal-office',
+    name: 'Office hours (example)',
+    is24x7: false,
+    workDays: [0, 1, 2, 3, 4],
+    start: '08:00',
+    end: '16:00',
+    holidays: [{ date: '2026-11-18', name: 'National Day (example)' }],
+  },
+]
+
+export const initialMastersSettings: MastersSettings = { endUserCanChangePriority: false }
+
+function fmtH(h: number): string {
+  return h < 1 ? `${Math.round(h * 60)}m` : `${h}h`
+}
+
+/**
+ * Starting SLA policies. One policy for every distinct set of times already used
+ * by the issue types, and each issue type is pointed at its policy.
+ */
+function buildInitialSlaPolicies(): SlaPolicy[] {
+  const byKey = new Map<string, SlaPolicy>()
+  for (const main of classificationTree) {
+    for (const sub of main.subClassifications) {
+      for (const issue of sub.issueTypes) {
+        const key = `${issue.slaResponseHours}-${issue.slaResolutionHours}-${issue.hodApprovalLimitHours}`
+        let policy = byKey.get(key)
+        if (!policy) {
+          policy = {
+            id: `sla-${key.replace(/\./g, 'p')}`,
+            name: `Respond ${fmtH(issue.slaResponseHours)} / Resolve ${fmtH(issue.slaResolutionHours)} / HOD ${fmtH(issue.hodApprovalLimitHours)}`,
+            responseHours: issue.slaResponseHours,
+            resolutionHours: issue.slaResolutionHours,
+            hodLimitHours: issue.hodApprovalLimitHours,
+            pauseOnClarification: true,
+            calendarId: 'cal-24x7',
+            warnPercent: 80,
+            escalateAfterHours: 0,
+            escalateTo: 'Admin Team',
+            overrides: {},
+            active: true,
+          }
+          byKey.set(key, policy)
+        }
+        issue.slaPolicyId = policy.id
+      }
+    }
+  }
+  return [...byKey.values()].sort((a, b) => a.resolutionHours - b.resolutionHours)
+}
+
+export const initialSlaPolicies: SlaPolicy[] = buildInitialSlaPolicies()

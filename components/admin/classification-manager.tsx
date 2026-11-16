@@ -1,6 +1,8 @@
 'use client'
 
 import React, { useState, useMemo } from 'react'
+import { useTicketContext } from '@/context/ticket-context'
+import { fmtHours } from '@/lib/masters'
 import {
   FolderKanban,
   Laptop,
@@ -219,6 +221,17 @@ export function ClassificationManager({
   classificationTree,
   onUpdateClassificationTree,
 }: ClassificationManagerProps) {
+  // Severity and SLA come from the masters (Administration, Masters)
+  const { severities, slaPolicies } = useTicketContext()
+  const activeSeverities = [...severities].filter((s) => s.active).sort((a, b) => a.rank - b.rank)
+  const activePolicies = slaPolicies.filter((p) => p.active)
+  const policySummary = (id?: string) => {
+    const p = slaPolicies.find((x) => x.id === id)
+    return p
+      ? `Response ${fmtHours(p.responseHours)}, resolution ${fmtHours(p.resolutionHours)}, HOD limit ${fmtHours(p.hodLimitHours)}. Change these under Masters.`
+      : 'No SLA policy selected.'
+  }
+  const [newIssuePolicyId, setNewIssuePolicyId] = useState(slaPolicies[0]?.id || '')
   // Page 1: 5 Sub-Tabs per Section 15
   const [activeTab, setActiveTab] = useState<AdminClassificationTab>('tree')
 
@@ -603,9 +616,10 @@ export function ClassificationManager({
     const newIssue: IssueTypeConfig = {
       name: newIssueName.trim(),
       autoSeverity: newIssueSeverity,
-      slaResponseHours: Number(newIssueResponseHours) || 1,
-      slaResolutionHours: Number(newIssueResolutionHours) || 4,
-      hodApprovalLimitHours: Number(newIssueHodLimitHours) || 2,
+      slaPolicyId: newIssuePolicyId || undefined,
+      slaResponseHours: slaPolicies.find((p) => p.id === newIssuePolicyId)?.responseHours ?? (Number(newIssueResponseHours) || 1),
+      slaResolutionHours: slaPolicies.find((p) => p.id === newIssuePolicyId)?.resolutionHours ?? (Number(newIssueResolutionHours) || 4),
+      hodApprovalLimitHours: slaPolicies.find((p) => p.id === newIssuePolicyId)?.hodLimitHours ?? (Number(newIssueHodLimitHours) || 2),
       isChangeRequest: newIssueIsCR,
       crRequiresHodApproval: newIssueIsCR ? newIssueRequiresHodApproval : undefined,
     }
@@ -2844,60 +2858,36 @@ export function ClassificationManager({
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div>
-                    <label className="form-label-control">Auto Severity</label>
+                    <label className="form-label-control">Severity (Severity master)</label>
                     <select
                       className="form-input-control"
                       value={newIssueSeverity}
-                      onChange={(e) => setNewIssueSeverity(e.target.value as TicketSeverity)}
+                      onChange={(e) => setNewIssueSeverity(e.target.value)}
                     >
-                      <option value="Critical">Critical (P1)</option>
-                      <option value="High">High (P2)</option>
-                      <option value="Medium">Medium (P3)</option>
-                      <option value="Low">Low (P4)</option>
+                      {activeSeverities.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                        </option>
+                      ))}
                     </select>
                   </div>
 
                   <div>
-                    <label className="form-label-control">Response SLA (Hours)</label>
-                    <input
-                      type="number"
-                      step="0.5"
-                      min="0.25"
-                      required
+                    <label className="form-label-control">SLA policy (SLA master)</label>
+                    <select
                       className="form-input-control"
-                      value={newIssueResponseHours}
-                      onChange={(e) => setNewIssueResponseHours(parseFloat(e.target.value) || 1)}
-                    />
+                      value={newIssuePolicyId}
+                      onChange={(e) => setNewIssuePolicyId(e.target.value)}
+                    >
+                      {activePolicies.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <div>
-                    <label className="form-label-control">Resolution SLA (Hours)</label>
-                    <input
-                      type="number"
-                      step="0.5"
-                      min="0.5"
-                      required
-                      className="form-input-control"
-                      value={newIssueResolutionHours}
-                      onChange={(e) => setNewIssueResolutionHours(parseFloat(e.target.value) || 4)}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="form-label-control">HOD Approval Limit (Hours)</label>
-                    <input
-                      type="number"
-                      step="0.5"
-                      min="0.5"
-                      required
-                      className="form-input-control"
-                      value={newIssueHodLimitHours}
-                      onChange={(e) => setNewIssueHodLimitHours(parseFloat(e.target.value) || 2)}
-                    />
-                  </div>
-                </div>
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{policySummary(newIssuePolicyId)}</div>
 
                 <div>
                   <label
@@ -3121,89 +3111,62 @@ export function ClassificationManager({
                   </div>
                 </div>
 
-                <div>
-                  <label className="form-label-control">Auto-Calculated Severity</label>
-                  <select
-                    className="form-input-control"
-                    value={editingIssue.issue.autoSeverity}
-                    onChange={(e) =>
-                      setEditingIssue({
-                        ...editingIssue,
-                        issue: {
-                          ...editingIssue.issue,
-                          autoSeverity: e.target.value as TicketSeverity,
-                        },
-                      })
-                    }
-                  >
-                    <option value="Critical">Critical (P1)</option>
-                    <option value="High">High (P2)</option>
-                    <option value="Medium">Medium (P3)</option>
-                    <option value="Low">Low (P4)</option>
-                  </select>
-                </div>
-
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div>
-                    <label className="form-label-control">Response SLA (Hours)</label>
-                    <input
-                      type="number"
-                      step="0.25"
-                      min="0.25"
+                    <label className="form-label-control">Severity (Severity master)</label>
+                    <select
                       className="form-input-control"
-                      value={editingIssue.issue.slaResponseHours}
+                      value={editingIssue.issue.autoSeverity}
                       onChange={(e) =>
                         setEditingIssue({
                           ...editingIssue,
-                          issue: {
-                            ...editingIssue.issue,
-                            slaResponseHours: parseFloat(e.target.value) || 0.5,
-                          },
+                          issue: { ...editingIssue.issue, autoSeverity: e.target.value },
                         })
                       }
-                    />
+                    >
+                      {severities
+                        .filter((s) => s.active || s.id === editingIssue.issue.autoSeverity)
+                        .sort((a, b) => a.rank - b.rank)
+                        .map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.name}
+                            {s.active ? '' : ' (inactive)'}
+                          </option>
+                        ))}
+                    </select>
                   </div>
 
                   <div>
-                    <label className="form-label-control">Resolution SLA (Hours)</label>
-                    <input
-                      type="number"
-                      step="0.5"
-                      min="0.5"
+                    <label className="form-label-control">SLA policy (SLA master)</label>
+                    <select
                       className="form-input-control"
-                      value={editingIssue.issue.slaResolutionHours}
-                      onChange={(e) =>
+                      value={editingIssue.issue.slaPolicyId || ''}
+                      onChange={(e) => {
+                        const pol = slaPolicies.find((p) => p.id === e.target.value)
                         setEditingIssue({
                           ...editingIssue,
                           issue: {
                             ...editingIssue.issue,
-                            slaResolutionHours: parseFloat(e.target.value) || 1,
+                            slaPolicyId: e.target.value || undefined,
+                            slaResponseHours: pol?.responseHours ?? editingIssue.issue.slaResponseHours,
+                            slaResolutionHours: pol?.resolutionHours ?? editingIssue.issue.slaResolutionHours,
+                            hodApprovalLimitHours: pol?.hodLimitHours ?? editingIssue.issue.hodApprovalLimitHours,
                           },
                         })
-                      }
-                    />
+                      }}
+                    >
+                      {!editingIssue.issue.slaPolicyId && <option value="">No policy</option>}
+                      {slaPolicies
+                        .filter((p) => p.active || p.id === editingIssue.issue.slaPolicyId)
+                        .map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}
+                          </option>
+                        ))}
+                    </select>
                   </div>
                 </div>
-
-                <div>
-                  <label className="form-label-control">HOD Approval Limit (Hours)</label>
-                  <input
-                    type="number"
-                    step="0.5"
-                    min="0.5"
-                    className="form-input-control"
-                    value={editingIssue.issue.hodApprovalLimitHours}
-                    onChange={(e) =>
-                      setEditingIssue({
-                        ...editingIssue,
-                        issue: {
-                          ...editingIssue.issue,
-                          hodApprovalLimitHours: parseFloat(e.target.value) || 1,
-                        },
-                      })
-                    }
-                  />
-                </div>
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{policySummary(editingIssue.issue.slaPolicyId)}</div>
 
                 <div>
                   <label

@@ -23,6 +23,17 @@ import {
   classificationTree,
   ClassificationConfig,
   departmentsData,
+  SeverityMaster,
+  PriorityMaster,
+  SlaPolicy,
+  BusinessCalendar,
+  MastersSettings,
+  SlaSnapshot,
+  initialSeverities,
+  initialPriorities,
+  initialSlaPolicies,
+  initialCalendars,
+  initialMastersSettings,
 } from '@/app/ticket-data'
 import { MS_DAY, MS_HOUR, nextTicketId, pickTechnician } from '@/lib/workflow'
 
@@ -51,6 +62,8 @@ export interface NewTicketForm {
   hodLimitHours: number
   slaHours: number
   isDraft: boolean
+  /** SLA as resolved from the masters when the ticket is raised */
+  slaSnapshot?: SlaSnapshot
 }
 
 interface TicketContextType {
@@ -63,6 +76,18 @@ interface TicketContextType {
   visibleTickets: Ticket[]
   /** Clock tick (refreshed every 15 seconds) so countdowns stay live */
   now: number
+
+  /* Masters: severity, priority, SLA policies, business calendars */
+  severities: SeverityMaster[]
+  setSeverities: React.Dispatch<React.SetStateAction<SeverityMaster[]>>
+  priorities: PriorityMaster[]
+  setPriorities: React.Dispatch<React.SetStateAction<PriorityMaster[]>>
+  slaPolicies: SlaPolicy[]
+  setSlaPolicies: React.Dispatch<React.SetStateAction<SlaPolicy[]>>
+  calendars: BusinessCalendar[]
+  setCalendars: React.Dispatch<React.SetStateAction<BusinessCalendar[]>>
+  mastersSettings: MastersSettings
+  setMastersSettings: React.Dispatch<React.SetStateAction<MastersSettings>>
 
   closureThreshold: number
   setClosureThreshold: (val: number) => void
@@ -156,6 +181,12 @@ export function TicketProvider({ children }: { children: ReactNode }) {
   const [globalSearch, setGlobalSearch] = useState('')
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const [now, setNow] = useState<number>(() => Date.now())
+
+  const [severities, setSeverities] = useState<SeverityMaster[]>(initialSeverities)
+  const [priorities, setPriorities] = useState<PriorityMaster[]>(initialPriorities)
+  const [slaPolicies, setSlaPolicies] = useState<SlaPolicy[]>(initialSlaPolicies)
+  const [calendars, setCalendars] = useState<BusinessCalendar[]>(initialCalendars)
+  const [mastersSettings, setMastersSettings] = useState<MastersSettings>(initialMastersSettings)
 
   const [closureThreshold, setClosureThreshold] = useState(
     policySettings.unresolvedClosureThreshold
@@ -469,6 +500,7 @@ export function TicketProvider({ children }: { children: ReactNode }) {
       slaBreached: false,
       created: stamp(),
       createdAt: t0,
+      slaSnapshot: f.slaSnapshot,
       dynamicFields: f.dynamicFields,
       timeline: [],
       clarifications: [],
@@ -815,6 +847,16 @@ export function TicketProvider({ children }: { children: ReactNode }) {
         setTickets,
         visibleTickets,
         now,
+        severities,
+        setSeverities,
+        priorities,
+        setPriorities,
+        slaPolicies,
+        setSlaPolicies,
+        calendars,
+        setCalendars,
+        mastersSettings,
+        setMastersSettings,
         closureThreshold,
         setClosureThreshold,
         unclosedResolvedCount,

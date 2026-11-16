@@ -47,6 +47,7 @@ import { ForwardToTestingModal } from '@/components/tickets/forward-to-testing-m
 import { RejectTicketModal } from '@/components/tickets/reject-ticket-modal'
 import { EscalateToVendorModal } from '@/components/tickets/escalate-to-vendor-modal'
 import { ReasonModal } from '@/components/tickets/reason-modal'
+import { SeverityBadge, PriorityBadge } from '@/components/tickets/master-badges'
 import { hodRemaining } from '@/lib/workflow'
 
 export default function TicketDetailPage() {
@@ -664,44 +665,9 @@ export default function TicketDetailPage() {
                 {ticket.status}
               </span>
 
-              <span className={`badge-tag badge-severity-${ticket.severity.toLowerCase()}`}>
-                Severity: {ticket.severity}
-              </span>
+              <SeverityBadge id={ticket.severity} prefix="Severity: " />
 
-              <span
-                className="badge-tag"
-                style={{
-                  background:
-                    ticket.priority === 'P1'
-                      ? '#FEE2E2'
-                      : ticket.priority === 'P2'
-                      ? '#FEF3C7'
-                      : ticket.priority === 'P3'
-                      ? '#EFF6FF'
-                      : '#F1F5F9',
-                  color:
-                    ticket.priority === 'P1'
-                      ? '#991B1B'
-                      : ticket.priority === 'P2'
-                      ? '#92400E'
-                      : ticket.priority === 'P3'
-                      ? '#1E40AF'
-                      : '#475569',
-                  border: `1px solid ${
-                    ticket.priority === 'P1'
-                      ? '#FECACA'
-                      : ticket.priority === 'P2'
-                      ? '#FDE68A'
-                      : ticket.priority === 'P3'
-                      ? '#BFDBFE'
-                      : '#E2E8F0'
-                  }`,
-                  fontFamily: 'var(--font-mono)',
-                  fontWeight: 700,
-                }}
-              >
-                Priority: {ticket.priority}
-              </span>
+              <PriorityBadge id={ticket.priority} prefix="Priority: " />
 
               <span
                 className="badge-tag"

@@ -187,6 +187,7 @@ export function AppShell({ children }: AppShellProps) {
   // Standard Administration Pages (ITSM Industry Standard)
   const adminPages: NavItem[] = [
     { label: 'Classification', href: '/admin/classification', icon: FolderKanban },
+    { label: 'Masters (Severity, Priority, SLA)', href: '/admin/masters', icon: Sliders },
     { label: 'Workflows & Timers', href: '/admin/workflows', icon: GitBranch },
     { label: 'Users & Access', href: '/admin/users', icon: Users },
     { label: 'Notifications', href: '/admin/notifications', icon: Bell },

@@ -16,6 +16,8 @@ import {
   User,
   SlidersHorizontal,
 } from 'lucide-react'
+import { useTicketContext } from '@/context/ticket-context'
+import { SeverityBadge, PriorityBadge } from '@/components/tickets/master-badges'
 import { Ticket, TicketType, TicketStatus, TicketSeverity, departmentsData } from '@/app/ticket-data'
 
 interface TicketListProps {
@@ -37,6 +39,7 @@ export function TicketList({
   createDisabled,
   createDisabledReason,
 }: TicketListProps) {
+  const { severities } = useTicketContext()
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedType, setSelectedType] = useState<string>('All')
   const [selectedStatus, setSelectedStatus] = useState<string>('All')
@@ -275,11 +278,15 @@ export function TicketList({
               value={selectedSeverity}
               onChange={(e) => setSelectedSeverity(e.target.value)}
             >
-              <option value="All">All Priorities</option>
-              <option value="Critical">Critical</option>
-              <option value="High">High</option>
-              <option value="Medium">Medium</option>
-              <option value="Low">Low</option>
+              <option value="All">All Severities</option>
+              {[...severities]
+                .sort((x, y) => x.rank - y.rank)
+                .map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                    {s.active ? '' : ' (inactive)'}
+                  </option>
+                ))}
             </select>
 
             {hasActiveFilters && (
@@ -464,46 +471,8 @@ export function TicketList({
                       {/* Priority & Severity */}
                       <td>
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                          <span
-                            title={`Priority: ${t.priority}`}
-                            style={{
-                              fontSize: '11px',
-                              fontWeight: 800,
-                              fontFamily: 'var(--font-mono)',
-                              padding: '2px 6px',
-                              borderRadius: '4px',
-                              background:
-                                t.priority === 'P1'
-                                  ? '#FEE2E2'
-                                  : t.priority === 'P2'
-                                  ? '#FEF3C7'
-                                  : t.priority === 'P3'
-                                  ? '#EFF6FF'
-                                  : '#F1F5F9',
-                              color:
-                                t.priority === 'P1'
-                                  ? '#991B1B'
-                                  : t.priority === 'P2'
-                                  ? '#92400E'
-                                  : t.priority === 'P3'
-                                  ? '#1E40AF'
-                                  : '#475569',
-                              border: `1px solid ${
-                                t.priority === 'P1'
-                                  ? '#FECACA'
-                                  : t.priority === 'P2'
-                                  ? '#FDE68A'
-                                  : t.priority === 'P3'
-                                  ? '#BFDBFE'
-                                  : '#E2E8F0'
-                              }`,
-                            }}
-                          >
-                            {t.priority}
-                          </span>
-                          <span className={`badge-tag badge-tag-sm ${getSeverityBadge(t.severity)}`}>
-                            {t.severity}
-                          </span>
+                          <PriorityBadge id={t.priority} />
+                          <SeverityBadge id={t.severity} />
                         </div>
                       </td>
 

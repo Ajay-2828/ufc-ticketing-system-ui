@@ -3,6 +3,7 @@
 import React, { useState } from 'react'
 import { X, UserCheck, Calendar, Clock } from 'lucide-react'
 import { Ticket, TicketPriority } from '@/app/ticket-data'
+import { useTicketContext } from '@/context/ticket-context'
 
 interface AssignTicketModalProps {
   ticket: Ticket
@@ -23,6 +24,7 @@ export function AssignTicketModal({
   onClose,
   onConfirmAssign,
 }: AssignTicketModalProps) {
+  const { priorities } = useTicketContext()
   const [assignee, setAssignee] = useState(
     ticket.assignee !== 'Unassigned' ? ticket.assignee : 'Daniel Mensah'
   )
@@ -110,10 +112,14 @@ export function AssignTicketModal({
                   value={priority}
                   onChange={(e) => setPriority(e.target.value as TicketPriority)}
                 >
-                  <option value="P1">P1 - Critical / Outage</option>
-                  <option value="P2">P2 - High Urgency</option>
-                  <option value="P3">P3 - Medium Standard</option>
-                  <option value="P4">P4 - Low / Minor</option>
+                  {[...priorities]
+                    .filter((p) => p.active || p.id === priority)
+                    .sort((a, b) => a.rank - b.rank)
+                    .map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
                 </select>
               </div>
 
