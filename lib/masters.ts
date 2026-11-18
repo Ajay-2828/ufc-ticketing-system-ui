@@ -3,14 +3,12 @@ import {
   IssueTypeConfig,
   PriorityMaster,
   SeverityMaster,
-  SlaPolicy,
   SlaSnapshot,
 } from '@/app/ticket-data'
 
 export interface MastersData {
   severities: SeverityMaster[]
   priorities: PriorityMaster[]
-  slaPolicies: SlaPolicy[]
   calendars: BusinessCalendar[]
 }
 
@@ -24,9 +22,6 @@ export function findSeverity(m: Pick<MastersData, 'severities'>, id: string) {
 }
 export function findPriority(m: Pick<MastersData, 'priorities'>, id: string) {
   return m.priorities.find((p) => p.id === id)
-}
-export function findPolicy(m: Pick<MastersData, 'slaPolicies'>, id?: string) {
-  return id ? m.slaPolicies.find((p) => p.id === id) : undefined
 }
 export function findCalendar(m: Pick<MastersData, 'calendars'>, id?: string) {
   return (id && m.calendars.find((c) => c.id === id)) || m.calendars[0]
@@ -79,7 +74,7 @@ export function addCalendarHours(startMs: number, hours: number, cal: BusinessCa
 export interface ResolvedSla {
   severityId: string
   priorityId: string
-  policy?: SlaPolicy
+  priorityName: string
   calendar: BusinessCalendar
   responseHours: number
   resolutionHours: number
@@ -87,37 +82,33 @@ export interface ResolvedSla {
 }
 
 /**
- * Severity, priority and SLA for a new ticket, all from the masters.
- * 1. The issue type gives the severity and the SLA policy.
- * 2. The severity gives the starting priority (or the one chosen, if allowed).
- * 3. The policy may override the times for that priority.
- * Issue types that still carry old hour fields and no policy use those as a fallback.
+ * Severity, priority and SLA for a new ticket.
+ * The issue type gives the severity and the priority (picked separately by Admin, not linked).
+ * Reply within comes from the severity. Fix within, the HOD limit and the calendar come from the priority.
  */
 export function resolveSla(
-  m: MastersData,
-  issue: IssueTypeConfig | undefined,
-  chosenPriorityId?: string
+  m: Pick<MastersData, 'severities' | 'priorities' | 'calendars'>,
+  issue: IssueTypeConfig | undefined
 ): ResolvedSla {
   const severityId = issue?.autoSeverity || m.severities[0]?.id || 'Medium'
+  const priorityId = issue?.autoPriority || m.priorities.find((p) => p.active)?.id || 'P3'
   const sev = findSeverity(m, severityId)
-  const priorityId =
-    chosenPriorityId ||
-    sev?.defaultPriorityId ||
-    m.priorities.find((p) => p.active)?.id ||
-    'P3'
-  const policy = findPolicy(m, issue?.slaPolicyId)
-  const calendar = findCalendar(m, policy?.calendarId)
-  const ov = policy?.overrides[priorityId]
-  const responseHours = ov?.responseHours ?? policy?.responseHours ?? issue?.slaResponseHours ?? 1
-  const resolutionHours = ov?.resolutionHours ?? policy?.resolutionHours ?? issue?.slaResolutionHours ?? 4
-  const hodLimitHours = policy?.hodLimitHours ?? issue?.hodApprovalLimitHours ?? 2
-  return { severityId, priorityId, policy, calendar, responseHours, resolutionHours, hodLimitHours }
+  const pri = findPriority(m, priorityId)
+  return {
+    severityId,
+    priorityId,
+    priorityName: pri?.name || priorityId,
+    calendar: findCalendar(m, pri?.calendarId),
+    responseHours: sev?.responseHours || 1,
+    resolutionHours: pri?.resolutionHours || 4,
+    hodLimitHours: pri?.hodLimitHours || 2,
+  }
 }
 
 export function snapshotOf(r: ResolvedSla, now = Date.now()): SlaSnapshot {
   return {
-    policyId: r.policy?.id || 'none',
-    policyName: r.policy?.name || 'No SLA policy',
+    priorityId: r.priorityId,
+    priorityName: r.priorityName,
     calendarId: r.calendar.id,
     responseHours: r.responseHours,
     resolutionHours: r.resolutionHours,
@@ -126,7 +117,7 @@ export function snapshotOf(r: ResolvedSla, now = Date.now()): SlaSnapshot {
   }
 }
 
-/** How many tickets, issue types and policies use a master value. Used to block deletes. */
+/** How many tickets and issue types use a master value. Used to block deletes. */
 export function usageOfSeverity(
   id: string,
   tickets: { severity: string }[],
@@ -140,12 +131,10 @@ export function usageOfSeverity(
 export function usageOfPriority(
   id: string,
   tickets: { priority: string }[],
-  severities: SeverityMaster[],
-  policies: SlaPolicy[]
+  issueTypes: IssueTypeConfig[]
 ) {
   return {
     tickets: tickets.filter((t) => t.priority === id).length,
-    severities: severities.filter((s) => s.defaultPriorityId === id).length,
-    policies: policies.filter((p) => p.overrides[id]).length,
+    issueTypes: issueTypes.filter((i) => i.autoPriority === id).length,
   }
 }

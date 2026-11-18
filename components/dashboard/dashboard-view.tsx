@@ -21,7 +21,7 @@ import {
   Activity,
   ArrowUpRight,
 } from 'lucide-react'
-import { Ticket, Role, usersByRole, policySettings, TicketStatus, TicketSeverity } from '@/app/ticket-data'
+import { Ticket, Role, usersByRole, policySettings, TicketStatus, TicketSeverity, isChangeFlow } from '@/app/ticket-data'
 
 interface DashboardViewProps {
   currentRole: Role
@@ -88,7 +88,7 @@ export function DashboardView({
     } else if (tableFilter === 'Pending') {
       list = list.filter((t) => t.status === 'Pending Approval' || t.status === 'Admin Review')
     } else if (tableFilter === 'ChangeRequest') {
-      list = list.filter((t) => t.type === 'Change Request')
+      list = list.filter((t) => isChangeFlow(t))
     }
     return list.slice(0, 6)
   }, [tickets, tableFilter])
@@ -1128,13 +1128,13 @@ export function DashboardView({
                         className="badge-tag badge-tag-sm"
                         style={{
                           background:
-                            t.type === 'Change Request'
+                            isChangeFlow(t)
                               ? '#F5F3FF'
                               : t.type === 'Service Request'
                               ? '#F0FDF4'
                               : '#EFF6FF',
                           color:
-                            t.type === 'Change Request'
+                            isChangeFlow(t)
                               ? '#6D28D9'
                               : t.type === 'Service Request'
                               ? '#15803D'

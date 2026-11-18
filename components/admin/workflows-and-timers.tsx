@@ -32,7 +32,8 @@ import {
   ArrowUpRight,
   CheckCheck,
 } from 'lucide-react'
-import { policySettings, standardSeveritySLAs } from '@/app/ticket-data'
+import { policySettings } from '@/app/ticket-data'
+import { useTicketContext } from '@/context/ticket-context'
 
 export function WorkflowsAndTimers() {
   // Navigation Tabs: Workflows vs Timers & SLAs
@@ -60,18 +61,8 @@ export function WorkflowsAndTimers() {
   const [hodDefaultTimeoutHours, setHodDefaultTimeoutHours] = useState(policySettings.hodDefaultTimeoutHours || 24)
   const [defaultTimeoutBehavior, setDefaultTimeoutBehavior] = useState('Notify and escalate to Admin')
 
-  // System-Wide SLA Targets (P1 - P4)
-  const [p1Resolution, setP1Resolution] = useState(standardSeveritySLAs.Critical.resolutionHours)
-  const [p1Response, setP1Response] = useState(standardSeveritySLAs.Critical.responseHours)
-
-  const [p2Resolution, setP2Resolution] = useState(standardSeveritySLAs.High.resolutionHours)
-  const [p2Response, setP2Response] = useState(standardSeveritySLAs.High.responseHours)
-
-  const [p3Resolution, setP3Resolution] = useState(standardSeveritySLAs.Medium.resolutionHours)
-  const [p3Response, setP3Response] = useState(standardSeveritySLAs.Medium.responseHours)
-
-  const [p4Resolution, setP4Resolution] = useState(standardSeveritySLAs.Low.resolutionHours)
-  const [p4Response, setP4Response] = useState(standardSeveritySLAs.Low.responseHours)
+  // Reply within is set on the severity, Fix within and HOD limit on the priority (Administration > Masters).
+  const { severities, priorities } = useTicketContext()
 
   // Unsaved changes tracker
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
@@ -89,16 +80,6 @@ export function WorkflowsAndTimers() {
     policySettings.unresolvedClosureThreshold = closureThreshold
     policySettings.hodReminderDays = hodReminderDays
     policySettings.hodDefaultTimeoutHours = hodDefaultTimeoutHours
-
-    // Persist system-wide severity SLAs
-    standardSeveritySLAs.Critical.resolutionHours = p1Resolution
-    standardSeveritySLAs.Critical.responseHours = p1Response
-    standardSeveritySLAs.High.resolutionHours = p2Resolution
-    standardSeveritySLAs.High.responseHours = p2Response
-    standardSeveritySLAs.Medium.resolutionHours = p3Resolution
-    standardSeveritySLAs.Medium.responseHours = p3Response
-    standardSeveritySLAs.Low.resolutionHours = p4Resolution
-    standardSeveritySLAs.Low.responseHours = p4Response
 
     setHasUnsavedChanges(false)
     triggerToast('Workflow pipelines & operational timers saved successfully!')
@@ -122,16 +103,6 @@ export function WorkflowsAndTimers() {
     setHodReminderDays(policySettings.hodReminderDays || 3)
     setHodDefaultTimeoutHours(policySettings.hodDefaultTimeoutHours || 24)
     setDefaultTimeoutBehavior('Notify and escalate to Admin')
-
-    // Revert SLAs
-    setP1Resolution(standardSeveritySLAs.Critical.resolutionHours)
-    setP1Response(standardSeveritySLAs.Critical.responseHours)
-    setP2Resolution(standardSeveritySLAs.High.resolutionHours)
-    setP2Response(standardSeveritySLAs.High.responseHours)
-    setP3Resolution(standardSeveritySLAs.Medium.resolutionHours)
-    setP3Response(standardSeveritySLAs.Medium.responseHours)
-    setP4Resolution(standardSeveritySLAs.Low.resolutionHours)
-    setP4Response(standardSeveritySLAs.Low.responseHours)
 
     setHasUnsavedChanges(false)
     triggerToast('All changes reverted to default policies.')
@@ -292,9 +263,9 @@ export function WorkflowsAndTimers() {
               Turnaround SLA Matrix
             </span>
             <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-main)', marginTop: '2px' }}>
-              4 Severity Tiers
+              Severity &amp; Priority
             </div>
-            <span style={{ fontSize: '11px', color: '#047857', fontWeight: 600 }}>P1 (2h) to P4 (24h)</span>
+            <span style={{ fontSize: '11px', color: '#047857', fontWeight: 600 }}>{severities.filter((s) => s.active).length} severities set reply, {priorities.filter((p) => p.active).length} priorities set fix</span>
           </div>
         </div>
       </div>
@@ -955,321 +926,16 @@ export function WorkflowsAndTimers() {
             </div>
           </div>
 
-          {/* Section B: Universal Turnaround SLA Targets Table */}
+          {/* Section B: SLA times live on the Severity and Priority masters */}
           <div className="modern-card" style={{ padding: '24px 28px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: 'var(--text-main)' }}>
-                    System-Wide SLA Target Matrix by Severity
-                  </h3>
-                  <span style={{ fontSize: '11px', color: '#16A34A', background: '#ECFDF5', padding: '2px 8px', borderRadius: '4px', fontWeight: 700 }}>
-                    Policy Baseline
-                  </span>
-                </div>
-                <p style={{ margin: '4px 0 0', fontSize: '12.5px', color: 'var(--text-secondary)' }}>
-                  Default turnaround targets applied across all tickets. Individual issue types in Classification can override these.
-                </p>
-              </div>
-            </div>
-
-            <div className="table-responsive-container">
-              <table className="custom-data-table">
-                <thead>
-                  <tr>
-                    <th style={{ width: '18%' }}>Severity Tier</th>
-                    <th style={{ width: '38%' }}>Operational Criteria &amp; Target</th>
-                    <th style={{ width: '22%' }}>Response SLA (Hours)</th>
-                    <th style={{ width: '22%' }}>Resolution SLA (Hours)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {/* P1 Critical */}
-                  <tr>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span
-                          style={{
-                            fontSize: '11px',
-                            fontWeight: 800,
-                            fontFamily: 'var(--font-mono)',
-                            color: '#991B1B',
-                            background: '#FEE2E2',
-                            padding: '2px 8px',
-                            borderRadius: '4px',
-                            border: '1px solid #FECACA',
-                          }}
-                        >
-                          P1
-                        </span>
-                        <span className="badge-tag badge-tag-sm badge-critical">
-                          Critical
-                        </span>
-                      </div>
-                    </td>
-                    <td>
-                      <strong style={{ fontSize: '13px', color: 'var(--text-main)', display: 'block' }}>
-                        Total Outage / Mission-Critical Blocker
-                      </strong>
-                      <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)' }}>
-                        Immediate engineer response; continuous emergency work until restored.
-                      </span>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <input
-                          type="number"
-                          step={0.25}
-                          min={0.1}
-                          className="form-input-control"
-                          style={{ width: '90px', height: '34px', fontSize: '13px', fontWeight: 700 }}
-                          value={p1Response}
-                          onChange={(e) => {
-                            setP1Response(parseFloat(e.target.value) || 0.5)
-                            markDirty()
-                          }}
-                        />
-                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>
-                          {p1Response < 1 ? `(${Math.round(p1Response * 60)} mins)` : `(${p1Response} hrs)`}
-                        </span>
-                      </div>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <input
-                          type="number"
-                          step={0.5}
-                          min={0.5}
-                          className="form-input-control"
-                          style={{ width: '90px', height: '34px', fontSize: '13px', fontWeight: 700 }}
-                          value={p1Resolution}
-                          onChange={(e) => {
-                            setP1Resolution(parseFloat(e.target.value) || 2)
-                            markDirty()
-                          }}
-                        />
-                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>
-                          ({p1Resolution} hrs target)
-                        </span>
-                      </div>
-                    </td>
-                  </tr>
-
-                  {/* P2 High */}
-                  <tr>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span
-                          style={{
-                            fontSize: '11px',
-                            fontWeight: 800,
-                            fontFamily: 'var(--font-mono)',
-                            color: '#92400E',
-                            background: '#FEF3C7',
-                            padding: '2px 8px',
-                            borderRadius: '4px',
-                            border: '1px solid #FDE68A',
-                          }}
-                        >
-                          P2
-                        </span>
-                        <span className="badge-tag badge-tag-sm badge-high">
-                          High
-                        </span>
-                      </div>
-                    </td>
-                    <td>
-                      <strong style={{ fontSize: '13px', color: 'var(--text-main)', display: 'block' }}>
-                        Severe Degradation / High Business Impact
-                      </strong>
-                      <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)' }}>
-                        Significant operational disruption without acceptable immediate workaround.
-                      </span>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <input
-                          type="number"
-                          step={0.25}
-                          min={0.25}
-                          className="form-input-control"
-                          style={{ width: '90px', height: '34px', fontSize: '13px', fontWeight: 700 }}
-                          value={p2Response}
-                          onChange={(e) => {
-                            setP2Response(parseFloat(e.target.value) || 1)
-                            markDirty()
-                          }}
-                        />
-                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>
-                          {p2Response < 1 ? `(${Math.round(p2Response * 60)} mins)` : `(${p2Response} hrs)`}
-                        </span>
-                      </div>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <input
-                          type="number"
-                          step={0.5}
-                          min={1}
-                          className="form-input-control"
-                          style={{ width: '90px', height: '34px', fontSize: '13px', fontWeight: 700 }}
-                          value={p2Resolution}
-                          onChange={(e) => {
-                            setP2Resolution(parseFloat(e.target.value) || 4)
-                            markDirty()
-                          }}
-                        />
-                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>
-                          ({p2Resolution} hrs target)
-                        </span>
-                      </div>
-                    </td>
-                  </tr>
-
-                  {/* P3 Medium */}
-                  <tr>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span
-                          style={{
-                            fontSize: '11px',
-                            fontWeight: 800,
-                            fontFamily: 'var(--font-mono)',
-                            color: '#1E40AF',
-                            background: '#EFF6FF',
-                            padding: '2px 8px',
-                            borderRadius: '4px',
-                            border: '1px solid #BFDBFE',
-                          }}
-                        >
-                          P3
-                        </span>
-                        <span className="badge-tag badge-tag-sm badge-medium">
-                          Medium
-                        </span>
-                      </div>
-                    </td>
-                    <td>
-                      <strong style={{ fontSize: '13px', color: 'var(--text-main)', display: 'block' }}>
-                        Standard Work Request / Moderate Impact
-                      </strong>
-                      <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)' }}>
-                        Routine operational inquiry or non-critical issue with workaround.
-                      </span>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <input
-                          type="number"
-                          step={0.5}
-                          min={0.5}
-                          className="form-input-control"
-                          style={{ width: '90px', height: '34px', fontSize: '13px', fontWeight: 700 }}
-                          value={p3Response}
-                          onChange={(e) => {
-                            setP3Response(parseFloat(e.target.value) || 2)
-                            markDirty()
-                          }}
-                        />
-                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>
-                          {p3Response < 1 ? `(${Math.round(p3Response * 60)} mins)` : `(${p3Response} hrs)`}
-                        </span>
-                      </div>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <input
-                          type="number"
-                          step={1}
-                          min={1}
-                          className="form-input-control"
-                          style={{ width: '90px', height: '34px', fontSize: '13px', fontWeight: 700 }}
-                          value={p3Resolution}
-                          onChange={(e) => {
-                            setP3Resolution(parseFloat(e.target.value) || 8)
-                            markDirty()
-                          }}
-                        />
-                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>
-                          ({p3Resolution} hrs target)
-                        </span>
-                      </div>
-                    </td>
-                  </tr>
-
-                  {/* P4 Low */}
-                  <tr>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span
-                          style={{
-                            fontSize: '11px',
-                            fontWeight: 800,
-                            fontFamily: 'var(--font-mono)',
-                            color: '#475569',
-                            background: '#F1F5F9',
-                            padding: '2px 8px',
-                            borderRadius: '4px',
-                            border: '1px solid #CBD5E1',
-                          }}
-                        >
-                          P4
-                        </span>
-                        <span className="badge-tag badge-tag-sm badge-low">
-                          Low
-                        </span>
-                      </div>
-                    </td>
-                    <td>
-                      <strong style={{ fontSize: '13px', color: 'var(--text-main)', display: 'block' }}>
-                        Low Priority / Minor Request
-                      </strong>
-                      <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)' }}>
-                        Informational question, setup guidance, or aesthetic request.
-                      </span>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <input
-                          type="number"
-                          step={0.5}
-                          min={0.5}
-                          className="form-input-control"
-                          style={{ width: '90px', height: '34px', fontSize: '13px', fontWeight: 700 }}
-                          value={p4Response}
-                          onChange={(e) => {
-                            setP4Response(parseFloat(e.target.value) || 4)
-                            markDirty()
-                          }}
-                        />
-                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>
-                          {p4Response < 1 ? `(${Math.round(p4Response * 60)} mins)` : `(${p4Response} hrs)`}
-                        </span>
-                      </div>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <input
-                          type="number"
-                          step={1}
-                          min={1}
-                          className="form-input-control"
-                          style={{ width: '90px', height: '34px', fontSize: '13px', fontWeight: 700 }}
-                          value={p4Resolution}
-                          onChange={(e) => {
-                            setP4Resolution(parseFloat(e.target.value) || 24)
-                            markDirty()
-                          }}
-                        />
-                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>
-                          ({p4Resolution} hrs target)
-                        </span>
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: 'var(--text-main)' }}>SLA times</h3>
+            <p style={{ margin: '6px 0 0', fontSize: '12.5px', color: 'var(--text-secondary)' }}>
+              Reply within is set on each severity. Fix within and the HOD approval limit are set on each priority, in
+              Administration &gt; Masters. Each issue type picks a severity and a priority, and a ticket gets its times from them.
+            </p>
+            <a href="/admin/masters" className="btn-secondary" style={{ marginTop: '12px', display: 'inline-flex', height: '34px', alignItems: 'center' }}>
+              Open Masters
+            </a>
           </div>
         </div>
       )}

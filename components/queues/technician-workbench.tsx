@@ -15,7 +15,7 @@ import {
   FlaskConical,
   PlayCircle,
 } from 'lucide-react'
-import { Ticket, TicketStatus } from '@/app/ticket-data'
+import { Ticket, TicketStatus, isChangeFlow } from '@/app/ticket-data'
 
 interface TechnicianWorkbenchProps {
   tickets: Ticket[]
@@ -179,7 +179,7 @@ export function TechnicianWorkbench({
 
                       {/* Quick Action */}
                       <div onClick={(e) => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        {t.type !== 'Change Request' && (t.status === 'Assigned' || t.status === 'In Progress') && onClassifyCR && (
+                        {!isChangeFlow(t) && (t.status === 'Assigned' || t.status === 'In Progress') && onClassifyCR && (
                           <button
                             type="button"
                             className="btn-secondary"
@@ -202,7 +202,7 @@ export function TechnicianWorkbench({
                           </button>
                         )}
                         {t.status === 'In Progress' && (
-                          t.type === 'Change Request' ? (
+                          isChangeFlow(t) ? (
                             <button
                               type="button"
                               className="btn-primary"
@@ -312,7 +312,7 @@ export function TechnicianWorkbench({
                   <td>{t.sla}</td>
                   <td onClick={(e) => e.stopPropagation()}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      {t.type !== 'Change Request' && (t.status === 'Assigned' || t.status === 'In Progress') && onClassifyCR && (
+                      {!isChangeFlow(t) && (t.status === 'Assigned' || t.status === 'In Progress') && onClassifyCR && (
                         <button
                           type="button"
                           className="btn-secondary"
@@ -335,7 +335,7 @@ export function TechnicianWorkbench({
                         </button>
                       )}
                       {t.status === 'In Progress' && (
-                        t.type === 'Change Request' ? (
+                        isChangeFlow(t) ? (
                           <button
                             type="button"
                             className="btn-primary"

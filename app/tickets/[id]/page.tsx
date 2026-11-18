@@ -41,7 +41,7 @@ import {
   CheckCheck,
 } from 'lucide-react'
 import { useTicketContext } from '@/context/ticket-context'
-import { Ticket, Role, usersByRole, classificationTree, departmentsData, usersDirectory } from '@/app/ticket-data'
+import { Ticket, Role, usersByRole, classificationTree, departmentsData, usersDirectory, isChangeFlow } from '@/app/ticket-data'
 import { ClassifyChangeRequestModal } from '@/components/tickets/classify-change-request-modal'
 import { ForwardToTestingModal } from '@/components/tickets/forward-to-testing-modal'
 import { RejectTicketModal } from '@/components/tickets/reject-ticket-modal'
@@ -115,7 +115,7 @@ export default function TicketDetailPage() {
   }
 
   // Detect whether ticket is on Standard Flow vs Change Request Flow
-  const isCR = ticket.type === 'Change Request'
+  const isCR = isChangeFlow(ticket)
   
   // Show QA Testing Tab ONLY when relevant (Change Request or actively in testing)
   const isTestingRelevant = isCR || ticket.status === 'In Testing' || Boolean(ticket.testResults)
@@ -653,8 +653,8 @@ export default function TicketDetailPage() {
               <span
                 className="badge-tag"
                 style={{
-                  background: ticket.type === 'Change Request' ? '#F5F3FF' : '#EFF6FF',
-                  color: ticket.type === 'Change Request' ? '#6D28D9' : '#1D4ED8',
+                  background: isChangeFlow(ticket) ? '#F5F3FF' : '#EFF6FF',
+                  color: isChangeFlow(ticket) ? '#6D28D9' : '#1D4ED8',
                   fontWeight: 600,
                 }}
               >
@@ -778,7 +778,7 @@ export default function TicketDetailPage() {
               {/* Technician Primary Actions */}
               {currentRole === 'Technician' && (
                 <>
-                  {ticket.type !== 'Change Request' && ticket.status !== 'Resolved' && ticket.status !== 'Closed' && (
+                  {!isChangeFlow(ticket) && ticket.status !== 'Resolved' && ticket.status !== 'Closed' && (
                     <button
                       type="button"
                       className="btn-secondary"
@@ -810,7 +810,7 @@ export default function TicketDetailPage() {
                     </button>
                   )}
 
-                  {ticket.status === 'In Progress' && ticket.type === 'Change Request' && (
+                  {ticket.status === 'In Progress' && isChangeFlow(ticket) && (
                     <button
                       type="button"
                       className="btn-primary"
@@ -821,7 +821,7 @@ export default function TicketDetailPage() {
                     </button>
                   )}
 
-                  {ticket.status === 'In Progress' && ticket.type !== 'Change Request' && (
+                  {ticket.status === 'In Progress' && !isChangeFlow(ticket) && (
                     <button
                       type="button"
                       className="btn-primary"
@@ -1959,7 +1959,7 @@ export default function TicketDetailPage() {
               <>
                 {ticket.status === 'Assigned' && (
                   <>
-                    {ticket.type !== 'Change Request' && (
+                    {!isChangeFlow(ticket) && (
                       <button
                         type="button"
                         className="btn-secondary"
@@ -1980,7 +1980,7 @@ export default function TicketDetailPage() {
 
                 {ticket.status === 'In Progress' && (
                   <>
-                    {ticket.type === 'Change Request' ? (
+                    {isChangeFlow(ticket) ? (
                       <button
                         type="button"
                         className="btn-primary"
@@ -2043,7 +2043,7 @@ export default function TicketDetailPage() {
                   </button>
                 ) : (
                   <>
-                    {ticket.type !== 'Change Request' && (
+                    {!isChangeFlow(ticket) && (
                       <button
                         type="button"
                         className="btn-secondary"

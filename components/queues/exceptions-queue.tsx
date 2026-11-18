@@ -13,7 +13,7 @@ import {
   ArrowRight,
   ShieldAlert,
 } from 'lucide-react'
-import { Ticket } from '@/app/ticket-data'
+import { Ticket, isChangeFlow } from '@/app/ticket-data'
 
 interface ExceptionsQueueProps {
   tickets: Ticket[]
@@ -243,7 +243,7 @@ export function ExceptionsQueue({
                             >
                               {ticket.hodRejection
                                 ? 'HOD did not approve'
-                                : ticket.type === 'Change Request'
+                                : isChangeFlow(ticket)
                                 ? ticket.crStage === 'Implementation'
                                   ? 'Assign implementation'
                                   : 'Change approval'

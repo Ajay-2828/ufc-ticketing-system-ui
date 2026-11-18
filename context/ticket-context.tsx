@@ -25,15 +25,17 @@ import {
   departmentsData,
   SeverityMaster,
   PriorityMaster,
-  SlaPolicy,
   BusinessCalendar,
   MastersSettings,
   SlaSnapshot,
   initialSeverities,
   initialPriorities,
-  initialSlaPolicies,
   initialCalendars,
   initialMastersSettings,
+  isChangeFlow,
+  TicketTypeMaster,
+  initialTicketTypes,
+  DepartmentConfig,
 } from '@/app/ticket-data'
 import { MS_DAY, MS_HOUR, nextTicketId, pickTechnician } from '@/lib/workflow'
 
@@ -49,7 +51,8 @@ export interface CurrentUserProfile {
 export interface NewTicketForm {
   subject: string
   description: string
-  type: Exclude<TicketType, 'Change Request'>
+  /** Ticket type id. Its workflow template decides Standard or Change Request flow. */
+  type: TicketType
   classification: string
   subClassification: string
   issueType: string
@@ -57,8 +60,6 @@ export interface NewTicketForm {
   priority: TicketPriority
   department: string
   dynamicFields: Record<string, string>
-  isCR: boolean
-  crRequiresHod: boolean
   hodLimitHours: number
   slaHours: number
   isDraft: boolean
@@ -77,13 +78,11 @@ interface TicketContextType {
   /** Clock tick (refreshed every 15 seconds) so countdowns stay live */
   now: number
 
-  /* Masters: severity, priority, SLA policies, business calendars */
+  /* Masters: severity (reply time), priority (fix time, HOD limit), business calendars */
   severities: SeverityMaster[]
   setSeverities: React.Dispatch<React.SetStateAction<SeverityMaster[]>>
   priorities: PriorityMaster[]
   setPriorities: React.Dispatch<React.SetStateAction<PriorityMaster[]>>
-  slaPolicies: SlaPolicy[]
-  setSlaPolicies: React.Dispatch<React.SetStateAction<SlaPolicy[]>>
   calendars: BusinessCalendar[]
   setCalendars: React.Dispatch<React.SetStateAction<BusinessCalendar[]>>
   mastersSettings: MastersSettings
@@ -96,6 +95,13 @@ interface TicketContextType {
 
   classificationTreeData: ClassificationConfig[]
   setClassificationTreeData: React.Dispatch<React.SetStateAction<ClassificationConfig[]>>
+
+  /* Ticket Types master: each type follows a workflow template */
+  ticketTypes: TicketTypeMaster[]
+  setTicketTypes: React.Dispatch<React.SetStateAction<TicketTypeMaster[]>>
+  /* Departments with the applications (sub-classifications) they can raise tickets for */
+  departments: DepartmentConfig[]
+  setDepartments: React.Dispatch<React.SetStateAction<DepartmentConfig[]>>
 
   globalSearch: string
   setGlobalSearch: (q: string) => void
@@ -184,7 +190,6 @@ export function TicketProvider({ children }: { children: ReactNode }) {
 
   const [severities, setSeverities] = useState<SeverityMaster[]>(initialSeverities)
   const [priorities, setPriorities] = useState<PriorityMaster[]>(initialPriorities)
-  const [slaPolicies, setSlaPolicies] = useState<SlaPolicy[]>(initialSlaPolicies)
   const [calendars, setCalendars] = useState<BusinessCalendar[]>(initialCalendars)
   const [mastersSettings, setMastersSettings] = useState<MastersSettings>(initialMastersSettings)
 
@@ -193,6 +198,8 @@ export function TicketProvider({ children }: { children: ReactNode }) {
   )
   const [classificationTreeData, setClassificationTreeData] =
     useState<ClassificationConfig[]>(classificationTree)
+  const [ticketTypes, setTicketTypes] = useState<TicketTypeMaster[]>(initialTicketTypes)
+  const [departments, setDepartments] = useState<DepartmentConfig[]>(departmentsData)
 
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -369,7 +376,7 @@ export function TicketProvider({ children }: { children: ReactNode }) {
       assignee,
       priority: priority || t.priority,
       status: 'In Progress',
-      crStage: t.type === 'Change Request' ? 'Implementation' : t.crStage,
+      crStage: isChangeFlow(t) ? 'Implementation' : t.crStage,
       eta: eta ? `${eta}h` : t.eta,
       dueDate: dueDate || t.dueDate,
       vendor: vendor || t.vendor,
@@ -377,7 +384,7 @@ export function TicketProvider({ children }: { children: ReactNode }) {
         ...t.timeline,
         tl(
           currentUser.name,
-          t.type === 'Change Request' ? 'Implementation assigned by Admin' : 'Assigned by Admin',
+          isChangeFlow(t) ? 'Implementation assigned by Admin' : 'Assigned by Admin',
           `Allocated to ${assignee}. Priority ${priority}. ETA: ${eta || 'standard SLA'} hrs. Due: ${dueDate || 'SLA target'}. ${remarks || ''}`.trim(),
           'blue',
           currentRole
@@ -474,8 +481,12 @@ export function TicketProvider({ children }: { children: ReactNode }) {
 
   /* ---------- flow 1: create, HOD, Admin ---------- */
   const submitNewTicket = (f: NewTicketForm): Ticket => {
-    const type: TicketType = f.isCR ? 'Change Request' : f.type
-    const id = nextTicketId(tickets, type)
+    const type: TicketType = f.type
+    const typeMaster = ticketTypes.find((x) => x.id === type)
+    const workflow = typeMaster?.workflow || (type === 'Change Request' ? 'Change Request' : 'Standard')
+    const isCR = workflow === 'Change Request'
+    const crRequiresHod = typeMaster ? typeMaster.crRequiresHod : true
+    const id = nextTicketId(tickets, typeMaster?.code || 'TKT')
     const t0 = Date.now()
     const staffCreator = currentRole === 'HOD'
     const base: Ticket = {
@@ -483,6 +494,7 @@ export function TicketProvider({ children }: { children: ReactNode }) {
       subject: f.subject,
       description: f.description,
       type,
+      workflow,
       app: f.subClassification,
       classification: f.classification,
       subClassification: f.subClassification,
@@ -504,8 +516,8 @@ export function TicketProvider({ children }: { children: ReactNode }) {
       dynamicFields: f.dynamicFields,
       timeline: [],
       clarifications: [],
-      crRequiresHod: f.isCR ? f.crRequiresHod : undefined,
-      crStage: f.isCR ? 'Admin' : undefined,
+      crRequiresHod: isCR ? crRequiresHod : undefined,
+      crStage: isCR ? 'Admin' : undefined,
     }
     const created = tl(
       currentUser.name,
@@ -517,7 +529,7 @@ export function TicketProvider({ children }: { children: ReactNode }) {
     let ticket: Ticket
     if (f.isDraft) {
       ticket = { ...base, status: 'Draft', timeline: [created] }
-    } else if (f.isCR) {
+    } else if (isCR) {
       ticket = {
         ...base,
         status: 'Admin Review',
@@ -526,7 +538,7 @@ export function TicketProvider({ children }: { children: ReactNode }) {
           tl(
             'System',
             'Sent to Admin for review',
-            `Change Request. HOD approval for this change: ${f.crRequiresHod ? 'required' : 'not required'}.`,
+            `${typeMaster?.name || type} follows the Change Request workflow. HOD approval for this change: ${crRequiresHod ? 'required' : 'not required'}.`,
             'purple',
             'System'
           ),
@@ -582,12 +594,12 @@ export function TicketProvider({ children }: { children: ReactNode }) {
     const t0 = Date.now()
     patch(ticket.id, (t) => ({
       ...t,
-      status: t.type === 'Change Request' ? 'Admin Review' : 'Pending Approval',
+      status: isChangeFlow(t) ? 'Admin Review' : 'Pending Approval',
       hodTimeRemaining: `${String(hours).padStart(2, '0')}:00:00`,
-      hodDeadline: t.type === 'Change Request' ? undefined : t0 + hours * MS_HOUR,
+      hodDeadline: isChangeFlow(t) ? undefined : t0 + hours * MS_HOUR,
       timeline: [
         ...t.timeline,
-        tl(currentUser.name, 'Draft submitted', t.type === 'Change Request' ? 'Sent to Admin.' : 'Sent to the Department Head.', 'blue', currentRole),
+        tl(currentUser.name, 'Draft submitted', isChangeFlow(t) ? 'Sent to Admin.' : 'Sent to the Department Head.', 'blue', currentRole),
       ],
     }))
     triggerToast(`Ticket ${ticket.id} submitted.`)
@@ -595,7 +607,7 @@ export function TicketProvider({ children }: { children: ReactNode }) {
 
   /** HOD approves. Normal ticket: auto-assign. Change Request: next stage. */
   const hodApprove = (ticket: Ticket) => {
-    if (ticket.type === 'Change Request') {
+    if (isChangeFlow(ticket)) {
       patch(ticket.id, (t) => ({
         ...t,
         status: 'Management Approval',
@@ -630,7 +642,7 @@ export function TicketProvider({ children }: { children: ReactNode }) {
 
   /** HOD does not approve: the ticket goes to Admin (Change Requests are rejected). */
   const hodNotApprove = (ticket: Ticket, reason: string, category: string) => {
-    if (ticket.type === 'Change Request') {
+    if (isChangeFlow(ticket)) {
       patch(ticket.id, (t) => ({
         ...t,
         status: 'Rejected',
@@ -661,6 +673,7 @@ export function TicketProvider({ children }: { children: ReactNode }) {
     patch(ticket.id, (t) => ({
       ...t,
       type: 'Change Request',
+      workflow: 'Change Request',
       status: 'Admin Review',
       crStage: 'Admin',
       crRequiresHod: requiresHod,
@@ -804,7 +817,7 @@ export function TicketProvider({ children }: { children: ReactNode }) {
         )
         break
       case 'Management':
-        result = tickets.filter((t) => t.type === 'Change Request')
+        result = tickets.filter((t) => isChangeFlow(t))
         break
       case 'Testing Team':
         result = tickets.filter((t) => t.status === 'In Testing' || t.testResults?.tester === me)
@@ -851,8 +864,6 @@ export function TicketProvider({ children }: { children: ReactNode }) {
         setSeverities,
         priorities,
         setPriorities,
-        slaPolicies,
-        setSlaPolicies,
         calendars,
         setCalendars,
         mastersSettings,
@@ -863,6 +874,10 @@ export function TicketProvider({ children }: { children: ReactNode }) {
         isBlockedByThreshold,
         classificationTreeData,
         setClassificationTreeData,
+        ticketTypes,
+        setTicketTypes,
+        departments,
+        setDepartments,
         globalSearch,
         setGlobalSearch,
         toastMessage,

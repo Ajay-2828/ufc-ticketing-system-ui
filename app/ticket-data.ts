@@ -27,7 +27,40 @@ export type TicketStatus =
 
 /** Severity id from the Severity master (Critical, High, Medium, Low by default) */
 export type TicketSeverity = string
-export type TicketType = 'Incident' | 'Service Request' | 'Issue' | 'Change Request'
+/** Ticket type id from the Ticket Types master (Incident, Service Request, Issue, Change Request by default) */
+export type TicketType = string
+
+/** Workflow template a ticket type follows. The steps of each template are fixed (Workflows page). */
+export type WorkflowTemplate = 'Standard' | 'Change Request'
+
+export const workflowTemplates: { id: WorkflowTemplate; name: string; steps: string }[] = [
+  { id: 'Standard', name: 'Standard workflow', steps: 'HOD approval > auto-assign to technician > resolve > end user closes' },
+  { id: 'Change Request', name: 'Change Request workflow', steps: 'Admin approval > HOD approval (if on) > Management > implementation > testing > resolve' },
+]
+
+export interface TicketTypeMaster {
+  id: string
+  name: string
+  /** Prefix of the ticket number, e.g. INC gives INC-2026-0001 */
+  code: string
+  description: string
+  workflow: WorkflowTemplate
+  /** Change Request workflow only: HOD approval after Admin approval */
+  crRequiresHod: boolean
+  active: boolean
+}
+
+export const initialTicketTypes: TicketTypeMaster[] = [
+  { id: 'Incident', name: 'Incident', code: 'INC', description: 'Unplanned interruption or reduction in quality of an IT service', workflow: 'Standard', crRequiresHod: false, active: true },
+  { id: 'Service Request', name: 'Service Request', code: 'SRQ', description: 'User request for service provisioning, access permissions, or standard information', workflow: 'Standard', crRequiresHod: false, active: true },
+  { id: 'Issue', name: 'Issue', code: 'ISS', description: 'Hardware, peripheral, or application defect requiring troubleshooting', workflow: 'Standard', crRequiresHod: false, active: true },
+  { id: 'Change Request', name: 'Change Request', code: 'CR', description: 'Addition, modification, or removal of IT services, configurations, or infrastructure', workflow: 'Change Request', crRequiresHod: true, active: true },
+]
+
+/** True when the ticket follows the Change Request workflow (set from its ticket type). */
+export function isChangeFlow(t: { type: string; workflow?: WorkflowTemplate }): boolean {
+  return t.workflow ? t.workflow === 'Change Request' : t.type === 'Change Request'
+}
 /** Priority id from the Priority master (P1 to P4 by default) */
 export type TicketPriority = string
 
@@ -42,19 +75,24 @@ export interface DynamicQuestion {
 
 export interface IssueTypeConfig {
   name: string
+  /** Severity and priority are picked separately by Admin on each issue type (not linked).
+   *  Reply time comes from the severity, fix time and HOD limit from the priority. */
   autoSeverity: TicketSeverity
-  slaResponseHours: number
-  slaResolutionHours: number
-  hodApprovalLimitHours: number
-  /** SLA policy from the SLA master. The hour fields above are kept in step with it. */
-  slaPolicyId?: string
+  autoPriority: string
+  /** Legacy hour fields, not used. Times come from the Severity and Priority masters. */
+  slaResponseHours?: number
+  slaResolutionHours?: number
+  hodApprovalLimitHours?: number
+  /** Legacy, no longer used: the workflow now comes from the ticket type (Ticket Types master). */
   isChangeRequest?: boolean
-  crRequiresHodApproval?: boolean // Configures whether HOD approval is required for this Change Request (defaults to true)
+  crRequiresHodApproval?: boolean
 }
 
 export interface SubClassificationConfig {
   name: string
   technicians: string[]
+  /** User departments that can raise tickets for this sub-classification (kept in step with Applications & Access) */
+  departments?: string[]
   issueTypes: IssueTypeConfig[]
 }
 
@@ -91,6 +129,8 @@ export interface Ticket {
   subject: string
   description: string
   type: TicketType
+  /** Workflow template taken from the ticket type when the ticket was raised */
+  workflow?: WorkflowTemplate
   app: string
   classification: string
   subClassification: string
@@ -290,6 +330,7 @@ export const COMMON_MASTER_ISSUES = [
   {
     name: 'Login not working',
     autoSeverity: 'Critical' as TicketSeverity,
+    autoPriority: 'P1',
     slaResponseHours: 0.5,
     slaResolutionHours: 2,
     hodApprovalLimitHours: 1,
@@ -298,6 +339,7 @@ export const COMMON_MASTER_ISSUES = [
   {
     name: 'Application not opening',
     autoSeverity: 'High' as TicketSeverity,
+    autoPriority: 'P2',
     slaResponseHours: 1,
     slaResolutionHours: 4,
     hodApprovalLimitHours: 2,
@@ -306,6 +348,7 @@ export const COMMON_MASTER_ISSUES = [
   {
     name: 'Password reset',
     autoSeverity: 'Medium' as TicketSeverity,
+    autoPriority: 'P3',
     slaResponseHours: 2,
     slaResolutionHours: 8,
     hodApprovalLimitHours: 4,
@@ -314,6 +357,7 @@ export const COMMON_MASTER_ISSUES = [
   {
     name: 'Slow performance / Freezing',
     autoSeverity: 'Medium' as TicketSeverity,
+    autoPriority: 'P3',
     slaResponseHours: 2,
     slaResolutionHours: 6,
     hodApprovalLimitHours: 3,
@@ -322,6 +366,7 @@ export const COMMON_MASTER_ISSUES = [
   {
     name: 'Report generation failure',
     autoSeverity: 'Medium' as TicketSeverity,
+    autoPriority: 'P3',
     slaResponseHours: 2,
     slaResolutionHours: 6,
     hodApprovalLimitHours: 3,
@@ -330,6 +375,7 @@ export const COMMON_MASTER_ISSUES = [
   {
     name: 'Data sync error',
     autoSeverity: 'High' as TicketSeverity,
+    autoPriority: 'P2',
     slaResponseHours: 1,
     slaResolutionHours: 4,
     hodApprovalLimitHours: 2,
@@ -338,6 +384,7 @@ export const COMMON_MASTER_ISSUES = [
   {
     name: 'User access & permissions',
     autoSeverity: 'Medium' as TicketSeverity,
+    autoPriority: 'P3',
     slaResponseHours: 2,
     slaResolutionHours: 8,
     hodApprovalLimitHours: 4,
@@ -346,6 +393,7 @@ export const COMMON_MASTER_ISSUES = [
   {
     name: 'Transaction timeout',
     autoSeverity: 'Critical' as TicketSeverity,
+    autoPriority: 'P1',
     slaResponseHours: 0.5,
     slaResolutionHours: 2,
     hodApprovalLimitHours: 1,
@@ -357,6 +405,7 @@ export const COMMON_HARDWARE_ISSUES = [
   {
     name: 'Device will not power on / Power fault',
     autoSeverity: 'Critical' as TicketSeverity,
+    autoPriority: 'P1',
     slaResponseHours: 0.5,
     slaResolutionHours: 2,
     hodApprovalLimitHours: 1,
@@ -365,6 +414,7 @@ export const COMMON_HARDWARE_ISSUES = [
   {
     name: 'Screen display / Blank screen / Flickering',
     autoSeverity: 'High' as TicketSeverity,
+    autoPriority: 'P2',
     slaResponseHours: 1,
     slaResolutionHours: 4,
     hodApprovalLimitHours: 2,
@@ -373,6 +423,7 @@ export const COMMON_HARDWARE_ISSUES = [
   {
     name: 'Battery not charging / Fast draining',
     autoSeverity: 'Medium' as TicketSeverity,
+    autoPriority: 'P3',
     slaResponseHours: 2,
     slaResolutionHours: 6,
     hodApprovalLimitHours: 3,
@@ -381,6 +432,7 @@ export const COMMON_HARDWARE_ISSUES = [
   {
     name: 'Keyboard or trackpad unresponsive',
     autoSeverity: 'Medium' as TicketSeverity,
+    autoPriority: 'P3',
     slaResponseHours: 2,
     slaResolutionHours: 8,
     hodApprovalLimitHours: 4,
@@ -389,6 +441,7 @@ export const COMMON_HARDWARE_ISSUES = [
   {
     name: 'Operating System crash / Blue screen (BSOD)',
     autoSeverity: 'Critical' as TicketSeverity,
+    autoPriority: 'P1',
     slaResponseHours: 0.5,
     slaResolutionHours: 2,
     hodApprovalLimitHours: 1,
@@ -397,6 +450,7 @@ export const COMMON_HARDWARE_ISSUES = [
   {
     name: 'Paper jam / Feeder error',
     autoSeverity: 'High' as TicketSeverity,
+    autoPriority: 'P2',
     slaResponseHours: 1,
     slaResolutionHours: 3,
     hodApprovalLimitHours: 1.5,
@@ -405,6 +459,7 @@ export const COMMON_HARDWARE_ISSUES = [
   {
     name: 'Toner / Ink cartridge replacement',
     autoSeverity: 'Medium' as TicketSeverity,
+    autoPriority: 'P3',
     slaResponseHours: 2,
     slaResolutionHours: 6,
     hodApprovalLimitHours: 3,
@@ -413,6 +468,7 @@ export const COMMON_HARDWARE_ISSUES = [
   {
     name: 'Printer offline / Network disconnection',
     autoSeverity: 'High' as TicketSeverity,
+    autoPriority: 'P2',
     slaResponseHours: 1,
     slaResolutionHours: 3,
     hodApprovalLimitHours: 1.5,
@@ -421,6 +477,7 @@ export const COMMON_HARDWARE_ISSUES = [
   {
     name: 'Overheating / Excessive fan noise',
     autoSeverity: 'Medium' as TicketSeverity,
+    autoPriority: 'P3',
     slaResponseHours: 2,
     slaResolutionHours: 8,
     hodApprovalLimitHours: 4,
@@ -429,6 +486,7 @@ export const COMMON_HARDWARE_ISSUES = [
   {
     name: 'Network port / Wi-Fi disconnected',
     autoSeverity: 'Critical' as TicketSeverity,
+    autoPriority: 'P1',
     slaResponseHours: 0.5,
     slaResolutionHours: 2,
     hodApprovalLimitHours: 1,
@@ -445,56 +503,56 @@ export const classificationTree: ClassificationConfig[] = [
         name: 'Pro People',
         technicians: ['Daniel Mensah', 'Maya Patel'],
         issueTypes: [
-          { name: 'Login not working', autoSeverity: 'Critical', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
-          { name: 'Application not opening', autoSeverity: 'High', slaResponseHours: 1, slaResolutionHours: 4, hodApprovalLimitHours: 2 },
-          { name: 'Password reset', autoSeverity: 'Medium', slaResponseHours: 2, slaResolutionHours: 8, hodApprovalLimitHours: 4 },
-          { name: 'Slow performance / Freezing', autoSeverity: 'Medium', slaResponseHours: 2, slaResolutionHours: 6, hodApprovalLimitHours: 3 },
-          { name: 'Data sync error', autoSeverity: 'High', slaResponseHours: 1, slaResolutionHours: 4, hodApprovalLimitHours: 2 },
+          { name: 'Login not working', autoSeverity: 'Critical', autoPriority: 'P1', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
+          { name: 'Application not opening', autoSeverity: 'High', autoPriority: 'P2', slaResponseHours: 1, slaResolutionHours: 4, hodApprovalLimitHours: 2 },
+          { name: 'Password reset', autoSeverity: 'Medium', autoPriority: 'P3', slaResponseHours: 2, slaResolutionHours: 8, hodApprovalLimitHours: 4 },
+          { name: 'Slow performance / Freezing', autoSeverity: 'Medium', autoPriority: 'P3', slaResponseHours: 2, slaResolutionHours: 6, hodApprovalLimitHours: 3 },
+          { name: 'Data sync error', autoSeverity: 'High', autoPriority: 'P2', slaResponseHours: 1, slaResolutionHours: 4, hodApprovalLimitHours: 2 },
         ],
       },
       {
         name: 'Pro Biz',
         technicians: ['Maya Patel', 'Ibrahim Sani'],
         issueTypes: [
-          { name: 'Login not working', autoSeverity: 'Critical', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
-          { name: 'Application not opening', autoSeverity: 'High', slaResponseHours: 1, slaResolutionHours: 4, hodApprovalLimitHours: 2 },
-          { name: 'Report generation failure', autoSeverity: 'Medium', slaResponseHours: 2, slaResolutionHours: 6, hodApprovalLimitHours: 3 },
-          { name: 'Data sync error', autoSeverity: 'High', slaResponseHours: 1, slaResolutionHours: 4, hodApprovalLimitHours: 2 },
-          { name: 'Transaction timeout', autoSeverity: 'Critical', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
+          { name: 'Login not working', autoSeverity: 'Critical', autoPriority: 'P1', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
+          { name: 'Application not opening', autoSeverity: 'High', autoPriority: 'P2', slaResponseHours: 1, slaResolutionHours: 4, hodApprovalLimitHours: 2 },
+          { name: 'Report generation failure', autoSeverity: 'Medium', autoPriority: 'P3', slaResponseHours: 2, slaResolutionHours: 6, hodApprovalLimitHours: 3 },
+          { name: 'Data sync error', autoSeverity: 'High', autoPriority: 'P2', slaResponseHours: 1, slaResolutionHours: 4, hodApprovalLimitHours: 2 },
+          { name: 'Transaction timeout', autoSeverity: 'Critical', autoPriority: 'P1', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
         ],
       },
       {
         name: 'Pro Pupil',
         technicians: ['Ibrahim Sani', 'Daniel Mensah'],
         issueTypes: [
-          { name: 'Login not working', autoSeverity: 'Critical', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
-          { name: 'Password reset', autoSeverity: 'Medium', slaResponseHours: 2, slaResolutionHours: 8, hodApprovalLimitHours: 4 },
-          { name: 'User access & permissions', autoSeverity: 'Medium', slaResponseHours: 2, slaResolutionHours: 8, hodApprovalLimitHours: 4 },
-          { name: 'Slow performance / Freezing', autoSeverity: 'Medium', slaResponseHours: 2, slaResolutionHours: 6, hodApprovalLimitHours: 3 },
+          { name: 'Login not working', autoSeverity: 'Critical', autoPriority: 'P1', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
+          { name: 'Password reset', autoSeverity: 'Medium', autoPriority: 'P3', slaResponseHours: 2, slaResolutionHours: 8, hodApprovalLimitHours: 4 },
+          { name: 'User access & permissions', autoSeverity: 'Medium', autoPriority: 'P3', slaResponseHours: 2, slaResolutionHours: 8, hodApprovalLimitHours: 4 },
+          { name: 'Slow performance / Freezing', autoSeverity: 'Medium', autoPriority: 'P3', slaResponseHours: 2, slaResolutionHours: 6, hodApprovalLimitHours: 3 },
         ],
       },
       {
         name: 'Flexcube',
         technicians: ['Daniel Mensah', 'Maya Patel'],
         issueTypes: [
-          { name: 'Login not working', autoSeverity: 'Critical', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
-          { name: 'Application not opening', autoSeverity: 'High', slaResponseHours: 1, slaResolutionHours: 4, hodApprovalLimitHours: 2 },
-          { name: 'Transaction timeout', autoSeverity: 'Critical', slaResponseHours: 0.5, slaResolutionHours: 3, hodApprovalLimitHours: 1 },
-          { name: 'Password reset', autoSeverity: 'Medium', slaResponseHours: 2, slaResolutionHours: 8, hodApprovalLimitHours: 4 },
-          { name: 'End of Day (EOD) Batch Stalled', autoSeverity: 'Critical', slaResponseHours: 0.25, slaResolutionHours: 1.5, hodApprovalLimitHours: 1 },
-          { name: 'Core Patch Upgrade (Change Request)', autoSeverity: 'High', slaResponseHours: 4, slaResolutionHours: 48, hodApprovalLimitHours: 24, isChangeRequest: true, crRequiresHodApproval: true },
-          { name: 'Emergency Hotfix Deployment (CR - Direct to Admin)', autoSeverity: 'Critical', slaResponseHours: 1, slaResolutionHours: 12, hodApprovalLimitHours: 4, isChangeRequest: true, crRequiresHodApproval: false },
+          { name: 'Login not working', autoSeverity: 'Critical', autoPriority: 'P1', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
+          { name: 'Application not opening', autoSeverity: 'High', autoPriority: 'P2', slaResponseHours: 1, slaResolutionHours: 4, hodApprovalLimitHours: 2 },
+          { name: 'Transaction timeout', autoSeverity: 'Critical', autoPriority: 'P1', slaResponseHours: 0.5, slaResolutionHours: 3, hodApprovalLimitHours: 1 },
+          { name: 'Password reset', autoSeverity: 'Medium', autoPriority: 'P3', slaResponseHours: 2, slaResolutionHours: 8, hodApprovalLimitHours: 4 },
+          { name: 'End of Day (EOD) Batch Stalled', autoSeverity: 'Critical', autoPriority: 'P1', slaResponseHours: 0.25, slaResolutionHours: 1.5, hodApprovalLimitHours: 1 },
+          { name: 'Core Patch Upgrade (Change Request)', autoSeverity: 'High', autoPriority: 'P2', slaResponseHours: 4, slaResolutionHours: 48, hodApprovalLimitHours: 24, isChangeRequest: true, crRequiresHodApproval: true },
+          { name: 'Emergency Hotfix Deployment (CR - Direct to Admin)', autoSeverity: 'Critical', autoPriority: 'P1', slaResponseHours: 1, slaResolutionHours: 12, hodApprovalLimitHours: 4, isChangeRequest: true, crRequiresHodApproval: false },
         ],
       },
       {
         name: 'Atomverse',
         technicians: ['Ibrahim Sani', 'Maya Patel'],
         issueTypes: [
-          { name: 'Login not working', autoSeverity: 'Critical', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
-          { name: 'Customer biometric login failure', autoSeverity: 'High', slaResponseHours: 1, slaResolutionHours: 4, hodApprovalLimitHours: 2 },
-          { name: 'OTP delivery timeout', autoSeverity: 'Critical', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
-          { name: 'Mobile onboarding flow crash', autoSeverity: 'High', slaResponseHours: 1, slaResolutionHours: 6, hodApprovalLimitHours: 3 },
-          { name: 'Payment gateway timeout', autoSeverity: 'Critical', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
+          { name: 'Login not working', autoSeverity: 'Critical', autoPriority: 'P1', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
+          { name: 'Customer biometric login failure', autoSeverity: 'High', autoPriority: 'P2', slaResponseHours: 1, slaResolutionHours: 4, hodApprovalLimitHours: 2 },
+          { name: 'OTP delivery timeout', autoSeverity: 'Critical', autoPriority: 'P1', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
+          { name: 'Mobile onboarding flow crash', autoSeverity: 'High', autoPriority: 'P2', slaResponseHours: 1, slaResolutionHours: 6, hodApprovalLimitHours: 3 },
+          { name: 'Payment gateway timeout', autoSeverity: 'Critical', autoPriority: 'P1', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
         ],
       },
     ],
@@ -507,50 +565,50 @@ export const classificationTree: ClassificationConfig[] = [
         name: 'Laptops & Workstations',
         technicians: ['Daniel Mensah', 'Ibrahim Sani'],
         issueTypes: [
-          { name: 'Device will not power on / Power fault', autoSeverity: 'Critical', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
-          { name: 'Screen display / Blank screen / Flickering', autoSeverity: 'High', slaResponseHours: 1, slaResolutionHours: 4, hodApprovalLimitHours: 2 },
-          { name: 'Battery not charging / Fast draining', autoSeverity: 'Medium', slaResponseHours: 2, slaResolutionHours: 6, hodApprovalLimitHours: 3 },
-          { name: 'Keyboard or trackpad unresponsive', autoSeverity: 'Medium', slaResponseHours: 2, slaResolutionHours: 8, hodApprovalLimitHours: 4 },
-          { name: 'Operating System crash / Blue screen (BSOD)', autoSeverity: 'Critical', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
-          { name: 'Overheating / Excessive fan noise', autoSeverity: 'Medium', slaResponseHours: 2, slaResolutionHours: 8, hodApprovalLimitHours: 4 },
+          { name: 'Device will not power on / Power fault', autoSeverity: 'Critical', autoPriority: 'P1', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
+          { name: 'Screen display / Blank screen / Flickering', autoSeverity: 'High', autoPriority: 'P2', slaResponseHours: 1, slaResolutionHours: 4, hodApprovalLimitHours: 2 },
+          { name: 'Battery not charging / Fast draining', autoSeverity: 'Medium', autoPriority: 'P3', slaResponseHours: 2, slaResolutionHours: 6, hodApprovalLimitHours: 3 },
+          { name: 'Keyboard or trackpad unresponsive', autoSeverity: 'Medium', autoPriority: 'P3', slaResponseHours: 2, slaResolutionHours: 8, hodApprovalLimitHours: 4 },
+          { name: 'Operating System crash / Blue screen (BSOD)', autoSeverity: 'Critical', autoPriority: 'P1', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
+          { name: 'Overheating / Excessive fan noise', autoSeverity: 'Medium', autoPriority: 'P3', slaResponseHours: 2, slaResolutionHours: 8, hodApprovalLimitHours: 4 },
         ],
       },
       {
         name: 'Printers & Scanners',
         technicians: ['Ibrahim Sani', 'TechServe Ltd'],
         issueTypes: [
-          { name: 'Paper jam / Feeder error', autoSeverity: 'High', slaResponseHours: 1, slaResolutionHours: 3, hodApprovalLimitHours: 1.5 },
-          { name: 'Toner / Ink cartridge replacement', autoSeverity: 'Medium', slaResponseHours: 2, slaResolutionHours: 6, hodApprovalLimitHours: 3 },
-          { name: 'Printer offline / Network disconnection', autoSeverity: 'High', slaResponseHours: 1, slaResolutionHours: 3, hodApprovalLimitHours: 1.5 },
-          { name: 'Printout streaks / poor quality', autoSeverity: 'Low', slaResponseHours: 4, slaResolutionHours: 12, hodApprovalLimitHours: 6 },
+          { name: 'Paper jam / Feeder error', autoSeverity: 'High', autoPriority: 'P2', slaResponseHours: 1, slaResolutionHours: 3, hodApprovalLimitHours: 1.5 },
+          { name: 'Toner / Ink cartridge replacement', autoSeverity: 'Medium', autoPriority: 'P3', slaResponseHours: 2, slaResolutionHours: 6, hodApprovalLimitHours: 3 },
+          { name: 'Printer offline / Network disconnection', autoSeverity: 'High', autoPriority: 'P2', slaResponseHours: 1, slaResolutionHours: 3, hodApprovalLimitHours: 1.5 },
+          { name: 'Printout streaks / poor quality', autoSeverity: 'Low', autoPriority: 'P4', slaResponseHours: 4, slaResolutionHours: 12, hodApprovalLimitHours: 6 },
         ],
       },
       {
         name: 'Monitors & Displays',
         technicians: ['Daniel Mensah', 'TechServe Ltd'],
         issueTypes: [
-          { name: 'Screen display / Blank screen / Flickering', autoSeverity: 'High', slaResponseHours: 1, slaResolutionHours: 4, hodApprovalLimitHours: 2 },
-          { name: 'HDMI / DisplayPort cable or adapter failure', autoSeverity: 'Medium', slaResponseHours: 2, slaResolutionHours: 6, hodApprovalLimitHours: 3 },
-          { name: 'Color distortion or vertical lines', autoSeverity: 'Medium', slaResponseHours: 2, slaResolutionHours: 8, hodApprovalLimitHours: 4 },
+          { name: 'Screen display / Blank screen / Flickering', autoSeverity: 'High', autoPriority: 'P2', slaResponseHours: 1, slaResolutionHours: 4, hodApprovalLimitHours: 2 },
+          { name: 'HDMI / DisplayPort cable or adapter failure', autoSeverity: 'Medium', autoPriority: 'P3', slaResponseHours: 2, slaResolutionHours: 6, hodApprovalLimitHours: 3 },
+          { name: 'Color distortion or vertical lines', autoSeverity: 'Medium', autoPriority: 'P3', slaResponseHours: 2, slaResolutionHours: 8, hodApprovalLimitHours: 4 },
         ],
       },
       {
         name: 'Keyboards, Mice & Peripherals',
         technicians: ['Ibrahim Sani', 'Daniel Mensah'],
         issueTypes: [
-          { name: 'Keyboard or trackpad unresponsive', autoSeverity: 'Medium', slaResponseHours: 2, slaResolutionHours: 8, hodApprovalLimitHours: 4 },
-          { name: 'Docking station ports not responding', autoSeverity: 'High', slaResponseHours: 1, slaResolutionHours: 4, hodApprovalLimitHours: 2 },
-          { name: 'Webcam / Microphone not detected', autoSeverity: 'Medium', slaResponseHours: 2, slaResolutionHours: 8, hodApprovalLimitHours: 4 },
+          { name: 'Keyboard or trackpad unresponsive', autoSeverity: 'Medium', autoPriority: 'P3', slaResponseHours: 2, slaResolutionHours: 8, hodApprovalLimitHours: 4 },
+          { name: 'Docking station ports not responding', autoSeverity: 'High', autoPriority: 'P2', slaResponseHours: 1, slaResolutionHours: 4, hodApprovalLimitHours: 2 },
+          { name: 'Webcam / Microphone not detected', autoSeverity: 'Medium', autoPriority: 'P3', slaResponseHours: 2, slaResolutionHours: 8, hodApprovalLimitHours: 4 },
         ],
       },
       {
         name: 'Network Equipment & Routers',
         technicians: ['Daniel Mensah', 'SecureNet Ops'],
         issueTypes: [
-          { name: 'Wi-Fi Access Point offline', autoSeverity: 'Critical', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
-          { name: 'Ethernet wall port dead / No link', autoSeverity: 'High', slaResponseHours: 1, slaResolutionHours: 4, hodApprovalLimitHours: 2 },
-          { name: 'VPN router gateway drop', autoSeverity: 'Critical', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
-          { name: 'Switch port speed / Duplex mismatch', autoSeverity: 'Medium', slaResponseHours: 2, slaResolutionHours: 8, hodApprovalLimitHours: 4 },
+          { name: 'Wi-Fi Access Point offline', autoSeverity: 'Critical', autoPriority: 'P1', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
+          { name: 'Ethernet wall port dead / No link', autoSeverity: 'High', autoPriority: 'P2', slaResponseHours: 1, slaResolutionHours: 4, hodApprovalLimitHours: 2 },
+          { name: 'VPN router gateway drop', autoSeverity: 'Critical', autoPriority: 'P1', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
+          { name: 'Switch port speed / Duplex mismatch', autoSeverity: 'Medium', autoPriority: 'P3', slaResponseHours: 2, slaResolutionHours: 8, hodApprovalLimitHours: 4 },
         ],
       },
     ],
@@ -1048,12 +1106,8 @@ export const vendorAccounts = [
   { id: 'VND-002', name: 'SecureNet Managed Security', contractRef: 'UFC-SOC-2025-012', leadContact: 'SecureNet Ops Lead', email: 'ops@securenet.partner', activeTickets: 1, status: 'Active Certified Partner' },
 ]
 
-export const ticketTypesList = [
-  { id: 'Incident', name: 'Incident', code: 'INC', description: 'Unplanned interruption or reduction in quality of an IT service', defaultWorkflow: 'Standard Ticket Workflow (Published)', defaultPriority: 'High', active: true },
-  { id: 'Service Request', name: 'Service Request', code: 'SRQ', description: 'User request for service provisioning, access permissions, or standard information', defaultWorkflow: 'Standard Ticket Workflow (Published)', defaultPriority: 'Normal', active: true },
-  { id: 'Issue', name: 'Technical Issue', code: 'ISS', description: 'Underlying hardware, peripheral, or application defect requiring troubleshooting', defaultWorkflow: 'Standard Ticket Workflow (Published)', defaultPriority: 'Normal', active: true },
-  { id: 'Change Request', name: 'Change Request', code: 'CR', description: 'Addition, modification, or removal of IT services, configurations, or infrastructure', defaultWorkflow: 'Change Request Workflow (Draft)', defaultPriority: 'Urgent', active: true },
-]
+/** @deprecated use initialTicketTypes */
+export const ticketTypesList = initialTicketTypes
 
 export const ticketStatusesList = [
   { id: 'Draft', name: 'Draft', category: 'Open', color: '#64748B', desc: 'Saved by the requester, not yet submitted for approval', terminal: false, allowReopen: false },
@@ -1096,8 +1150,8 @@ export interface SeverityMaster {
   color: string
   active: boolean
   description: string
-  /** Priority a new ticket of this severity starts with */
-  defaultPriorityId: string
+  /** Reply within (first response), in hours */
+  responseHours: number
 }
 
 export interface PriorityMaster {
@@ -1107,6 +1161,12 @@ export interface PriorityMaster {
   color: string
   active: boolean
   description: string
+  /** Fix within (resolution), in hours */
+  resolutionHours: number
+  /** How long the HOD has to approve or reject, in hours */
+  hodLimitHours: number
+  /** Calendar the SLA clock runs on for tickets of this priority */
+  calendarId: string
 }
 
 export interface BusinessCalendar {
@@ -1121,39 +1181,14 @@ export interface BusinessCalendar {
   holidays: { date: string; name: string }[]
 }
 
-export interface SlaPriorityOverride {
-  responseHours?: number
-  resolutionHours?: number
-}
-
-export interface SlaPolicy {
-  id: string
-  name: string
-  responseHours: number
-  resolutionHours: number
-  /** How long the HOD has to approve or reject */
-  hodLimitHours: number
-  /** Stop the clock while waiting for a clarification */
-  pauseOnClarification: boolean
-  calendarId: string
-  /** Warn when this share of the resolution time is used */
-  warnPercent: number
-  /** Escalate when the resolution time is passed by this many hours */
-  escalateAfterHours: number
-  escalateTo: string
-  /** Optional shorter or longer times for a given priority id */
-  overrides: Record<string, SlaPriorityOverride>
-  active: boolean
-}
-
 export interface MastersSettings {
   /** If false, only staff roles can change the priority a ticket starts with */
   endUserCanChangePriority: boolean
 }
 
 export interface SlaSnapshot {
-  policyId: string
-  policyName: string
+  priorityId: string
+  priorityName: string
   calendarId: string
   responseHours: number
   resolutionHours: number
@@ -1162,18 +1197,19 @@ export interface SlaSnapshot {
   resolutionDue: number
 }
 
+/** Priorities carry the Fix within time and HOD limit. Not linked to severity. Placeholder hours until UFC confirms. */
 export const initialPriorities: PriorityMaster[] = [
-  { id: 'P1', name: 'P1 Urgent', rank: 1, color: '#DC2626', active: true, description: 'Service down or customers affected. Work starts at once.' },
-  { id: 'P2', name: 'P2 High', rank: 2, color: '#EA580C', active: true, description: 'Major function impaired. Same-day attention.' },
-  { id: 'P3', name: 'P3 Normal', rank: 3, color: '#CA8A04', active: true, description: 'Limited impact with a workaround.' },
-  { id: 'P4', name: 'P4 Low', rank: 4, color: '#2563EB', active: true, description: 'Minor issue or a routine request.' },
+  { id: 'P1', resolutionHours: 2, hodLimitHours: 1, name: 'P1 Urgent', rank: 1, color: '#DC2626', active: true, description: 'Service down or customers affected. Work starts at once.', calendarId: 'cal-24x7' },
+  { id: 'P2', resolutionHours: 4, hodLimitHours: 2, name: 'P2 High', rank: 2, color: '#EA580C', active: true, description: 'Major function impaired. Same-day attention.', calendarId: 'cal-24x7' },
+  { id: 'P3', resolutionHours: 8, hodLimitHours: 4, name: 'P3 Normal', rank: 3, color: '#CA8A04', active: true, description: 'Limited impact with a workaround.', calendarId: 'cal-24x7' },
+  { id: 'P4', resolutionHours: 24, hodLimitHours: 8, name: 'P4 Low', rank: 4, color: '#2563EB', active: true, description: 'Minor issue or a routine request.', calendarId: 'cal-24x7' },
 ]
 
 export const initialSeverities: SeverityMaster[] = [
-  { id: 'Critical', name: 'Critical', rank: 1, color: '#DC2626', active: true, description: 'Core banking or channel outage, security incident.', defaultPriorityId: 'P1' },
-  { id: 'High', name: 'High', rank: 2, color: '#EA580C', active: true, description: 'A major function is impaired for many users.', defaultPriorityId: 'P2' },
-  { id: 'Medium', name: 'Medium', rank: 3, color: '#CA8A04', active: true, description: 'Limited impact, a workaround exists.', defaultPriorityId: 'P3' },
-  { id: 'Low', name: 'Low', rank: 4, color: '#2563EB', active: true, description: 'Minor issue or routine request.', defaultPriorityId: 'P4' },
+  { id: 'Critical', name: 'Critical', responseHours: 0.25, rank: 1, color: '#DC2626', active: true, description: 'Core banking or channel outage, security incident.' },
+  { id: 'High', name: 'High', responseHours: 0.5, rank: 2, color: '#EA580C', active: true, description: 'A major function is impaired for many users.' },
+  { id: 'Medium', name: 'Medium', responseHours: 2, rank: 3, color: '#CA8A04', active: true, description: 'Limited impact, a workaround exists.' },
+  { id: 'Low', name: 'Low', responseHours: 4, rank: 4, color: '#2563EB', active: true, description: 'Minor issue or routine request.' },
 ]
 
 /** Example calendars. Working days and hours are placeholders until UFC confirms them. */
@@ -1191,44 +1227,3 @@ export const initialCalendars: BusinessCalendar[] = [
 ]
 
 export const initialMastersSettings: MastersSettings = { endUserCanChangePriority: false }
-
-function fmtH(h: number): string {
-  return h < 1 ? `${Math.round(h * 60)}m` : `${h}h`
-}
-
-/**
- * Starting SLA policies. One policy for every distinct set of times already used
- * by the issue types, and each issue type is pointed at its policy.
- */
-function buildInitialSlaPolicies(): SlaPolicy[] {
-  const byKey = new Map<string, SlaPolicy>()
-  for (const main of classificationTree) {
-    for (const sub of main.subClassifications) {
-      for (const issue of sub.issueTypes) {
-        const key = `${issue.slaResponseHours}-${issue.slaResolutionHours}-${issue.hodApprovalLimitHours}`
-        let policy = byKey.get(key)
-        if (!policy) {
-          policy = {
-            id: `sla-${key.replace(/\./g, 'p')}`,
-            name: `Respond ${fmtH(issue.slaResponseHours)} / Resolve ${fmtH(issue.slaResolutionHours)} / HOD ${fmtH(issue.hodApprovalLimitHours)}`,
-            responseHours: issue.slaResponseHours,
-            resolutionHours: issue.slaResolutionHours,
-            hodLimitHours: issue.hodApprovalLimitHours,
-            pauseOnClarification: true,
-            calendarId: 'cal-24x7',
-            warnPercent: 80,
-            escalateAfterHours: 0,
-            escalateTo: 'Admin Team',
-            overrides: {},
-            active: true,
-          }
-          byKey.set(key, policy)
-        }
-        issue.slaPolicyId = policy.id
-      }
-    }
-  }
-  return [...byKey.values()].sort((a, b) => a.resolutionHours - b.resolutionHours)
-}
-
-export const initialSlaPolicies: SlaPolicy[] = buildInitialSlaPolicies()

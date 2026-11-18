@@ -24,7 +24,6 @@ import {
   Ticket,
   TicketSeverity,
   applicationQuestionnaires,
-  departmentsData,
   policySettings,
 } from '@/app/ticket-data'
 
@@ -38,15 +37,15 @@ export default function CreateTicketPage() {
     submitNewTicket,
     severities,
     priorities,
-    slaPolicies,
     calendars,
-    mastersSettings,
     isBlockedByThreshold,
     closureThreshold,
+    ticketTypes,
+    departments,
   } = useTicketContext()
 
   // Active Directory lookup for user's HOD
-  const userDeptConfig = departmentsData.find(
+  const userDeptConfig = departments.find(
     (d) => d.name === (currentUser.dept || 'Finance & Risk')
   )
 
@@ -55,8 +54,8 @@ export default function CreateTicketPage() {
   const [department, setDepartment] = useState(currentUser.dept || 'Finance & Risk')
   const deptApps = useMemo(() => {
     if (currentRole === 'Admin Team') return undefined
-    return departmentsData.find((d) => d.name === department)?.assignedApplications
-  }, [currentRole, department])
+    return departments.find((d) => d.name === department)?.assignedApplications
+  }, [currentRole, department, departments])
   const availableCategories = useMemo(() => {
     if (!deptApps) return classificationTreeData
     return classificationTreeData
@@ -99,20 +98,17 @@ export default function CreateTicketPage() {
 
   const [subject, setSubject] = useState('')
   const [description, setDescription] = useState('')
-  const [ticketType, setTicketType] = useState<'Incident' | 'Service Request' | 'Issue'>('Incident')
-  // Empty means: use the starting priority of the severity (Priority master)
-  const [priorityOverride, setPriorityOverride] = useState<string>('')
+  // Ticket type from the Ticket Types master. Its workflow template decides the flow.
+  const activeTicketTypes = ticketTypes.filter((t) => t.active)
+  const [ticketType, setTicketType] = useState<string>(activeTicketTypes[0]?.id || 'Incident')
+  const ticketTypeObj = ticketTypes.find((t) => t.id === ticketType)
+  const isCRFlow = ticketTypeObj?.workflow === 'Change Request'
   const [dynamicAnswers, setDynamicAnswers] = useState<Record<string, string>>({})
   const [attachedFiles, setAttachedFiles] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Severity, priority and SLA all come from the masters
-  const canChangePriority = currentRole !== 'End User' || mastersSettings.endUserCanChangePriority
-  const resolved = resolveSla(
-    { severities, priorities, slaPolicies, calendars },
-    activeIssueTypeObj,
-    canChangePriority && priorityOverride ? priorityOverride : undefined
-  )
+  // The issue type gives severity and priority; reply time from the severity, fix time from the priority
+  const resolved = resolveSla({ severities, priorities, calendars }, activeIssueTypeObj)
   const autoSeverity = resolved.severityId
   const severityMaster = severities.find((s) => s.id === autoSeverity)
   const finalPriority = resolved.priorityId
@@ -161,7 +157,6 @@ export default function CreateTicketPage() {
     }
 
     setIsSubmitting(true)
-    const isCR = activeIssueTypeObj?.isChangeRequest || false
     const ticket = submitNewTicket({
       subject,
       description,
@@ -173,8 +168,6 @@ export default function CreateTicketPage() {
       priority: finalPriority,
       department,
       dynamicFields: dynamicAnswers,
-      isCR,
-      crRequiresHod: activeIssueTypeObj?.crRequiresHodApproval !== false,
       hodLimitHours: resolved.hodLimitHours,
       slaHours: targetResolutionHours,
       slaSnapshot,
@@ -333,32 +326,46 @@ export default function CreateTicketPage() {
                   >
                     {availableIssueTypes.map((i) => (
                       <option key={i.name} value={i.name}>
-                        {i.name} {i.isChangeRequest ? '(CR)' : ''}
+                        {i.name}
                       </option>
                     ))}
                   </select>
                 </div>
               </div>
 
-              {/* Ticket type. A Change Request is decided by the issue type. */}
-              <div style={{ marginTop: '14px', maxWidth: '320px' }}>
-                <label className="form-field-label">Ticket Type *</label>
-                {activeIssueTypeObj?.isChangeRequest ? (
-                  <div className="form-input-control" style={{ background: '#FAF5FF', color: '#6B21A8', fontWeight: 600 }}>
-                    Change Request (set by the issue type)
-                  </div>
-                ) : (
+              {/* Ticket type from the Ticket Types master. Its workflow template decides the flow. */}
+              <div style={{ marginTop: '14px', display: 'flex', gap: '12px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                <div style={{ minWidth: '260px' }}>
+                  <label className="form-field-label">Ticket Type *</label>
                   <select
                     className="form-input-control"
                     disabled={isBlockedByThreshold}
                     value={ticketType}
-                    onChange={(e) => setTicketType(e.target.value as 'Incident' | 'Service Request' | 'Issue')}
+                    onChange={(e) => setTicketType(e.target.value)}
                   >
-                    <option value="Incident">Incident</option>
-                    <option value="Service Request">Service Request</option>
-                    <option value="Issue">Issue</option>
+                    {activeTicketTypes.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name} ({t.code})
+                      </option>
+                    ))}
                   </select>
-                )}
+                </div>
+                <span
+                  style={{
+                    padding: '6px 10px',
+                    borderRadius: '999px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    background: isCRFlow ? '#FAF5FF' : '#F0FDF4',
+                    color: isCRFlow ? '#6B21A8' : '#166534',
+                    border: `1px solid ${isCRFlow ? '#E9D5FF' : '#BBF7D0'}`,
+                    marginBottom: '4px',
+                  }}
+                >
+                  {isCRFlow
+                    ? `Change Request workflow${ticketTypeObj?.crRequiresHod ? ' (HOD approval on)' : ' (no HOD approval)'}`
+                    : 'Standard workflow'}
+                </span>
               </div>
 
               {/* Read-Only Auto-Severity Badge (Section 5) */}
@@ -376,7 +383,7 @@ export default function CreateTicketPage() {
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }}>
-                    Auto-Calculated Severity:
+                    Severity:
                   </span>
                   <span
                     className="badge-tag"
@@ -384,12 +391,14 @@ export default function CreateTicketPage() {
                   >
                     {severityMaster?.name || autoSeverity}
                   </span>
+                  <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }}>Priority:</span>
+                  <strong style={{ fontSize: '12px' }}>{priorities.find((p) => p.id === finalPriority)?.name || finalPriority}</strong>
                   <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                    starts as {priorities.find((p) => p.id === finalPriority)?.name || finalPriority}
+                    Reply within {fmtHours(targetResponseHours)}, fix within {fmtHours(targetResolutionHours)}
                   </span>
                 </div>
                 <span style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>
-                  (Set by the issue type in the Severity master. Read-only for users.)
+                  (Set by Admin: severity and priority on the issue type, times in Masters. Read-only.)
                 </span>
               </div>
             </div>
@@ -618,41 +627,6 @@ export default function CreateTicketPage() {
                 </div>
               )}
 
-              {/* Priority: starts from the severity, can be changed where the master allows */}
-              {canChangePriority && (
-                <div
-                  style={{
-                    padding: '14px',
-                    background: '#FFFBEB',
-                    border: '1px solid #FDE68A',
-                    borderRadius: '8px',
-                  }}
-                >
-                  <label className="form-field-label" style={{ color: '#92400E' }}>
-                    Priority (from the Priority master)
-                  </label>
-                  <select
-                    className="form-input-control"
-                    value={priorityOverride}
-                    onChange={(e) => setPriorityOverride(e.target.value)}
-                  >
-                    <option value="">
-                      Starting priority of the severity ({priorities.find((p) => p.id === severityMaster?.defaultPriorityId)?.name || 'none'})
-                    </option>
-                    {[...priorities]
-                      .filter((p) => p.active)
-                      .sort((a, b) => a.rank - b.rank)
-                      .map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name}
-                        </option>
-                      ))}
-                  </select>
-                  <span style={{ fontSize: '11px', color: '#B45309', marginTop: '4px', display: 'block' }}>
-                    The priority can change the response and resolution times if the SLA policy has times for it.
-                  </span>
-                </div>
-              )}
             </div>
 
             {/* Bottom Action Strip */}
@@ -758,7 +732,7 @@ export default function CreateTicketPage() {
                     Response: {fmtHours(targetResponseHours)} &bull; Resolution: {fmtHours(targetResolutionHours)}
                   </div>
                   <div style={{ fontSize: '11.5px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                    {resolved.policy?.name || 'No SLA policy'} &bull; {resolved.calendar.name}
+                    {resolved.priorityName} &bull; {resolved.calendar.name}
                   </div>
                   <div style={{ fontSize: '11.5px', color: 'var(--text-secondary)' }}>
                     Due if raised now: {new Date(slaSnapshot.resolutionDue).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
@@ -777,8 +751,8 @@ export default function CreateTicketPage() {
                     APPROVAL GOVERNANCE
                   </span>
                   <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-main)', marginTop: '2px' }}>
-                    {activeIssueTypeObj?.isChangeRequest
-                      ? 'Admin approval first, then HOD if switched on, then Management'
+                    {isCRFlow
+                      ? `Admin approval first${ticketTypeObj?.crRequiresHod ? ', then HOD' : ''}, then Management`
                       : currentRole === 'HOD'
                       ? 'Raised by the HOD, no separate approval'
                       : `${userDeptConfig?.hodName || 'Department Head'} (HOD) • ${fmtHours(resolved.hodLimitHours)} limit`}
@@ -788,17 +762,17 @@ export default function CreateTicketPage() {
                 <div
                   style={{
                     padding: '10px 12px',
-                    background: activeIssueTypeObj?.isChangeRequest ? '#FAF5FF' : '#F0FDF4',
+                    background: isCRFlow ? '#FAF5FF' : '#F0FDF4',
                     borderRadius: '8px',
                     border: `1px solid ${
-                      activeIssueTypeObj?.isChangeRequest ? '#E9D5FF' : '#BBF7D0'
+                      isCRFlow ? '#E9D5FF' : '#BBF7D0'
                     }`,
                   }}
                 >
                   <span
                     style={{
                       fontSize: '11px',
-                      color: activeIssueTypeObj?.isChangeRequest ? '#7C3AED' : '#15803D',
+                      color: isCRFlow ? '#7C3AED' : '#15803D',
                       fontWeight: 600,
                     }}
                   >
@@ -808,13 +782,13 @@ export default function CreateTicketPage() {
                     style={{
                       fontSize: '13px',
                       fontWeight: 700,
-                      color: activeIssueTypeObj?.isChangeRequest ? '#6B21A8' : '#166534',
+                      color: isCRFlow ? '#6B21A8' : '#166534',
                       marginTop: '2px',
                     }}
                   >
-                    {activeIssueTypeObj?.isChangeRequest
-                      ? 'Change Request Pipeline (Admin Review 1st)'
-                      : 'Standard Ticket Workflow'}
+                    {isCRFlow
+                      ? `Change Request workflow (from ${ticketTypeObj?.name})`
+                      : `Standard workflow (from ${ticketTypeObj?.name || 'ticket type'})`}
                   </div>
                 </div>
               </div>

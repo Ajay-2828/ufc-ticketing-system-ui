@@ -57,7 +57,6 @@ import {
   TicketSeverity,
   classificationTree as initialClassificationTree,
   departmentsData as initialDepartmentsData,
-  ticketTypesList as initialTicketTypesList,
   ticketStatusesList as initialTicketStatusesList,
   DepartmentConfig,
   COMMON_MASTER_ISSUES,
@@ -95,21 +94,21 @@ const DIGITAL_FINTECH_PRESET: ClassificationConfig[] = [
         name: 'Retail Mobile App (iOS & Android)',
         technicians: ['Maya Patel', 'Ibrahim Sani'],
         issueTypes: [
-          { name: 'Biometric face login handshake failure', autoSeverity: 'Critical', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
-          { name: 'Push notification OTP delivery delay', autoSeverity: 'Critical', slaResponseHours: 0.25, slaResolutionHours: 1, hodApprovalLimitHours: 0.5 },
-          { name: 'Bill payment debit without confirmation', autoSeverity: 'Critical', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
-          { name: 'Card activation biometric scan rejection', autoSeverity: 'High', slaResponseHours: 1, slaResolutionHours: 4, hodApprovalLimitHours: 2 },
-          { name: 'Mobile release update v4.2 rollback (CR)', autoSeverity: 'High', slaResponseHours: 2, slaResolutionHours: 24, hodApprovalLimitHours: 12, isChangeRequest: true },
+          { name: 'Biometric face login handshake failure', autoSeverity: 'Critical', autoPriority: 'P1', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
+          { name: 'Push notification OTP delivery delay', autoSeverity: 'Critical', autoPriority: 'P1', slaResponseHours: 0.25, slaResolutionHours: 1, hodApprovalLimitHours: 0.5 },
+          { name: 'Bill payment debit without confirmation', autoSeverity: 'Critical', autoPriority: 'P1', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
+          { name: 'Card activation biometric scan rejection', autoSeverity: 'High', autoPriority: 'P2', slaResponseHours: 1, slaResolutionHours: 4, hodApprovalLimitHours: 2 },
+          { name: 'Mobile release update v4.2 rollback (CR)', autoSeverity: 'High', autoPriority: 'P2', slaResponseHours: 2, slaResolutionHours: 24, hodApprovalLimitHours: 12, isChangeRequest: true },
         ],
       },
       {
         name: 'Corporate Internet Banking (CIB)',
         technicians: ['Maya Patel', 'TechServe Ltd'],
         issueTypes: [
-          { name: 'Dual-authorizer digital signature timeout', autoSeverity: 'Critical', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
-          { name: 'Bulk payroll salary batch upload parse error', autoSeverity: 'Critical', slaResponseHours: 0.5, slaResolutionHours: 1.5, hodApprovalLimitHours: 1 },
-          { name: 'Foreign exchange live rate feed freeze', autoSeverity: 'High', slaResponseHours: 1, slaResolutionHours: 3, hodApprovalLimitHours: 1.5 },
-          { name: 'Corporate user RBAC role assignment', autoSeverity: 'Medium', slaResponseHours: 2, slaResolutionHours: 8, hodApprovalLimitHours: 4 },
+          { name: 'Dual-authorizer digital signature timeout', autoSeverity: 'Critical', autoPriority: 'P1', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
+          { name: 'Bulk payroll salary batch upload parse error', autoSeverity: 'Critical', autoPriority: 'P1', slaResponseHours: 0.5, slaResolutionHours: 1.5, hodApprovalLimitHours: 1 },
+          { name: 'Foreign exchange live rate feed freeze', autoSeverity: 'High', autoPriority: 'P2', slaResponseHours: 1, slaResolutionHours: 3, hodApprovalLimitHours: 1.5 },
+          { name: 'Corporate user RBAC role assignment', autoSeverity: 'Medium', autoPriority: 'P3', slaResponseHours: 2, slaResolutionHours: 8, hodApprovalLimitHours: 4 },
         ],
       },
     ],
@@ -122,18 +121,18 @@ const DIGITAL_FINTECH_PRESET: ClassificationConfig[] = [
         name: 'Instant Payment Switch (IPS / CBO)',
         technicians: ['Daniel Mensah', 'TechServe Ltd'],
         issueTypes: [
-          { name: 'IPS gateway timeout on Central Bank rail', autoSeverity: 'Critical', slaResponseHours: 0.25, slaResolutionHours: 1, hodApprovalLimitHours: 0.5 },
-          { name: 'Peer-to-peer mobile proxy resolution failure', autoSeverity: 'High', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
-          { name: 'Daily clearing batch reconciliation discrepancy', autoSeverity: 'High', slaResponseHours: 1, slaResolutionHours: 4, hodApprovalLimitHours: 2 },
+          { name: 'IPS gateway timeout on Central Bank rail', autoSeverity: 'Critical', autoPriority: 'P1', slaResponseHours: 0.25, slaResolutionHours: 1, hodApprovalLimitHours: 0.5 },
+          { name: 'Peer-to-peer mobile proxy resolution failure', autoSeverity: 'High', autoPriority: 'P2', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
+          { name: 'Daily clearing batch reconciliation discrepancy', autoSeverity: 'High', autoPriority: 'P2', slaResponseHours: 1, slaResolutionHours: 4, hodApprovalLimitHours: 2 },
         ],
       },
       {
         name: 'Card Management & Payment Gateway',
         technicians: ['Maya Patel', 'SecureNet Ops'],
         issueTypes: [
-          { name: '3D Secure 2.0 OTP verification gateway drop', autoSeverity: 'Critical', slaResponseHours: 0.25, slaResolutionHours: 1, hodApprovalLimitHours: 0.5 },
-          { name: 'Visa / Mastercard chargeback interface timeout', autoSeverity: 'Medium', slaResponseHours: 2, slaResolutionHours: 8, hodApprovalLimitHours: 4 },
-          { name: 'Merchant POS key injection certificate renewal (CR)', autoSeverity: 'High', slaResponseHours: 4, slaResolutionHours: 24, hodApprovalLimitHours: 12, isChangeRequest: true },
+          { name: '3D Secure 2.0 OTP verification gateway drop', autoSeverity: 'Critical', autoPriority: 'P1', slaResponseHours: 0.25, slaResolutionHours: 1, hodApprovalLimitHours: 0.5 },
+          { name: 'Visa / Mastercard chargeback interface timeout', autoSeverity: 'Medium', autoPriority: 'P3', slaResponseHours: 2, slaResolutionHours: 8, hodApprovalLimitHours: 4 },
+          { name: 'Merchant POS key injection certificate renewal (CR)', autoSeverity: 'High', autoPriority: 'P2', slaResponseHours: 4, slaResolutionHours: 24, hodApprovalLimitHours: 12, isChangeRequest: true },
         ],
       },
     ],
@@ -146,17 +145,17 @@ const DIGITAL_FINTECH_PRESET: ClassificationConfig[] = [
         name: 'AML & Sanctions Screening Engine',
         technicians: ['Daniel Mensah', 'Maya Patel'],
         issueTypes: [
-          { name: 'Real-time wire transfer false positive block', autoSeverity: 'High', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
-          { name: 'OFAC / UN list daily delta sync failure', autoSeverity: 'Critical', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
-          { name: 'High-risk PEP customer alert generation stall', autoSeverity: 'High', slaResponseHours: 1, slaResolutionHours: 4, hodApprovalLimitHours: 2 },
+          { name: 'Real-time wire transfer false positive block', autoSeverity: 'High', autoPriority: 'P2', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
+          { name: 'OFAC / UN list daily delta sync failure', autoSeverity: 'Critical', autoPriority: 'P1', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
+          { name: 'High-risk PEP customer alert generation stall', autoSeverity: 'High', autoPriority: 'P2', slaResponseHours: 1, slaResolutionHours: 4, hodApprovalLimitHours: 2 },
         ],
       },
       {
         name: 'Transaction Fraud Scoring',
         technicians: ['Ibrahim Sani', 'SecureNet Ops'],
         issueTypes: [
-          { name: 'Fraud scoring API latency spike (>800ms)', autoSeverity: 'Critical', slaResponseHours: 0.25, slaResolutionHours: 1, hodApprovalLimitHours: 0.5 },
-          { name: 'Card transaction behavioral rule tuning (CR)', autoSeverity: 'Medium', slaResponseHours: 4, slaResolutionHours: 16, hodApprovalLimitHours: 8, isChangeRequest: true },
+          { name: 'Fraud scoring API latency spike (>800ms)', autoSeverity: 'Critical', autoPriority: 'P1', slaResponseHours: 0.25, slaResolutionHours: 1, hodApprovalLimitHours: 0.5 },
+          { name: 'Card transaction behavioral rule tuning (CR)', autoSeverity: 'Medium', autoPriority: 'P3', slaResponseHours: 4, slaResolutionHours: 16, hodApprovalLimitHours: 8, isChangeRequest: true },
         ],
       },
     ],
@@ -173,19 +172,19 @@ const ENTERPRISE_IT_PRESET: ClassificationConfig[] = [
         name: 'Microsoft 365 & Exchange Online',
         technicians: ['Ibrahim Sani', 'Daniel Mensah'],
         issueTypes: [
-          { name: 'Executive email mailbox delivery bounce', autoSeverity: 'Critical', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
-          { name: 'Shared mailbox delegation permission error', autoSeverity: 'Medium', slaResponseHours: 2, slaResolutionHours: 8, hodApprovalLimitHours: 4 },
-          { name: 'Teams audio conferencing gateway degradation', autoSeverity: 'High', slaResponseHours: 1, slaResolutionHours: 3, hodApprovalLimitHours: 1.5 },
-          { name: 'Exchange retention policy compliance update (CR)', autoSeverity: 'Low', slaResponseHours: 4, slaResolutionHours: 48, hodApprovalLimitHours: 24, isChangeRequest: true },
+          { name: 'Executive email mailbox delivery bounce', autoSeverity: 'Critical', autoPriority: 'P1', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
+          { name: 'Shared mailbox delegation permission error', autoSeverity: 'Medium', autoPriority: 'P3', slaResponseHours: 2, slaResolutionHours: 8, hodApprovalLimitHours: 4 },
+          { name: 'Teams audio conferencing gateway degradation', autoSeverity: 'High', autoPriority: 'P2', slaResponseHours: 1, slaResolutionHours: 3, hodApprovalLimitHours: 1.5 },
+          { name: 'Exchange retention policy compliance update (CR)', autoSeverity: 'Low', autoPriority: 'P4', slaResponseHours: 4, slaResolutionHours: 48, hodApprovalLimitHours: 24, isChangeRequest: true },
         ],
       },
       {
         name: 'Enterprise ERP & HRMS',
         technicians: ['Maya Patel', 'TechServe Ltd'],
         issueTypes: [
-          { name: 'Payroll run batch calculation exception', autoSeverity: 'Critical', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
-          { name: 'Employee leave balance synchronization mismatch', autoSeverity: 'Medium', slaResponseHours: 2, slaResolutionHours: 8, hodApprovalLimitHours: 4 },
-          { name: 'ERP monthly financial book closing lock error', autoSeverity: 'High', slaResponseHours: 1, slaResolutionHours: 4, hodApprovalLimitHours: 2 },
+          { name: 'Payroll run batch calculation exception', autoSeverity: 'Critical', autoPriority: 'P1', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
+          { name: 'Employee leave balance synchronization mismatch', autoSeverity: 'Medium', autoPriority: 'P3', slaResponseHours: 2, slaResolutionHours: 8, hodApprovalLimitHours: 4 },
+          { name: 'ERP monthly financial book closing lock error', autoSeverity: 'High', autoPriority: 'P2', slaResponseHours: 1, slaResolutionHours: 4, hodApprovalLimitHours: 2 },
         ],
       },
     ],
@@ -198,17 +197,17 @@ const ENTERPRISE_IT_PRESET: ClassificationConfig[] = [
         name: 'Endpoint Detection & Response (EDR)',
         technicians: ['Daniel Mensah', 'SecureNet Ops'],
         issueTypes: [
-          { name: 'Ransomware / Malicious script alert quarantine', autoSeverity: 'Critical', slaResponseHours: 0.25, slaResolutionHours: 1, hodApprovalLimitHours: 0.5 },
-          { name: 'EDR sensor disconnected on critical server', autoSeverity: 'High', slaResponseHours: 1, slaResolutionHours: 3, hodApprovalLimitHours: 1.5 },
-          { name: 'USB storage device unauthorized mount', autoSeverity: 'High', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
+          { name: 'Ransomware / Malicious script alert quarantine', autoSeverity: 'Critical', autoPriority: 'P1', slaResponseHours: 0.25, slaResolutionHours: 1, hodApprovalLimitHours: 0.5 },
+          { name: 'EDR sensor disconnected on critical server', autoSeverity: 'High', autoPriority: 'P2', slaResponseHours: 1, slaResolutionHours: 3, hodApprovalLimitHours: 1.5 },
+          { name: 'USB storage device unauthorized mount', autoSeverity: 'High', autoPriority: 'P2', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
         ],
       },
       {
         name: 'Zero Trust Network Access (ZTNA)',
         technicians: ['Ibrahim Sani', 'SecureNet Ops'],
         issueTypes: [
-          { name: 'ZTNA gateway certificate expiry alert', autoSeverity: 'Critical', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
-          { name: 'Branch office secure web proxy bypass attempt', autoSeverity: 'High', slaResponseHours: 1, slaResolutionHours: 4, hodApprovalLimitHours: 2 },
+          { name: 'ZTNA gateway certificate expiry alert', autoSeverity: 'Critical', autoPriority: 'P1', slaResponseHours: 0.5, slaResolutionHours: 2, hodApprovalLimitHours: 1 },
+          { name: 'Branch office secure web proxy bypass attempt', autoSeverity: 'High', autoPriority: 'P2', slaResponseHours: 1, slaResolutionHours: 4, hodApprovalLimitHours: 2 },
         ],
       },
     ],
@@ -222,16 +221,40 @@ export function ClassificationManager({
   onUpdateClassificationTree,
 }: ClassificationManagerProps) {
   // Severity and SLA come from the masters (Administration, Masters)
-  const { severities, slaPolicies } = useTicketContext()
+  const { severities, priorities, departments, setDepartments } = useTicketContext()
   const activeSeverities = [...severities].filter((s) => s.active).sort((a, b) => a.rank - b.rank)
-  const activePolicies = slaPolicies.filter((p) => p.active)
-  const policySummary = (id?: string) => {
-    const p = slaPolicies.find((x) => x.id === id)
-    return p
-      ? `Response ${fmtHours(p.responseHours)}, resolution ${fmtHours(p.resolutionHours)}, HOD limit ${fmtHours(p.hodLimitHours)}. Change these under Masters.`
-      : 'No SLA policy selected.'
+  const activePriorities = [...priorities].filter((p) => p.active).sort((a, b) => a.rank - b.rank)
+  // Reply within comes from the severity; Fix within and the HOD limit come from the priority (Masters)
+  const slaFor = (issue: Pick<IssueTypeConfig, 'autoSeverity' | 'autoPriority'>) => {
+    const sev = severities.find((x) => x.id === issue.autoSeverity)
+    const pri = priorities.find((x) => x.id === issue.autoPriority)
+    return {
+      severityName: sev?.name || issue.autoSeverity,
+      priorityName: pri?.name || issue.autoPriority || 'Not set',
+      reply: sev ? fmtHours(sev.responseHours) : '-',
+      fix: pri ? fmtHours(pri.resolutionHours) : '-',
+      hod: pri ? fmtHours(pri.hodLimitHours) : '-',
+      responseHours: sev?.responseHours,
+      resolutionHours: pri?.resolutionHours,
+      hodLimitHours: pri?.hodLimitHours,
+    }
   }
-  const [newIssuePolicyId, setNewIssuePolicyId] = useState(slaPolicies[0]?.id || '')
+  // Read-only line under the severity and priority pickers
+  const slaLine = (issue: Pick<IssueTypeConfig, 'autoSeverity' | 'autoPriority'>) => {
+    const t = slaFor(issue)
+    const odd = t.responseHours !== undefined && t.resolutionHours !== undefined && t.resolutionHours < t.responseHours
+    return (
+      <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+        Reply within <strong>{t.reply}</strong> (from the severity), fix within <strong>{t.fix}</strong> and HOD limit{' '}
+        <strong>{t.hod}</strong> (from the priority). Change these times in Administration &gt; Masters.
+        {odd && (
+          <span style={{ display: 'block', color: '#B45309', marginTop: '4px' }}>
+            Note: the fix time is shorter than the reply time for this pair.
+          </span>
+        )}
+      </div>
+    )
+  }
   // Page 1: 5 Sub-Tabs per Section 15
   const [activeTab, setActiveTab] = useState<AdminClassificationTab>('tree')
 
@@ -309,6 +332,9 @@ export function ClassificationManager({
   const [newSubName, setNewSubName] = useState('')
   const [newSubTech1, setNewSubTech1] = useState(availableITStaff[0].name)
   const [newSubTech2, setNewSubTech2] = useState('None')
+  // User departments that can raise tickets for the new sub-classification
+  const [newSubDepts, setNewSubDepts] = useState<string[]>([])
+  const [newSubDeptError, setNewSubDeptError] = useState('')
 
   // Form states for adding issue type
   const [newIssueMainTarget, setNewIssueMainTarget] = useState(classificationTree[0]?.name || '')
@@ -317,14 +343,11 @@ export function ClassificationManager({
   )
   const [newIssueName, setNewIssueName] = useState('')
   const [newIssueSeverity, setNewIssueSeverity] = useState<TicketSeverity>('Medium')
-  const [newIssueResponseHours, setNewIssueResponseHours] = useState(1)
-  const [newIssueResolutionHours, setNewIssueResolutionHours] = useState(4)
-  const [newIssueHodLimitHours, setNewIssueHodLimitHours] = useState(2)
+  const [newIssuePriority, setNewIssuePriority] = useState('P3')
   const [newIssueIsCR, setNewIssueIsCR] = useState(false)
   const [newIssueRequiresHodApproval, setNewIssueRequiresHodApproval] = useState(true)
 
   // TAB 2: Applications & Access State
-  const [departments, setDepartments] = useState<DepartmentConfig[]>(initialDepartmentsData)
   const [deptSearch, setDeptSearch] = useState('')
   const [deptCategoryFilter, setDeptCategoryFilter] = useState<'All' | 'Software' | 'Hardware'>('All')
 
@@ -343,15 +366,6 @@ export function ClassificationManager({
     if (deptCategoryFilter === 'All') return allSubClassifications
     return allSubClassifications.filter((s) => s.mainName.toLowerCase().includes(deptCategoryFilter.toLowerCase()))
   }, [allSubClassifications, deptCategoryFilter])
-
-  // TAB 3: Ticket Types State
-  const [ticketTypes, setTicketTypes] = useState(initialTicketTypesList)
-  const [showAddTypeModal, setShowAddTypeModal] = useState(false)
-  const [newTypeName, setNewTypeName] = useState('')
-  const [newTypeCode, setNewTypeCode] = useState('')
-  const [newTypeWorkflow, setNewTypeWorkflow] = useState('Standard Ticket Workflow (Published)')
-  const [newTypePriority, setNewTypePriority] = useState('Normal')
-  const [newTypeDesc, setNewTypeDesc] = useState('')
 
   // TAB 4: Severity & Priority State
   const [severitySettings, setSeveritySettings] = useState([
@@ -536,7 +550,7 @@ export function ClassificationManager({
           issueTypes: [
             {
               name: 'General Service Inquiry',
-              autoSeverity: 'Medium',
+              autoSeverity: 'Medium', autoPriority: 'P3',
               slaResponseHours: 2,
               slaResolutionHours: 8,
               hodApprovalLimitHours: 4,
@@ -560,6 +574,10 @@ export function ClassificationManager({
   const handleCreateSubClassification = (e: React.FormEvent) => {
     e.preventDefault()
     if (!newSubName.trim()) return
+    if (newSubDepts.length === 0) {
+      setNewSubDeptError('Select at least one department.')
+      return
+    }
 
     const selectedTechs = [newSubTech1]
     if (newSubTech2 && newSubTech2 !== 'None' && newSubTech2 !== newSubTech1) {
@@ -569,17 +587,18 @@ export function ClassificationManager({
     const newSub: SubClassificationConfig = {
       name: newSubName.trim(),
       technicians: selectedTechs,
+      departments: newSubDepts,
       issueTypes: [
         {
           name: `${newSubName.trim()} System Outage`,
-          autoSeverity: 'Critical',
+          autoSeverity: 'Critical', autoPriority: 'P1',
           slaResponseHours: 0.5,
           slaResolutionHours: 2,
           hodApprovalLimitHours: 1,
         },
         {
           name: `${newSubName.trim()} Routine Request`,
-          autoSeverity: 'Medium',
+          autoSeverity: 'Medium', autoPriority: 'P3',
           slaResponseHours: 2,
           slaResolutionHours: 8,
           hodApprovalLimitHours: 4,
@@ -596,12 +615,22 @@ export function ClassificationManager({
     })
 
     onUpdateClassificationTree(updated)
+    // Give the chosen departments access (same as ticking them in Applications & Access)
+    setDepartments((prev) =>
+      prev.map((d) =>
+        newSubDepts.includes(d.name) && !d.assignedApplications.includes(newSub.name)
+          ? { ...d, assignedApplications: [...d.assignedApplications, newSub.name] }
+          : d
+      )
+    )
     setSelectedSub(newSub.name)
     setNewSubName('')
+    setNewSubDepts([])
+    setNewSubDeptError('')
     setShowAddSubModal(false)
     setHasUnsavedChanges(true)
     triggerToast(
-      `Sub-service "${newSub.name}" created with designated technicians: ${selectedTechs.join(', ')}!`
+      `Sub-classification "${newSub.name}" created. Technicians: ${selectedTechs.join(', ')}. Departments: ${newSubDepts.join(', ')}.`
     )
   }
 
@@ -616,12 +645,7 @@ export function ClassificationManager({
     const newIssue: IssueTypeConfig = {
       name: newIssueName.trim(),
       autoSeverity: newIssueSeverity,
-      slaPolicyId: newIssuePolicyId || undefined,
-      slaResponseHours: slaPolicies.find((p) => p.id === newIssuePolicyId)?.responseHours ?? (Number(newIssueResponseHours) || 1),
-      slaResolutionHours: slaPolicies.find((p) => p.id === newIssuePolicyId)?.resolutionHours ?? (Number(newIssueResolutionHours) || 4),
-      hodApprovalLimitHours: slaPolicies.find((p) => p.id === newIssuePolicyId)?.hodLimitHours ?? (Number(newIssueHodLimitHours) || 2),
-      isChangeRequest: newIssueIsCR,
-      crRequiresHodApproval: newIssueIsCR ? newIssueRequiresHodApproval : undefined,
+      autoPriority: newIssuePriority,
     }
 
     const updated = classificationTree.map((main) => {
@@ -709,9 +733,7 @@ export function ClassificationManager({
         return {
           name: name,
           autoSeverity: master?.autoSeverity || 'Medium',
-          slaResponseHours: master?.slaResponseHours || 1,
-          slaResolutionHours: master?.slaResolutionHours || 4,
-          hodApprovalLimitHours: master?.hodApprovalLimitHours || 2,
+          autoPriority: master?.autoPriority || 'P3',
         }
       })
 
@@ -863,24 +885,29 @@ export function ClassificationManager({
       'Sub-Classification',
       'Catalog Issue Type',
       'Designated Technicians',
-      'Auto Severity',
-      'Response SLA (Hours)',
-      'Resolution SLA (Hours)',
+      'Severity',
+      'Priority',
+      'Reply Within (Hours)',
+      'Fix Within (Hours)',
       'HOD Limit (Hours)',
       'Workflow Path',
     ]
 
-    const rows = allMatrixRows.map((r) => [
+    const rows = allMatrixRows.map((r) => {
+      const s = slaFor(r.issue)
+      return [
       `"${r.category.replace(/"/g, '""')}"`,
       `"${r.sub.replace(/"/g, '""')}"`,
       `"${r.issue.name.replace(/"/g, '""')}"`,
       `"${r.technicians.join(' & ').replace(/"/g, '""')}"`,
-      `"${r.issue.autoSeverity}"`,
-      r.issue.slaResponseHours,
-      r.issue.slaResolutionHours,
-      r.issue.hodApprovalLimitHours,
+      `"${s.severityName}"`,
+      `"${s.priorityName}"`,
+      s.responseHours ?? '',
+      s.resolutionHours ?? '',
+      s.hodLimitHours ?? '',
       `"${r.issue.isChangeRequest ? (r.issue.crRequiresHodApproval !== false ? 'Change Request (Admin ➔ HOD)' : 'Change Request (Admin Only)') : 'Standard'}"`,
-    ])
+      ]
+    })
 
     const csvContent =
       'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n')
@@ -1010,37 +1037,6 @@ export function ClassificationManager({
     triggerToast(`Revoked ${systemName} from all departments`)
   }
 
-  // TAB 3: Ticket Types Handlers
-  const handleToggleTypeActive = (typeId: string) => {
-    setTicketTypes((prev) =>
-      prev.map((t) => (t.id === typeId ? { ...t, active: !t.active } : t))
-    )
-    setHasUnsavedChanges(true)
-  }
-
-  const handleCreateTicketType = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newTypeName.trim() || !newTypeCode.trim()) return
-
-    const newType = {
-      id: newTypeName.trim(),
-      name: newTypeName.trim(),
-      code: newTypeCode.trim().toUpperCase(),
-      description: newTypeDesc.trim() || 'Custom business ticket type',
-      defaultWorkflow: newTypeWorkflow,
-      defaultPriority: newTypePriority,
-      active: true,
-    }
-
-    setTicketTypes((prev) => [...prev, newType])
-    setNewTypeName('')
-    setNewTypeCode('')
-    setNewTypeDesc('')
-    setShowAddTypeModal(false)
-    setHasUnsavedChanges(true)
-    triggerToast(`Added ticket type "${newType.name}" (${newType.code})`)
-  }
-
   // Save / Discard Page Changes
   const handleSavePageChanges = () => {
     setHasUnsavedChanges(false)
@@ -1050,7 +1046,6 @@ export function ClassificationManager({
   const handleDiscardPageChanges = () => {
     onUpdateClassificationTree(initialClassificationTree)
     setDepartments(initialDepartmentsData)
-    setTicketTypes(initialTicketTypesList)
     setTicketStatuses(initialTicketStatusesList)
     setHasUnsavedChanges(false)
     triggerToast('All unsaved changes discarded.')
@@ -1587,9 +1582,9 @@ export function ClassificationManager({
                       sub: selectedSub,
                       issueName: first.name,
                       severity: first.autoSeverity,
-                      responseHours: first.slaResponseHours,
-                      resolutionHours: first.slaResolutionHours,
-                      hodLimitHours: first.hodApprovalLimitHours,
+                      responseHours: slaFor(first).responseHours ?? 0,
+                      resolutionHours: slaFor(first).resolutionHours ?? 0,
+                      hodLimitHours: slaFor(first).hodLimitHours ?? 0,
                       isCR: !!first.isChangeRequest,
                       technicians: activeSub.technicians,
                     })
@@ -1813,6 +1808,47 @@ export function ClassificationManager({
             </div>
           </div>
 
+          {/* Departments that can raise tickets for this sub-classification */}
+          <div className="modern-card" style={{ padding: '20px', marginBottom: 0, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Users size={18} color="var(--primary)" />
+                <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: 'var(--text-main)' }}>
+                  Departments that can raise tickets ({departments.filter((d) => d.assignedApplications.includes(activeSub.name)).length} of {departments.length})
+                </h3>
+              </div>
+              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                Click a department to give or remove access. Also shown under Users &amp; Access &gt; Departments.
+              </span>
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              {departments.map((d) => {
+                const on = d.assignedApplications.includes(activeSub.name)
+                return (
+                  <button
+                    key={d.name}
+                    type="button"
+                    onClick={() => handleToggleDepartmentApp(d.name, activeSub.name)}
+                    aria-pressed={on}
+                    style={{
+                      padding: '5px 12px',
+                      borderRadius: '999px',
+                      fontSize: '12.5px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      background: on ? '#ECFDF5' : '#FFFFFF',
+                      color: on ? '#047857' : 'var(--text-secondary)',
+                      border: `1px solid ${on ? '#6EE7B7' : 'var(--border)'}`,
+                    }}
+                  >
+                    {on ? '✓ ' : '+ '}
+                    {d.name}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
           {/* SECTION 2: CONFIGURED ISSUES & SLAS */}
           <div
             className="modern-card"
@@ -1895,17 +1931,18 @@ export function ClassificationManager({
               <table className="custom-data-table">
                 <thead>
                   <tr>
-                    <th style={{ width: '34%' }}>Issue Name &amp; Routing</th>
-                    <th style={{ width: '16%' }}>Severity Tier</th>
-                    <th style={{ width: '26%' }}>Guaranteed Turnaround (SLA)</th>
-                    <th style={{ width: '14%' }}>Workflow Route</th>
-                    <th style={{ width: '10%', textAlign: 'right' }}>Actions</th>
+                    <th style={{ width: '32%' }}>Problem</th>
+                    <th style={{ width: '13%' }}>Severity</th>
+                    <th style={{ width: '13%' }}>Priority</th>
+                    <th style={{ width: '13%' }}>Reply within</th>
+                    <th style={{ width: '13%' }}>Fix within</th>
+                    <th style={{ width: '16%', textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredIssues.length === 0 ? (
                     <tr>
-                      <td colSpan={5} style={{ textAlign: 'center', padding: '28px 16px', color: 'var(--text-muted)' }}>
+                      <td colSpan={6} style={{ textAlign: 'center', padding: '28px 16px', color: 'var(--text-muted)' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
                           <AlertCircle size={22} color="#94A3B8" />
                           <span style={{ fontSize: '13px', fontWeight: 500 }}>
@@ -1933,6 +1970,7 @@ export function ClassificationManager({
                       const isCrit = sev === 'critical'
                       const isHigh = sev === 'high'
                       const isMed = sev === 'medium'
+                      const sla = slaFor(issue)
 
                       return (
                         <tr key={issue.name}>
@@ -1968,95 +2006,28 @@ export function ClassificationManager({
                                   background: isCrit ? '#DC2626' : isHigh ? '#D97706' : isMed ? '#2563EB' : '#94A3B8',
                                 }}
                               />
-                              {issue.autoSeverity}
+                              {sla.severityName}
                             </span>
                           </td>
 
                           <td>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                              <span
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '4px',
-                                  background: '#ECFDF5',
-                                  color: '#059669',
-                                  border: '1px solid #A7F3D0',
-                                  borderRadius: '5px',
-                                  padding: '2px 7px',
-                                  fontSize: '11px',
-                                  fontWeight: 700,
-                                }}
-                              >
-                                <Clock size={11} />
-                                {issue.slaResolutionHours >= 1
-                                  ? `${issue.slaResolutionHours}h res`
-                                  : `${Math.round(issue.slaResolutionHours * 60)}m res`}
-                              </span>
-
-                              <span
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '3px',
-                                  background: '#F0F9FF',
-                                  color: '#0284C7',
-                                  border: '1px solid #BAE6FD',
-                                  borderRadius: '5px',
-                                  padding: '2px 6px',
-                                  fontSize: '10.5px',
-                                  fontWeight: 600,
-                                }}
-                              >
-                                <Zap size={10} />
-                                {issue.slaResponseHours >= 1
-                                  ? `${issue.slaResponseHours}h resp`
-                                  : `${Math.round(issue.slaResponseHours * 60)}m resp`}
-                              </span>
-                            </div>
+                            <strong style={{ fontSize: '12px', color: 'var(--text-main)' }}>{sla.priorityName}</strong>
                           </td>
 
                           <td>
-                            {issue.isChangeRequest ? (
-                              <span
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '4px',
-                                  background: '#FAF5FF',
-                                  color: '#7C3AED',
-                                  border: '1px solid #E9D5FF',
-                                  padding: '2px 7px',
-                                  borderRadius: '6px',
-                                  fontSize: '10.5px',
-                                  fontWeight: 700,
-                                }}
-                              >
-                                <ShieldCheck size={11} />
-                                {issue.crRequiresHodApproval !== false
-                                  ? 'Change Request'
-                                  : 'CR (Admin Only)'}
-                              </span>
-                            ) : (
-                              <span
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '4px',
-                                  background: '#F8FAFC',
-                                  color: '#475569',
-                                  border: '1px solid #E2E8F0',
-                                  padding: '2px 7px',
-                                  borderRadius: '6px',
-                                  fontSize: '10.5px',
-                                  fontWeight: 600,
-                                }}
-                              >
-                                <CheckCircle2 size={11} color="#16A34A" />
-                                Standard
-                              </span>
-                            )}
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600, color: '#0284C7' }}>
+                              <Zap size={11} />
+                              {sla.reply}
+                            </span>
                           </td>
+
+                          <td>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600, color: '#059669' }}>
+                              <Clock size={11} />
+                              {sla.fix}
+                            </span>
+                          </td>
+
 
                           <td style={{ textAlign: 'right' }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
@@ -2562,6 +2533,58 @@ export function ClassificationManager({
                       ))}
                   </select>
                 </div>
+
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <label className="form-label-control" style={{ marginBottom: 0 }}>
+                      Departments that can raise tickets <span style={{ color: '#EF4444' }}>*</span>
+                    </label>
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      style={{ height: '26px', fontSize: '11.5px', padding: '0 8px' }}
+                      onClick={() => {
+                        setNewSubDepts(newSubDepts.length === departments.length ? [] : departments.map((d) => d.name))
+                        setNewSubDeptError('')
+                      }}
+                    >
+                      {newSubDepts.length === departments.length ? 'Clear all' : 'Select all'}
+                    </button>
+                  </div>
+                  <div
+                    style={{
+                      marginTop: '6px',
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))',
+                      gap: '6px',
+                      padding: '10px',
+                      border: `1px solid ${newSubDeptError ? '#DC2626' : 'var(--border)'}`,
+                      borderRadius: '8px',
+                      maxHeight: '180px',
+                      overflowY: 'auto',
+                    }}
+                  >
+                    {departments.map((d) => (
+                      <label key={d.name} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={newSubDepts.includes(d.name)}
+                          onChange={(e) => {
+                            setNewSubDepts((prev) =>
+                              e.target.checked ? [...prev, d.name] : prev.filter((x) => x !== d.name)
+                            )
+                            setNewSubDeptError('')
+                          }}
+                        />
+                        {d.name}
+                      </label>
+                    ))}
+                  </div>
+                  <span style={{ fontSize: '11.5px', color: newSubDeptError ? '#DC2626' : 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
+                    {newSubDeptError ||
+                      'Departments come from the user departments (Active Directory). Only users of these departments see this sub-classification when they create a ticket.'}
+                  </span>
+                </div>
               </div>
 
               <div className="modal-dialog-footer">
@@ -2735,8 +2758,9 @@ export function ClassificationManager({
 
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <div style={{ textAlign: 'right', fontSize: '11.5px', color: 'var(--text-secondary)' }}>
-                          <div>Resp: <strong>{masterIssue.slaResponseHours >= 1 ? `${masterIssue.slaResponseHours}h` : `${Math.round(masterIssue.slaResponseHours * 60)}m`}</strong></div>
-                          <div>Resol: <strong>{masterIssue.slaResolutionHours >= 1 ? `${masterIssue.slaResolutionHours}h` : `${Math.round(masterIssue.slaResolutionHours * 60)}m`}</strong></div>
+                          <div>{slaFor(masterIssue).priorityName}</div>
+                          <div>Reply: <strong>{slaFor(masterIssue).reply}</strong></div>
+                          <div>Fix: <strong>{slaFor(masterIssue).fix}</strong></div>
                         </div>
 
                         {isAlreadyAdded && (
@@ -2871,83 +2895,29 @@ export function ClassificationManager({
                       ))}
                     </select>
                   </div>
-
                   <div>
-                    <label className="form-label-control">SLA policy (SLA master)</label>
+                    <label className="form-label-control">Priority (Priority master)</label>
                     <select
                       className="form-input-control"
-                      value={newIssuePolicyId}
-                      onChange={(e) => setNewIssuePolicyId(e.target.value)}
+                      value={newIssuePriority}
+                      onChange={(e) => setNewIssuePriority(e.target.value)}
                     >
-                      {activePolicies.map((p) => (
+                      {activePriorities.map((p) => (
                         <option key={p.id} value={p.id}>
                           {p.name}
                         </option>
                       ))}
                     </select>
                   </div>
+
                 </div>
-                <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{policySummary(newIssuePolicyId)}</div>
+                {slaLine({ autoSeverity: newIssueSeverity, autoPriority: newIssuePriority })}
 
                 <div>
-                  <label
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      cursor: 'pointer',
-                      fontSize: '13px',
-                      fontWeight: 600,
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={newIssueIsCR}
-                      onChange={(e) => {
-                        setNewIssueIsCR(e.target.checked)
-                        if (e.target.checked) setNewIssueRequiresHodApproval(true)
-                      }}
-                    />
-                    <span>Classify as Change Request (Requires CAB / Management Review &amp; Testing)</span>
-                  </label>
-
-                  {newIssueIsCR && (
-                    <div
-                      style={{
-                        marginTop: '10px',
-                        marginLeft: '24px',
-                        padding: '12px 14px',
-                        background: '#FAF5FF',
-                        borderRadius: '8px',
-                        border: '1px solid #E9D5FF',
-                      }}
-                    >
-                      <label
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          cursor: 'pointer',
-                          fontWeight: 700,
-                          fontSize: '13px',
-                          color: '#581C87',
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={newIssueRequiresHodApproval}
-                          onChange={(e) => setNewIssueRequiresHodApproval(e.target.checked)}
-                          style={{ accentColor: '#7C3AED' }}
-                        />
-                        Require Department Head (HOD) Approval
-                      </label>
-                      <p style={{ margin: '4px 0 0 24px', fontSize: '12px', color: '#6B21A8', lineHeight: 1.4 }}>
-                        {newIssueRequiresHodApproval
-                          ? '✓ Ticket routes to Admin Team first, then to requester\'s Department Head for sign-off.'
-                          : '⚡ HOD approval waived (routine change). Ticket routes to Admin Team, then directly to implementation.'}
-                      </p>
-                    </div>
-                  )}
+                  <p style={{ margin: 0, fontSize: '12.5px', color: 'var(--text-secondary)' }}>
+                    Workflow (Standard or Change Request) is not set here. It comes from the ticket type the
+                    user picks when creating the ticket (Administration &gt; Ticket Types).
+                  </p>
                 </div>
               </div>
 
@@ -2976,7 +2946,7 @@ export function ClassificationManager({
           <div className="modal-dialog-box">
             <div className="modal-dialog-header">
               <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--text-main)' }}>
-                Edit SLA: {editingIssue.issue.name}
+                Edit issue type: {editingIssue.issue.name}
               </h3>
               <button
                 type="button"
@@ -2990,127 +2960,6 @@ export function ClassificationManager({
 
             <form onSubmit={handleSaveEditedIssue}>
               <div className="modal-dialog-body" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                {/* Fast SLA Presets */}
-                <div>
-                  <label className="form-label-control" style={{ marginBottom: '6px' }}>
-                    Quick SLA Presets
-                  </label>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '6px' }}>
-                    <button
-                      type="button"
-                      style={{
-                        padding: '6px 8px',
-                        border: '1.5px solid #FEE2E2',
-                        background: '#FEF2F2',
-                        borderRadius: '6px',
-                        fontSize: '11.5px',
-                        fontWeight: 600,
-                        color: '#DC2626',
-                        cursor: 'pointer',
-                        textAlign: 'left',
-                      }}
-                      onClick={() => {
-                        setEditingIssue({
-                          ...editingIssue,
-                          issue: {
-                            ...editingIssue.issue,
-                            autoSeverity: 'Critical',
-                            slaResponseHours: 0.5,
-                            slaResolutionHours: 2,
-                            hodApprovalLimitHours: 1,
-                          },
-                        })
-                      }}
-                    >
-                      ⚡ Critical (30m / 2h)
-                    </button>
-                    <button
-                      type="button"
-                      style={{
-                        padding: '6px 8px',
-                        border: '1.5px solid #FFEDD5',
-                        background: '#FFF7ED',
-                        borderRadius: '6px',
-                        fontSize: '11.5px',
-                        fontWeight: 600,
-                        color: '#EA580C',
-                        cursor: 'pointer',
-                        textAlign: 'left',
-                      }}
-                      onClick={() => {
-                        setEditingIssue({
-                          ...editingIssue,
-                          issue: {
-                            ...editingIssue.issue,
-                            autoSeverity: 'High',
-                            slaResponseHours: 1,
-                            slaResolutionHours: 4,
-                            hodApprovalLimitHours: 2,
-                          },
-                        })
-                      }}
-                    >
-                      🟠 High (1h / 4h)
-                    </button>
-                    <button
-                      type="button"
-                      style={{
-                        padding: '6px 8px',
-                        border: '1.5px solid #FEF08A',
-                        background: '#FEFCE8',
-                        borderRadius: '6px',
-                        fontSize: '11.5px',
-                        fontWeight: 600,
-                        color: '#854D0E',
-                        cursor: 'pointer',
-                        textAlign: 'left',
-                      }}
-                      onClick={() => {
-                        setEditingIssue({
-                          ...editingIssue,
-                          issue: {
-                            ...editingIssue.issue,
-                            autoSeverity: 'Medium',
-                            slaResponseHours: 2,
-                            slaResolutionHours: 8,
-                            hodApprovalLimitHours: 4,
-                          },
-                        })
-                      }}
-                    >
-                      🟡 Medium (2h / 8h)
-                    </button>
-                    <button
-                      type="button"
-                      style={{
-                        padding: '6px 8px',
-                        border: '1.5px solid #E2E8F0',
-                        background: '#F8FAFC',
-                        borderRadius: '6px',
-                        fontSize: '11.5px',
-                        fontWeight: 600,
-                        color: '#475569',
-                        cursor: 'pointer',
-                        textAlign: 'left',
-                      }}
-                      onClick={() => {
-                        setEditingIssue({
-                          ...editingIssue,
-                          issue: {
-                            ...editingIssue.issue,
-                            autoSeverity: 'Low',
-                            slaResponseHours: 4,
-                            slaResolutionHours: 24,
-                            hodApprovalLimitHours: 8,
-                          },
-                        })
-                      }}
-                    >
-                      🟢 Routine (4h / 24h)
-                    </button>
-                  </div>
-                </div>
-
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div>
                     <label className="form-label-control">Severity (Severity master)</label>
@@ -3135,114 +2984,38 @@ export function ClassificationManager({
                         ))}
                     </select>
                   </div>
-
                   <div>
-                    <label className="form-label-control">SLA policy (SLA master)</label>
+                    <label className="form-label-control">Priority (Priority master)</label>
                     <select
                       className="form-input-control"
-                      value={editingIssue.issue.slaPolicyId || ''}
-                      onChange={(e) => {
-                        const pol = slaPolicies.find((p) => p.id === e.target.value)
+                      value={editingIssue.issue.autoPriority}
+                      onChange={(e) =>
                         setEditingIssue({
                           ...editingIssue,
-                          issue: {
-                            ...editingIssue.issue,
-                            slaPolicyId: e.target.value || undefined,
-                            slaResponseHours: pol?.responseHours ?? editingIssue.issue.slaResponseHours,
-                            slaResolutionHours: pol?.resolutionHours ?? editingIssue.issue.slaResolutionHours,
-                            hodApprovalLimitHours: pol?.hodLimitHours ?? editingIssue.issue.hodApprovalLimitHours,
-                          },
+                          issue: { ...editingIssue.issue, autoPriority: e.target.value },
                         })
-                      }}
+                      }
                     >
-                      {!editingIssue.issue.slaPolicyId && <option value="">No policy</option>}
-                      {slaPolicies
-                        .filter((p) => p.active || p.id === editingIssue.issue.slaPolicyId)
+                      {priorities
+                        .filter((p) => p.active || p.id === editingIssue.issue.autoPriority)
+                        .sort((a, b) => a.rank - b.rank)
                         .map((p) => (
                           <option key={p.id} value={p.id}>
                             {p.name}
+                            {p.active ? '' : ' (inactive)'}
                           </option>
                         ))}
                     </select>
                   </div>
+
                 </div>
-                <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{policySummary(editingIssue.issue.slaPolicyId)}</div>
+                {slaLine(editingIssue.issue)}
 
                 <div>
-                  <label
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      cursor: 'pointer',
-                      fontSize: '13px',
-                      fontWeight: 600,
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={!!editingIssue.issue.isChangeRequest}
-                      onChange={(e) =>
-                        setEditingIssue({
-                          ...editingIssue,
-                          issue: {
-                            ...editingIssue.issue,
-                            isChangeRequest: e.target.checked,
-                            crRequiresHodApproval: e.target.checked
-                              ? (editingIssue.issue.crRequiresHodApproval ?? true)
-                              : undefined,
-                          },
-                        })
-                      }
-                    />
-                    <span>Flag as Change Request (Requires Testing &amp; CAB Review)</span>
-                  </label>
-
-                  {editingIssue.issue.isChangeRequest && (
-                    <div
-                      style={{
-                        marginTop: '10px',
-                        marginLeft: '24px',
-                        padding: '12px 14px',
-                        background: '#FAF5FF',
-                        borderRadius: '8px',
-                        border: '1px solid #E9D5FF',
-                      }}
-                    >
-                      <label
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          cursor: 'pointer',
-                          fontWeight: 700,
-                          fontSize: '13px',
-                          color: '#581C87',
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={editingIssue.issue.crRequiresHodApproval !== false}
-                          onChange={(e) =>
-                            setEditingIssue({
-                              ...editingIssue,
-                              issue: {
-                                ...editingIssue.issue,
-                                crRequiresHodApproval: e.target.checked,
-                              },
-                            })
-                          }
-                          style={{ accentColor: '#7C3AED' }}
-                        />
-                        Require Department Head (HOD) Approval
-                      </label>
-                      <p style={{ margin: '4px 0 0 24px', fontSize: '12px', color: '#6B21A8', lineHeight: 1.4 }}>
-                        {editingIssue.issue.crRequiresHodApproval !== false
-                          ? '✓ Ticket routes to Admin Team first, then to requester\'s Department Head for sign-off.'
-                          : '⚡ HOD approval waived (routine change). Ticket routes to Admin Team, then directly to implementation.'}
-                      </p>
-                    </div>
-                  )}
+                  <p style={{ margin: 0, fontSize: '12.5px', color: 'var(--text-secondary)' }}>
+                    Workflow (Standard or Change Request) is not set here. It comes from the ticket type the
+                    user picks when creating the ticket (Administration &gt; Ticket Types).
+                  </p>
                 </div>
               </div>
 

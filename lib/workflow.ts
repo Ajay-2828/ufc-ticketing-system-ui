@@ -1,20 +1,12 @@
 import {
   ClassificationConfig,
   Ticket,
-  TicketType,
   policySettings,
 } from '@/app/ticket-data'
 
-const PREFIX: Record<TicketType, string> = {
-  Incident: 'INC',
-  'Service Request': 'SRQ',
-  Issue: 'ISS',
-  'Change Request': 'CR',
-}
-
-/** Next ticket number for a type: highest existing number of that prefix plus one. */
-export function nextTicketId(tickets: Ticket[], type: TicketType): string {
-  const prefix = PREFIX[type]
+/** Next ticket number for a type code (from the Ticket Types master): highest existing number plus one. */
+export function nextTicketId(tickets: Ticket[], code: string): string {
+  const prefix = code.toUpperCase()
   let max = 0
   for (const t of tickets) {
     const m = new RegExp(`^${prefix}-\\d{4}-(\\d+)$`).exec(t.id)

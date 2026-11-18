@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ApprovalQueue } from '@/components/queues/approval-queue'
 import { useTicketContext } from '@/context/ticket-context'
-import { Ticket } from '@/app/ticket-data'
+import { Ticket, isChangeFlow } from '@/app/ticket-data'
 import { RejectTicketModal } from '@/components/tickets/reject-ticket-modal'
 
 export default function ApprovalsPage() {
@@ -44,7 +44,7 @@ export default function ApprovalsPage() {
           approverName={currentUser.name}
           onClose={() => setTicketToReject(null)}
           onConfirmReject={handleConfirmReject}
-          forwardToAdmin={ticketToReject.type !== 'Change Request'}
+          forwardToAdmin={!isChangeFlow(ticketToReject)}
         />
       )}
     </>

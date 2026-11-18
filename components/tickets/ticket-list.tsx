@@ -18,7 +18,7 @@ import {
 } from 'lucide-react'
 import { useTicketContext } from '@/context/ticket-context'
 import { SeverityBadge, PriorityBadge } from '@/components/tickets/master-badges'
-import { Ticket, TicketType, TicketStatus, TicketSeverity, departmentsData } from '@/app/ticket-data'
+import { Ticket, TicketType, TicketStatus, TicketSeverity, departmentsData, isChangeFlow } from '@/app/ticket-data'
 
 interface TicketListProps {
   tickets: Ticket[]
@@ -62,7 +62,7 @@ export function TicketList({
         selectedType === 'All' ||
         (selectedType === 'Incidents' && t.type === 'Incident') ||
         (selectedType === 'Service Requests' && t.type === 'Service Request') ||
-        (selectedType === 'Change Requests' && t.type === 'Change Request') ||
+        (selectedType === 'Change Requests' && isChangeFlow(t)) ||
         t.type === selectedType
 
       const matchesStatus = selectedStatus === 'All' || t.status === selectedStatus
@@ -443,13 +443,13 @@ export function TicketList({
                           className="badge-tag badge-tag-sm"
                           style={{
                             background:
-                              t.type === 'Change Request'
+                              isChangeFlow(t)
                                 ? '#F5F3FF'
                                 : t.type === 'Service Request'
                                 ? '#F0FDF4'
                                 : '#EFF6FF',
                             color:
-                              t.type === 'Change Request'
+                              isChangeFlow(t)
                                 ? '#6D28D9'
                                 : t.type === 'Service Request'
                                 ? '#15803D'

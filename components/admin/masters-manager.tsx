@@ -8,20 +8,12 @@ import {
   IssueTypeConfig,
   PriorityMaster,
   SeverityMaster,
-  SlaPolicy,
 } from '@/app/ticket-data'
-import {
-  fmtHours,
-  resolveSla,
-  snapshotOf,
-  usageOfPriority,
-  usageOfSeverity,
-} from '@/lib/masters'
+import { fmtHours, usageOfPriority, usageOfSeverity } from '@/lib/masters'
 
-type Tab = 'severity' | 'priority' | 'sla' | 'calendar'
+type Tab = 'severity' | 'priority' | 'calendar'
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-const ESCALATE_TO = ['Admin Team', 'HOD', 'Management']
 
 function slug(name: string): string {
   return name.trim().replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'item'
@@ -44,21 +36,38 @@ function move<T extends { id: string; rank: number }>(list: T[], id: string, dir
   return list.map((x) => (x.id === a.id ? { ...x, rank: b.rank } : x.id === b.id ? { ...x, rank: a.rank } : x))
 }
 
+/** Hours box: 0.25 = 15 min. Red when empty or zero. */
+function HoursInput({ value, onChange, label }: { value: number; onChange: (n: number) => void; label: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
+      <input
+        type="number"
+        min={0}
+        step={0.25}
+        className="form-input-control"
+        style={{ width: '80px', borderColor: value > 0 ? undefined : '#DC2626' }}
+        value={value || ''}
+        aria-label={label}
+        onChange={(e) => {
+          const n = parseFloat(e.target.value)
+          onChange(Number.isFinite(n) && n > 0 ? n : 0)
+        }}
+      />
+      <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{value > 0 ? fmtHours(value) : ''}</span>
+    </div>
+  )
+}
+
 export function MastersManager() {
   const {
     severities,
     setSeverities,
     priorities,
     setPriorities,
-    slaPolicies,
-    setSlaPolicies,
     calendars,
     setCalendars,
-    mastersSettings,
-    setMastersSettings,
     tickets,
     classificationTreeData,
-    setClassificationTreeData,
     triggerToast,
   } = useTicketContext()
 
@@ -72,7 +81,6 @@ export function MastersManager() {
   const tabs: { id: Tab; label: string; count: number }[] = [
     { id: 'severity', label: 'Severity', count: severities.length },
     { id: 'priority', label: 'Priority', count: priorities.length },
-    { id: 'sla', label: 'SLA policies', count: slaPolicies.length },
     { id: 'calendar', label: 'Business calendars', count: calendars.length },
   ]
 
@@ -83,11 +91,11 @@ export function MastersManager() {
           <div className="page-eyebrow">
             <Layers size={14} /> Masters
           </div>
-          <h1 className="page-title-main">Severity, Priority and SLA Masters</h1>
+          <h1 className="page-title-main">Severity and Priority Masters</h1>
           <p className="page-desc-sub">
-            Severity, priority and SLA are set here and nowhere else. An issue type points to a
-            severity and an SLA policy. The severity gives the starting priority. The policy gives
-            the times, counted on a business calendar.
+            Severity and priority are not linked. The severity sets the Reply within time. The priority
+            sets the Fix within time and the HOD approval limit. When Admin creates an issue type
+            (Administration &gt; Classification) it picks a severity and a priority, and a ticket gets its times from them.
           </p>
         </div>
       </div>
@@ -110,7 +118,6 @@ export function MastersManager() {
         <SeverityTab
           severities={severities}
           setSeverities={setSeverities}
-          priorities={priorities}
           tickets={tickets}
           issueTypes={issueTypes}
         />
@@ -119,45 +126,13 @@ export function MastersManager() {
         <PriorityTab
           priorities={priorities}
           setPriorities={setPriorities}
-          severities={severities}
-          policies={slaPolicies}
-          tickets={tickets}
-          settings={mastersSettings}
-          setSettings={setMastersSettings}
-        />
-      )}
-      {tab === 'sla' && (
-        <SlaTab
-          policies={slaPolicies}
-          setPolicies={setSlaPolicies}
-          priorities={priorities}
           calendars={calendars}
+          tickets={tickets}
           issueTypes={issueTypes}
-          onSyncIssueTypes={(p) =>
-            setClassificationTreeData((tree) =>
-              tree.map((m) => ({
-                ...m,
-                subClassifications: m.subClassifications.map((s) => ({
-                  ...s,
-                  issueTypes: s.issueTypes.map((i) =>
-                    i.slaPolicyId === p.id
-                      ? {
-                          ...i,
-                          slaResponseHours: p.responseHours,
-                          slaResolutionHours: p.resolutionHours,
-                          hodApprovalLimitHours: p.hodLimitHours,
-                        }
-                      : i
-                  ),
-                })),
-              }))
-            )
-          }
-          toast={triggerToast}
         />
       )}
       {tab === 'calendar' && (
-        <CalendarTab calendars={calendars} setCalendars={setCalendars} policies={slaPolicies} toast={triggerToast} />
+        <CalendarTab calendars={calendars} setCalendars={setCalendars} priorities={priorities} toast={triggerToast} />
       )}
     </div>
   )
@@ -168,21 +143,18 @@ export function MastersManager() {
 function SeverityTab({
   severities,
   setSeverities,
-  priorities,
   tickets,
   issueTypes,
 }: {
   severities: SeverityMaster[]
   setSeverities: React.Dispatch<React.SetStateAction<SeverityMaster[]>>
-  priorities: PriorityMaster[]
   tickets: { severity: string }[]
   issueTypes: IssueTypeConfig[]
 }) {
   const sorted = [...severities].sort((a, b) => a.rank - b.rank)
-  const activePriorities = priorities.filter((p) => p.active).sort((a, b) => a.rank - b.rank)
   const [name, setName] = useState('')
   const [color, setColor] = useState('#7C3AED')
-  const [defPri, setDefPri] = useState(activePriorities[0]?.id || '')
+  const [reply, setReply] = useState(2)
   const [confirmDel, setConfirmDel] = useState<string | null>(null)
 
   const patch = (id: string, p: Partial<SeverityMaster>) =>
@@ -193,7 +165,7 @@ function SeverityTab({
 
   const add = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!name.trim() || dupName(name)) return
+    if (!name.trim() || dupName(name) || !(reply > 0)) return
     setSeverities((l) => [
       ...l,
       {
@@ -203,7 +175,7 @@ function SeverityTab({
         color,
         active: true,
         description: '',
-        defaultPriorityId: defPri,
+        responseHours: reply,
       },
     ])
     setName('')
@@ -212,8 +184,8 @@ function SeverityTab({
   return (
     <div className="modern-card" style={{ padding: '20px' }}>
       <p style={{ margin: '0 0 12px', fontSize: '13px', color: 'var(--text-secondary)' }}>
-        Rank 1 is the most serious. A severity used by tickets or issue types cannot be deleted, only
-        deactivated. The default priority is what a new ticket of that severity starts with.
+        Rank 1 is the most serious. Reply within is how soon a technician must first respond to a ticket of this severity. A severity used by tickets or issue types cannot be deleted, only
+        deactivated. Severity is not linked to priority; each issue type picks both.
       </p>
       <div className="table-responsive-container">
         <table className="custom-data-table">
@@ -223,7 +195,7 @@ function SeverityTab({
               <th>Code</th>
               <th>Name</th>
               <th>Colour</th>
-              <th>Default priority</th>
+              <th>Reply within (hours)</th>
               <th>Description</th>
               <th>Used by</th>
               <th>Active</th>
@@ -263,14 +235,7 @@ function SeverityTab({
                     <input type="color" value={s.color} onChange={(e) => patch(s.id, { color: e.target.value })} aria-label={`Colour of ${s.id}`} />
                   </td>
                   <td>
-                    <select className="form-input-control" value={s.defaultPriorityId} onChange={(e) => patch(s.id, { defaultPriorityId: e.target.value })} aria-label={`Default priority of ${s.id}`}>
-                      {priorities.map((p) => (
-                        <option key={p.id} value={p.id} disabled={!p.active && p.id !== s.defaultPriorityId}>
-                          {p.name}
-                          {p.active ? '' : ' (inactive)'}
-                        </option>
-                      ))}
-                    </select>
+                    <HoursInput value={s.responseHours} onChange={(n) => patch(s.id, { responseHours: n })} label={`Reply within for ${s.name}`} />
                   </td>
                   <td>
                     <input className="form-input-control" style={{ minWidth: '200px' }} value={s.description} onChange={(e) => patch(s.id, { description: e.target.value })} aria-label={`Description of ${s.id}`} />
@@ -319,16 +284,10 @@ function SeverityTab({
           <input type="color" value={color} onChange={(e) => setColor(e.target.value)} />
         </div>
         <div>
-          <label className="form-label-control">Default priority</label>
-          <select className="form-input-control" value={defPri} onChange={(e) => setDefPri(e.target.value)}>
-            {activePriorities.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
+          <label className="form-label-control">Reply within (hours)</label>
+          <HoursInput value={reply} onChange={setReply} label="Reply within for the new severity" />
         </div>
-        <button type="submit" className="btn-primary" disabled={!name.trim() || dupName(name)}>
+        <button type="submit" className="btn-primary" disabled={!name.trim() || dupName(name) || !(reply > 0)}>
           <Plus size={14} /> Add severity
         </button>
         {name.trim() && dupName(name) && <span style={{ color: '#DC2626', fontSize: '12px' }}>That name already exists.</span>}
@@ -342,23 +301,21 @@ function SeverityTab({
 function PriorityTab({
   priorities,
   setPriorities,
-  severities,
-  policies,
+  calendars,
   tickets,
-  settings,
-  setSettings,
+  issueTypes,
 }: {
   priorities: PriorityMaster[]
   setPriorities: React.Dispatch<React.SetStateAction<PriorityMaster[]>>
-  severities: SeverityMaster[]
-  policies: SlaPolicy[]
+  calendars: BusinessCalendar[]
   tickets: { priority: string }[]
-  settings: { endUserCanChangePriority: boolean }
-  setSettings: React.Dispatch<React.SetStateAction<{ endUserCanChangePriority: boolean }>>
+  issueTypes: IssueTypeConfig[]
 }) {
   const sorted = [...priorities].sort((a, b) => a.rank - b.rank)
   const [name, setName] = useState('')
   const [color, setColor] = useState('#0D9488')
+  const [fix, setFix] = useState(8)
+  const [hod, setHod] = useState(4)
   const [confirmDel, setConfirmDel] = useState<string | null>(null)
   const patch = (id: string, p: Partial<PriorityMaster>) =>
     setPriorities((l) => l.map((x) => (x.id === id ? { ...x, ...p } : x)))
@@ -367,7 +324,7 @@ function PriorityTab({
 
   const add = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!name.trim() || dupName(name)) return
+    if (!name.trim() || dupName(name) || !(fix > 0 && hod > 0)) return
     setPriorities((l) => [
       ...l,
       {
@@ -377,6 +334,9 @@ function PriorityTab({
         color,
         active: true,
         description: '',
+        resolutionHours: fix,
+        hodLimitHours: hod,
+        calendarId: calendars[0]?.id || 'cal-24x7',
       },
     ])
     setName('')
@@ -385,8 +345,8 @@ function PriorityTab({
   return (
     <div className="modern-card" style={{ padding: '20px' }}>
       <p style={{ margin: '0 0 12px', fontSize: '13px', color: 'var(--text-secondary)' }}>
-        Rank 1 is the most urgent. The starting priority of a ticket comes from its severity (set in
-        the Severity tab). A policy may give a priority its own response and resolution times.
+        Rank 1 is the most urgent. Fix within is how soon a ticket of this priority must be resolved. HOD limit is how
+        long the HOD has to approve. The calendar says when the clock runs. Priority is not linked to severity.
       </p>
       <div className="table-responsive-container">
         <table className="custom-data-table">
@@ -396,8 +356,10 @@ function PriorityTab({
               <th>Code</th>
               <th>Name</th>
               <th>Colour</th>
+              <th>Fix within (hours)</th>
+              <th>HOD limit (hours)</th>
               <th>Description</th>
-              <th>Default for severity</th>
+              <th>Clock runs on</th>
               <th>Used by</th>
               <th>Active</th>
               <th />
@@ -405,9 +367,8 @@ function PriorityTab({
           </thead>
           <tbody>
             {sorted.map((p, i) => {
-              const u = usageOfPriority(p.id, tickets, severities, policies)
-              const used = u.tickets + u.severities + u.policies > 0
-              const defaults = severities.filter((s) => s.defaultPriorityId === p.id).map((s) => s.name)
+              const u = usageOfPriority(p.id, tickets, issueTypes)
+              const used = u.tickets + u.issueTypes > 0
               return (
                 <tr key={p.id}>
                   <td>
@@ -431,13 +392,27 @@ function PriorityTab({
                     <input type="color" value={p.color} onChange={(e) => patch(p.id, { color: e.target.value })} aria-label={`Colour of ${p.id}`} />
                   </td>
                   <td>
+                    <HoursInput value={p.resolutionHours} onChange={(n) => patch(p.id, { resolutionHours: n })} label={`Fix within for ${p.name}`} />
+                  </td>
+                  <td>
+                    <HoursInput value={p.hodLimitHours} onChange={(n) => patch(p.id, { hodLimitHours: n })} label={`HOD limit for ${p.name}`} />
+                  </td>
+                  <td>
                     <input className="form-input-control" style={{ minWidth: '220px' }} value={p.description} onChange={(e) => patch(p.id, { description: e.target.value })} aria-label={`Description of ${p.id}`} />
                   </td>
-                  <td style={{ fontSize: '12.5px' }}>{defaults.length ? defaults.join(', ') : <span style={{ color: 'var(--text-muted)' }}>none</span>}</td>
+                  <td>
+                    <select className="form-input-control" value={p.calendarId} onChange={(e) => patch(p.id, { calendarId: e.target.value })} aria-label={`Calendar for ${p.name}`}>
+                      {calendars.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
                   <td style={{ fontSize: '12px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-                    {u.severities} severities
+                    {u.issueTypes} issue types
                     <br />
-                    {u.policies} overrides, {u.tickets} tickets
+                    {u.tickets} tickets
                   </td>
                   <td>
                     <input type="checkbox" checked={p.active} onChange={(e) => patch(p.id, { active: e.target.checked })} aria-label={`Active ${p.id}`} />
@@ -477,354 +452,19 @@ function PriorityTab({
           <label className="form-label-control">Colour</label>
           <input type="color" value={color} onChange={(e) => setColor(e.target.value)} />
         </div>
-        <button type="submit" className="btn-primary" disabled={!name.trim() || dupName(name)}>
+        <div>
+          <label className="form-label-control">Fix within (hours)</label>
+          <HoursInput value={fix} onChange={setFix} label="Fix within for the new priority" />
+        </div>
+        <div>
+          <label className="form-label-control">HOD limit (hours)</label>
+          <HoursInput value={hod} onChange={setHod} label="HOD limit for the new priority" />
+        </div>
+        <button type="submit" className="btn-primary" disabled={!name.trim() || dupName(name) || !(fix > 0 && hod > 0)}>
           <Plus size={14} /> Add priority
         </button>
       </form>
 
-      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '20px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
-        <input type="checkbox" checked={settings.endUserCanChangePriority} onChange={(e) => setSettings({ ...settings, endUserCanChangePriority: e.target.checked })} />
-        End users may change the starting priority when they raise a ticket (staff roles always can)
-      </label>
-    </div>
-  )
-}
-
-/* ---------------------------------------------------------------- SLA */
-
-function blankPolicy(calendarId: string): SlaPolicy {
-  return {
-    id: `sla-${Date.now().toString(36)}`,
-    name: '',
-    responseHours: 1,
-    resolutionHours: 8,
-    hodLimitHours: 4,
-    pauseOnClarification: true,
-    calendarId,
-    warnPercent: 80,
-    escalateAfterHours: 0,
-    escalateTo: 'Admin Team',
-    overrides: {},
-    active: true,
-  }
-}
-
-function SlaTab({
-  policies,
-  setPolicies,
-  priorities,
-  calendars,
-  issueTypes,
-  onSyncIssueTypes,
-  toast,
-}: {
-  policies: SlaPolicy[]
-  setPolicies: React.Dispatch<React.SetStateAction<SlaPolicy[]>>
-  priorities: PriorityMaster[]
-  calendars: BusinessCalendar[]
-  issueTypes: IssueTypeConfig[]
-  onSyncIssueTypes: (p: SlaPolicy) => void
-  toast: (m: string) => void
-}) {
-  const { severities, slaPolicies } = useTicketContext()
-  const [draft, setDraft] = useState<SlaPolicy | null>(null)
-  const [isNew, setIsNew] = useState(false)
-  const [confirmDel, setConfirmDel] = useState<string | null>(null)
-  const sortedPolicies = [...policies].sort((a, b) => a.resolutionHours - b.resolutionHours)
-  const calName = (id: string) => calendars.find((c) => c.id === id)?.name || id
-
-  // "Try it" panel
-  const [tryIssue, setTryIssue] = useState(issueTypes[0]?.name || '')
-  const [tryPri, setTryPri] = useState('')
-  const tryIssueObj = issueTypes.find((i) => i.name === tryIssue)
-  const tried = useMemo(() => {
-    if (!tryIssueObj) return null
-    const r = resolveSla({ severities, priorities, slaPolicies, calendars }, tryIssueObj, tryPri || undefined)
-    return { r, snap: snapshotOf(r) }
-  }, [tryIssueObj, tryPri, severities, priorities, slaPolicies, calendars])
-
-  const valid =
-    draft &&
-    draft.name.trim() &&
-    draft.responseHours > 0 &&
-    draft.resolutionHours > 0 &&
-    draft.hodLimitHours > 0 &&
-    draft.resolutionHours >= draft.responseHours &&
-    !policies.some((p) => p.id !== draft.id && p.name.trim().toLowerCase() === draft.name.trim().toLowerCase())
-
-  const save = () => {
-    if (!draft || !valid) return
-    const clean: SlaPolicy = {
-      ...draft,
-      name: draft.name.trim(),
-      overrides: Object.fromEntries(
-        Object.entries(draft.overrides).filter(([, v]) => v.responseHours || v.resolutionHours)
-      ),
-    }
-    setPolicies((l) => (isNew ? [...l, clean] : l.map((p) => (p.id === clean.id ? clean : p))))
-    onSyncIssueTypes(clean)
-    setDraft(null)
-    toast(`SLA policy "${clean.name}" saved.`)
-  }
-
-  const num = (v: string) => (v === '' ? 0 : parseFloat(v) || 0)
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      <div className="modern-card" style={{ padding: '20px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '12px' }}>
-          <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)', maxWidth: '640px' }}>
-            An issue type points to one policy. Changing a policy changes the times of every issue type that uses it. Tickets keep
-            the times they were raised with.
-          </p>
-          <button
-            type="button"
-            className="btn-primary"
-            onClick={() => {
-              setDraft(blankPolicy(calendars[0]?.id || ''))
-              setIsNew(true)
-            }}
-          >
-            <Plus size={14} /> New policy
-          </button>
-        </div>
-        <div className="table-responsive-container">
-          <table className="custom-data-table">
-            <thead>
-              <tr>
-                <th>Policy</th>
-                <th>Response</th>
-                <th>Resolution</th>
-                <th>HOD limit</th>
-                <th>Calendar</th>
-                <th>Clock pauses on clarification</th>
-                <th>Warn at</th>
-                <th>Escalation</th>
-                <th>Used by</th>
-                <th>Active</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {sortedPolicies.map((p) => {
-                const used = issueTypes.filter((i) => i.slaPolicyId === p.id).length
-                const ovCount = Object.keys(p.overrides).length
-                return (
-                  <tr key={p.id}>
-                    <td style={{ minWidth: '200px' }}>
-                      <strong>{p.name}</strong>
-                      {ovCount > 0 && <div style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>{ovCount} priority overrides</div>}
-                    </td>
-                    <td>{fmtHours(p.responseHours)}</td>
-                    <td>{fmtHours(p.resolutionHours)}</td>
-                    <td>{fmtHours(p.hodLimitHours)}</td>
-                    <td>{calName(p.calendarId)}</td>
-                    <td>{p.pauseOnClarification ? 'Yes' : 'No'}</td>
-                    <td>{p.warnPercent}%</td>
-                    <td style={{ fontSize: '12.5px' }}>
-                      {p.escalateTo}
-                      {p.escalateAfterHours > 0 ? ` after ${fmtHours(p.escalateAfterHours)}` : ' at breach'}
-                    </td>
-                    <td>{used} issue types</td>
-                    <td>
-                      <input
-                        type="checkbox"
-                        checked={p.active}
-                        onChange={(e) => setPolicies((l) => l.map((x) => (x.id === p.id ? { ...x, active: e.target.checked } : x)))}
-                        aria-label={`Active ${p.name}`}
-                      />
-                    </td>
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      <button
-                        type="button"
-                        className="btn-secondary"
-                        style={{ height: '30px' }}
-                        onClick={() => {
-                          setDraft(JSON.parse(JSON.stringify(p)))
-                          setIsNew(false)
-                        }}
-                      >
-                        Edit
-                      </button>{' '}
-                      {used === 0 && (
-                        <button
-                          type="button"
-                          className="btn-secondary"
-                          style={{ color: '#DC2626', height: '30px' }}
-                          onClick={() => {
-                            if (confirmDel === p.id) {
-                              setPolicies((l) => l.filter((x) => x.id !== p.id))
-                              setConfirmDel(null)
-                            } else setConfirmDel(p.id)
-                          }}
-                        >
-                          <Trash2 size={13} /> {confirmDel === p.id ? 'Confirm' : 'Delete'}
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {draft && (
-        <div className="modern-card" style={{ padding: '20px', border: '1.5px solid var(--primary)' }}>
-          <h3 style={{ margin: '0 0 14px', fontSize: '15px', fontWeight: 700 }}>{isNew ? 'New SLA policy' : `Edit ${draft.name || 'policy'}`}</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '12px' }}>
-            <div style={{ gridColumn: '1 / -1' }}>
-              <label className="form-label-control">Policy name</label>
-              <input className="form-input-control" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="e.g. Core banking, critical" />
-            </div>
-            <div>
-              <label className="form-label-control">Response (hours)</label>
-              <input type="number" step="0.25" min="0.25" className="form-input-control" value={draft.responseHours || ''} onChange={(e) => setDraft({ ...draft, responseHours: num(e.target.value) })} />
-            </div>
-            <div>
-              <label className="form-label-control">Resolution (hours)</label>
-              <input type="number" step="0.5" min="0.5" className="form-input-control" value={draft.resolutionHours || ''} onChange={(e) => setDraft({ ...draft, resolutionHours: num(e.target.value) })} />
-            </div>
-            <div>
-              <label className="form-label-control">HOD approval limit (hours)</label>
-              <input type="number" step="0.5" min="0.5" className="form-input-control" value={draft.hodLimitHours || ''} onChange={(e) => setDraft({ ...draft, hodLimitHours: num(e.target.value) })} />
-            </div>
-            <div>
-              <label className="form-label-control">Business calendar</label>
-              <select className="form-input-control" value={draft.calendarId} onChange={(e) => setDraft({ ...draft, calendarId: e.target.value })}>
-                {calendars.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="form-label-control">Warn at (% of resolution time)</label>
-              <input type="number" min="10" max="100" className="form-input-control" value={draft.warnPercent || ''} onChange={(e) => setDraft({ ...draft, warnPercent: Math.min(100, num(e.target.value)) })} />
-            </div>
-            <div>
-              <label className="form-label-control">Escalate to</label>
-              <select className="form-input-control" value={draft.escalateTo} onChange={(e) => setDraft({ ...draft, escalateTo: e.target.value })}>
-                {ESCALATE_TO.map((r) => (
-                  <option key={r}>{r}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="form-label-control">Escalate after breach (hours, 0 = at breach)</label>
-              <input type="number" step="0.5" min="0" className="form-input-control" value={draft.escalateAfterHours} onChange={(e) => setDraft({ ...draft, escalateAfterHours: num(e.target.value) })} />
-            </div>
-          </div>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '12px 0', fontSize: '13px', fontWeight: 600 }}>
-            <input type="checkbox" checked={draft.pauseOnClarification} onChange={(e) => setDraft({ ...draft, pauseOnClarification: e.target.checked })} />
-            Stop the clock while waiting for a clarification
-          </label>
-
-          <h4 style={{ margin: '14px 0 6px', fontSize: '13px', fontWeight: 700 }}>Times for a given priority (optional, leave blank to use the policy times)</h4>
-          <div className="table-responsive-container">
-            <table className="custom-data-table">
-              <thead>
-                <tr>
-                  <th>Priority</th>
-                  <th>Response (hours)</th>
-                  <th>Resolution (hours)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[...priorities].sort((a, b) => a.rank - b.rank).map((p) => (
-                  <tr key={p.id}>
-                    <td>{p.name}</td>
-                    <td>
-                      <input
-                        type="number"
-                        step="0.25"
-                        min="0"
-                        className="form-input-control"
-                        style={{ width: '120px' }}
-                        value={draft.overrides[p.id]?.responseHours ?? ''}
-                        onChange={(e) =>
-                          setDraft({ ...draft, overrides: { ...draft.overrides, [p.id]: { ...draft.overrides[p.id], responseHours: e.target.value === '' ? undefined : num(e.target.value) } } })
-                        }
-                        aria-label={`Response override ${p.id}`}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="number"
-                        step="0.5"
-                        min="0"
-                        className="form-input-control"
-                        style={{ width: '120px' }}
-                        value={draft.overrides[p.id]?.resolutionHours ?? ''}
-                        onChange={(e) =>
-                          setDraft({ ...draft, overrides: { ...draft.overrides, [p.id]: { ...draft.overrides[p.id], resolutionHours: e.target.value === '' ? undefined : num(e.target.value) } } })
-                        }
-                        aria-label={`Resolution override ${p.id}`}
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div style={{ display: 'flex', gap: '10px', marginTop: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <button type="button" className="btn-primary" disabled={!valid} onClick={save}>
-              <CheckCircle2 size={14} /> Save policy
-            </button>
-            <button type="button" className="btn-secondary" onClick={() => setDraft(null)}>
-              Cancel
-            </button>
-            {!valid && (
-              <span style={{ fontSize: '12px', color: '#B45309' }}>
-                Needs a unique name, times above zero, and a resolution time not shorter than the response time.
-              </span>
-            )}
-          </div>
-        </div>
-      )}
-
-      <div className="modern-card" style={{ padding: '20px' }}>
-        <h3 style={{ margin: '0 0 6px', fontSize: '15px', fontWeight: 700 }}>Try the rules</h3>
-        <p style={{ margin: '0 0 12px', fontSize: '12.5px', color: 'var(--text-secondary)' }}>
-          See what a new ticket would get for an issue type and priority.
-        </p>
-        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-          <div style={{ minWidth: '260px' }}>
-            <label className="form-label-control">Issue type</label>
-            <select className="form-input-control" value={tryIssue} onChange={(e) => setTryIssue(e.target.value)}>
-              {issueTypes.map((i) => (
-                <option key={i.name} value={i.name}>
-                  {i.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="form-label-control">Priority</label>
-            <select className="form-input-control" value={tryPri} onChange={(e) => setTryPri(e.target.value)}>
-              <option value="">Starting priority of the severity</option>
-              {priorities.filter((p) => p.active).map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-        {tried && (
-          <div style={{ marginTop: '14px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px', fontSize: '13px' }}>
-            <div><span style={{ color: 'var(--text-muted)' }}>Severity</span><br /><strong>{severities.find((s) => s.id === tried.r.severityId)?.name || tried.r.severityId}</strong></div>
-            <div><span style={{ color: 'var(--text-muted)' }}>Priority</span><br /><strong>{priorities.find((p) => p.id === tried.r.priorityId)?.name || tried.r.priorityId}</strong></div>
-            <div><span style={{ color: 'var(--text-muted)' }}>Policy</span><br /><strong>{tried.r.policy?.name || 'None'}</strong></div>
-            <div><span style={{ color: 'var(--text-muted)' }}>Response / Resolution / HOD</span><br /><strong>{fmtHours(tried.r.responseHours)} / {fmtHours(tried.r.resolutionHours)} / {fmtHours(tried.r.hodLimitHours)}</strong></div>
-            <div><span style={{ color: 'var(--text-muted)' }}>Calendar</span><br /><strong>{tried.r.calendar.name}</strong></div>
-            <div><span style={{ color: 'var(--text-muted)' }}>Resolution due if raised now</span><br /><strong>{new Date(tried.snap.resolutionDue).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</strong></div>
-          </div>
-        )}
-      </div>
     </div>
   )
 }
@@ -834,12 +474,12 @@ function SlaTab({
 function CalendarTab({
   calendars,
   setCalendars,
-  policies,
+  priorities,
   toast,
 }: {
   calendars: BusinessCalendar[]
   setCalendars: React.Dispatch<React.SetStateAction<BusinessCalendar[]>>
-  policies: SlaPolicy[]
+  priorities: PriorityMaster[]
   toast: (m: string) => void
 }) {
   const [draft, setDraft] = useState<BusinessCalendar | null>(null)
@@ -885,7 +525,7 @@ function CalendarTab({
             </thead>
             <tbody>
               {calendars.map((c) => {
-                const used = policies.filter((p) => p.calendarId === c.id).length
+                const used = priorities.filter((p) => p.calendarId === c.id).length
                 return (
                   <tr key={c.id}>
                     <td><strong>{c.name}</strong></td>
@@ -893,7 +533,7 @@ function CalendarTab({
                       {c.is24x7 ? 'All day, every day' : `${c.workDays.map((d) => DAYS[d]).join(', ')}, ${c.start} to ${c.end}`}
                     </td>
                     <td>{c.holidays.length}</td>
-                    <td>{used} policies</td>
+                    <td>{used} priorities</td>
                     <td style={{ whiteSpace: 'nowrap' }}>
                       <button type="button" className="btn-secondary" style={{ height: '30px' }} onClick={() => { setDraft(JSON.parse(JSON.stringify(c))); setIsNew(false) }}>
                         Edit

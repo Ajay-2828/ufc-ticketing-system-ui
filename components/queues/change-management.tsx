@@ -10,7 +10,7 @@ import {
   AlertTriangle,
   ChevronRight,
 } from 'lucide-react'
-import { Ticket } from '@/app/ticket-data'
+import { Ticket, isChangeFlow } from '@/app/ticket-data'
 
 interface ChangeManagementProps {
   tickets: Ticket[]
@@ -28,7 +28,7 @@ export function ChangeManagement({
   onRejectCR,
   canDecide = false,
 }: ChangeManagementProps) {
-  const all = tickets.filter((t) => t.type === 'Change Request')
+  const all = tickets.filter((t) => isChangeFlow(t))
   // Management decides only when the ticket is at the Management stage
   const changeRequests = all.filter((t) => t.status === 'Management Approval')
   const inStage = (s: (t: Ticket) => boolean) => all.filter(s).length

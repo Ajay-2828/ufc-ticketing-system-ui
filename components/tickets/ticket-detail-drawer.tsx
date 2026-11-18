@@ -25,7 +25,7 @@ import {
   FileText,
   Sliders,
 } from 'lucide-react'
-import { Ticket, Role, usersByRole } from '@/app/ticket-data'
+import { Ticket, Role, usersByRole, isChangeFlow } from '@/app/ticket-data'
 import { ClassifyChangeRequestModal } from '@/components/tickets/classify-change-request-modal'
 import { ForwardToTestingModal } from '@/components/tickets/forward-to-testing-modal'
 
@@ -62,7 +62,7 @@ export function TicketDetailDrawer({
   const currentUser = usersByRole[currentRole]
 
   // Data-driven Stepper based on ticket type (Section 8 & 13)
-  const isCR = ticket.type === 'Change Request' || ticket.status === 'Admin Review'
+  const isCR = isChangeFlow(ticket) || ticket.status === 'Admin Review'
 
   // Stepper stages matching Scope of Work 3.6 (User ➔ Admin Review ➔ HOD Approval ➔ Management ➔ Implementation ➔ Testing ➔ Closure)
   const stepperStages = isCR
@@ -223,6 +223,7 @@ export function TicketDetailDrawer({
     const updated: Ticket = {
       ...ticket,
       type: 'Change Request',
+      workflow: 'Change Request',
       status: 'Admin Review', // Always Admin Review 1st per SOW 3.6
       timeline: [
         ...ticket.timeline,
@@ -556,7 +557,7 @@ export function TicketDetailDrawer({
             </div>
 
             {/* Quick Technician Action in Drawer Header */}
-            {currentRole === 'Technician' && ticket.type !== 'Change Request' && ticket.status !== 'Resolved' && ticket.status !== 'Closed' && (
+            {currentRole === 'Technician' && !isChangeFlow(ticket) && ticket.status !== 'Resolved' && ticket.status !== 'Closed' && (
               <button
                 type="button"
                 className="btn-secondary"
@@ -1070,7 +1071,7 @@ export function TicketDetailDrawer({
               <>
                 {ticket.status === 'Assigned' && (
                   <>
-                    {ticket.type !== 'Change Request' && (
+                    {!isChangeFlow(ticket) && (
                       <button
                         type="button"
                         className="btn-secondary"
@@ -1091,7 +1092,7 @@ export function TicketDetailDrawer({
                 )}
                 {ticket.status === 'In Progress' && (
                   <>
-                    {ticket.type === 'Change Request' ? (
+                    {isChangeFlow(ticket) ? (
                       <button
                         type="button"
                         className="btn-primary"

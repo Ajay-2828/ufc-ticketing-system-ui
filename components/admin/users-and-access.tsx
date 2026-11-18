@@ -1,5 +1,6 @@
 'use client'
 
+import { useTicketContext } from '@/context/ticket-context'
 import React, { useState } from 'react'
 import {
   Users,
@@ -26,7 +27,6 @@ import {
 } from 'lucide-react'
 import {
   usersDirectory,
-  departmentsData,
   vendorAccounts,
   roles,
   Role,
@@ -34,6 +34,8 @@ import {
 } from '@/app/ticket-data'
 
 export function UsersAndAccess() {
+  // Departments live in the shared context so new sub-classification access shows here too
+  const { departments: departmentsData } = useTicketContext()
   const [activeTab, setActiveTab] = useState<'users' | 'roles' | 'departments' | 'vendors'>('users')
   const [userSearch, setUserSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState('All')

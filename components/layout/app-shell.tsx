@@ -31,6 +31,7 @@ import {
   Plus,
   MessageSquare,
   LucideIcon,
+  Tags,
 } from 'lucide-react'
 import { useTicketContext } from '@/context/ticket-context'
 import { roles, departmentsData } from '@/app/ticket-data'
@@ -187,6 +188,7 @@ export function AppShell({ children }: AppShellProps) {
   // Standard Administration Pages (ITSM Industry Standard)
   const adminPages: NavItem[] = [
     { label: 'Classification', href: '/admin/classification', icon: FolderKanban },
+    { label: 'Ticket Types', href: '/admin/ticket-types', icon: Tags },
     { label: 'Masters (Severity, Priority, SLA)', href: '/admin/masters', icon: Sliders },
     { label: 'Workflows & Timers', href: '/admin/workflows', icon: GitBranch },
     { label: 'Users & Access', href: '/admin/users', icon: Users },
